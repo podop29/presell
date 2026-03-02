@@ -1,16 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import type { BusinessProfile, StyleSuggestion } from "@/types";
-
-type Phase = "input" | "analyzing" | "pick-style" | "generating" | "done";
-
-function extractColors(text: string): string[] {
-  const matches = text.match(/#[0-9a-fA-F]{6}\b/g);
-  if (!matches) return [];
-  return Array.from(new Set(matches)).slice(0, 5);
-}
 
 /* ───── tiny icon components ───── */
 function ArrowRight({ className = "w-4 h-4" }: { className?: string }) {
@@ -56,98 +48,17 @@ function Check({ className = "w-5 h-5" }: { className?: string }) {
   );
 }
 
-function Spinner({ className = "w-5 h-5" }: { className?: string }) {
-  return (
-    <svg className={`${className} animate-spin`} fill="none" viewBox="0 0 24 24">
-      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-    </svg>
-  );
-}
-
 /* ───── Main component ───── */
 export default function Home() {
+  const router = useRouter();
   const [url, setUrl] = useState("");
-  const [devName, setDevName] = useState("");
-  const [devEmail, setDevEmail] = useState("");
-  const [devMessage, setDevMessage] = useState("");
   const [error, setError] = useState("");
-  const [phase, setPhase] = useState<Phase>("input");
 
-  const [profile, setProfile] = useState<BusinessProfile | null>(null);
-  const [styles, setStyles] = useState<StyleSuggestion[]>([]);
-  const [pageStructure, setPageStructure] = useState<string[]>([]);
-  const [imageUrls, setImageUrls] = useState<string[]>([]);
-  const [stockImageUrls, setStockImageUrls] = useState<string[]>([]);
-  const [selectedIndex, setSelectedIndex] = useState<number>(0);
-
-  const [previewUrl, setPreviewUrl] = useState("");
-  const [copied, setCopied] = useState(false);
-
-  async function handleAnalyze() {
+  function handleAnalyze() {
     setError("");
     if (!url) { setError("Please enter a website URL."); return; }
-    setPhase("analyzing");
-    try {
-      const res = await fetch("/api/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error || "Something went wrong."); setPhase("input"); return; }
-      setProfile(data.profile);
-      setStyles(data.styles);
-      setPageStructure(data.pageStructure);
-      setImageUrls(data.imageUrls);
-      setStockImageUrls(data.stockImageUrls || []);
-      setSelectedIndex(0);
-      setPhase("pick-style");
-    } catch {
-      setError("Network error. Please try again.");
-      setPhase("input");
-    }
+    router.push(`/create?url=${encodeURIComponent(url)}`);
   }
-
-  async function handleGenerate() {
-    setError("");
-    if (!devName || !devEmail) { setError("Please fill in your name and email."); return; }
-    setPhase("generating");
-    try {
-      const res = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          url, devName, devEmail, devMessage, profile,
-          selectedStyle: styles[selectedIndex],
-          pageStructure, imageUrls, stockImageUrls,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error || "Something went wrong."); setPhase("pick-style"); return; }
-      setPreviewUrl(data.previewUrl);
-      setPhase("done");
-    } catch {
-      setError("Network error. Please try again.");
-      setPhase("pick-style");
-    }
-  }
-
-  function handleCopy() {
-    navigator.clipboard.writeText(previewUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
-
-  function handleReset() {
-    setUrl(""); setDevName(""); setDevEmail(""); setDevMessage("");
-    setPreviewUrl(""); setError(""); setProfile(null);
-    setStyles([]); setPageStructure([]); setImageUrls([]);
-    setStockImageUrls([]); setSelectedIndex(0); setPhase("input");
-  }
-
-  const isLoading = phase === "analyzing" || phase === "generating";
-  const showApp = phase !== "input" && phase !== "analyzing";
 
   return (
     <div className="min-h-screen">
@@ -207,211 +118,34 @@ export default function Home() {
             ))}
           </div>
 
-          {/* ─── APP AREA ─── */}
+          {/* ─── URL INPUT ─── */}
           <div className="animate-fade-in-up delay-400 mt-14 max-w-xl mx-auto">
-            {/* Phase 1: URL Input */}
-            {(phase === "input" || phase === "analyzing") && (
-              <div>
-                <div className="relative group">
-                  <div className="absolute -inset-0.5 bg-gradient-to-r from-accent/30 via-accent/10 to-accent/30 rounded-2xl blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                  <div className="relative flex items-center bg-surface border border-[var(--border)] rounded-xl overflow-hidden">
-                    <div className="pl-4 text-neutral-600">
-                      <Globe className="w-5 h-5" />
-                    </div>
-                    <input
-                      type="url"
-                      placeholder="https://their-website.com"
-                      value={url}
-                      onChange={(e) => setUrl(e.target.value)}
-                      disabled={isLoading}
-                      onKeyDown={(e) => e.key === "Enter" && handleAnalyze()}
-                      className="flex-1 px-4 py-4 bg-transparent text-white text-base placeholder:text-neutral-600 focus:outline-none disabled:opacity-50 font-mono"
-                    />
-                    <button
-                      onClick={handleAnalyze}
-                      disabled={isLoading}
-                      className="m-1.5 px-5 py-2.5 bg-accent hover:bg-accent-light disabled:opacity-50 text-black font-semibold text-sm rounded-lg transition-all duration-200 hover:shadow-lg hover:shadow-accent/20 flex items-center gap-2 shrink-0"
-                    >
-                      {phase === "analyzing" ? (
-                        <>
-                          <Spinner className="w-4 h-4" />
-                          <span>Analyzing...</span>
-                        </>
-                      ) : (
-                        <>
-                          <span>Analyze</span>
-                          <ArrowRight className="w-3.5 h-3.5" />
-                        </>
-                      )}
-                    </button>
-                  </div>
+            <div className="relative group">
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-accent/30 via-accent/10 to-accent/30 rounded-2xl blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="relative flex items-center bg-surface border border-[var(--border)] rounded-xl overflow-hidden">
+                <div className="pl-4 text-neutral-600">
+                  <Globe className="w-5 h-5" />
                 </div>
-                <p className="mt-3 text-xs text-neutral-600 text-center">
-                  Paste any live website URL and we&apos;ll do the rest
-                </p>
-              </div>
-            )}
-
-            {/* Phase 2: Pick Style + Details */}
-            {(phase === "pick-style" || phase === "generating") && (
-              <div className="text-left space-y-5 animate-fade-in">
-                {/* Analyzed badge */}
-                {profile && (
-                  <div className="flex items-start gap-3 p-4 bg-surface rounded-xl border border-[var(--border)]">
-                    <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center shrink-0 mt-0.5">
-                      <Check className="w-4 h-4 text-accent" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-white font-medium text-sm">{profile.businessName}</p>
-                      <p className="text-xs text-neutral-500 mt-0.5 truncate">{profile.whatTheyDo}</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Style picker */}
-                <div>
-                  <p className="text-xs font-medium text-neutral-500 mb-2 uppercase tracking-wider">
-                    Choose a design direction
-                  </p>
-                  <div className="space-y-2">
-                    {styles.map((style, i) => (
-                      <button
-                        key={i}
-                        onClick={() => setSelectedIndex(i)}
-                        disabled={phase === "generating"}
-                        className={`w-full text-left p-4 rounded-xl border transition-all duration-200 group ${
-                          selectedIndex === i
-                            ? "bg-accent/5 border-accent/40 shadow-lg shadow-accent/5"
-                            : "bg-surface border-[var(--border)] hover:border-[var(--border-light)]"
-                        } disabled:opacity-50`}
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className={`w-2 h-2 rounded-full shrink-0 transition-colors ${
-                              selectedIndex === i ? "bg-accent" : "bg-neutral-700"
-                            }`} />
-                            <p className={`font-medium text-sm ${selectedIndex === i ? "text-accent" : "text-white"}`}>
-                              {style.styleName}
-                            </p>
-                          </div>
-                          {extractColors(style.styleBrief).length > 0 && (
-                            <div className="flex -space-x-1 shrink-0">
-                              {extractColors(style.styleBrief).map((color) => (
-                                <span
-                                  key={color}
-                                  className="w-4 h-4 rounded-full ring-2 ring-[#111]"
-                                  style={{ backgroundColor: color }}
-                                  title={color}
-                                />
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                        <p className="text-xs text-neutral-500 mt-1.5 ml-5 line-clamp-2">
-                          {style.styleBrief}
-                        </p>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Contact fields */}
-                <div className="space-y-3 pt-1">
-                  <div className="grid grid-cols-2 gap-3">
-                    <input
-                      type="text"
-                      placeholder="Your name"
-                      value={devName}
-                      onChange={(e) => setDevName(e.target.value)}
-                      disabled={phase === "generating"}
-                      className="px-3.5 py-2.5 bg-surface border border-[var(--border)] rounded-lg text-sm text-white placeholder:text-neutral-600 focus:outline-none focus:border-accent/40 transition-colors disabled:opacity-50"
-                    />
-                    <input
-                      type="email"
-                      placeholder="Your email"
-                      value={devEmail}
-                      onChange={(e) => setDevEmail(e.target.value)}
-                      disabled={phase === "generating"}
-                      className="px-3.5 py-2.5 bg-surface border border-[var(--border)] rounded-lg text-sm text-white placeholder:text-neutral-600 focus:outline-none focus:border-accent/40 transition-colors disabled:opacity-50"
-                    />
-                  </div>
-                  <textarea
-                    placeholder="Message to the client (optional)"
-                    value={devMessage}
-                    onChange={(e) => setDevMessage(e.target.value)}
-                    disabled={phase === "generating"}
-                    rows={2}
-                    className="w-full px-3.5 py-2.5 bg-surface border border-[var(--border)] rounded-lg text-sm text-white placeholder:text-neutral-600 focus:outline-none focus:border-accent/40 transition-colors disabled:opacity-50 resize-none"
-                  />
-                  <button
-                    onClick={handleGenerate}
-                    disabled={phase === "generating"}
-                    className="w-full py-3 bg-accent hover:bg-accent-light disabled:opacity-50 text-black font-semibold text-sm rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-accent/20 flex items-center justify-center gap-2"
-                  >
-                    {phase === "generating" ? (
-                      <>
-                        <Spinner className="w-4 h-4" />
-                        <span>Generating redesign...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="w-4 h-4" />
-                        <span>Generate Redesign</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-
+                <input
+                  type="url"
+                  placeholder="https://their-website.com"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleAnalyze()}
+                  className="flex-1 px-4 py-4 bg-transparent text-white text-base placeholder:text-neutral-600 focus:outline-none font-mono"
+                />
                 <button
-                  onClick={handleReset}
-                  disabled={phase === "generating"}
-                  className="text-xs text-neutral-600 hover:text-neutral-400 transition-colors disabled:opacity-50"
+                  onClick={handleAnalyze}
+                  className="m-1.5 px-5 py-2.5 bg-accent hover:bg-accent-light text-black font-semibold text-sm rounded-lg transition-all duration-200 hover:shadow-lg hover:shadow-accent/20 flex items-center gap-2 shrink-0"
                 >
-                  &larr; Start over
+                  <span>Analyze</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </div>
-            )}
-
-            {/* Phase 3: Done */}
-            {phase === "done" && previewUrl && (
-              <div className="animate-fade-in text-left space-y-4 p-5 bg-surface rounded-xl border border-accent/20 glow-amber">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
-                    <Check className="w-4 h-4 text-accent" />
-                  </div>
-                  <p className="text-white font-medium">Your preview is ready</p>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 px-3 py-2 bg-black/50 rounded-lg text-xs font-mono text-neutral-400 truncate border border-white/5">
-                    {previewUrl}
-                  </code>
-                  <button
-                    onClick={handleCopy}
-                    className="px-4 py-2 bg-white/10 hover:bg-white/15 text-white text-xs font-medium rounded-lg transition-colors whitespace-nowrap border border-white/10"
-                  >
-                    {copied ? "Copied!" : "Copy"}
-                  </button>
-                </div>
-
-                <a
-                  href={previewUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 w-full py-3 bg-accent hover:bg-accent-light text-black font-semibold text-sm rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-accent/20"
-                >
-                  <span>Open Preview</span>
-                  <ArrowRight className="w-4 h-4" />
-                </a>
-
-                <button
-                  onClick={handleReset}
-                  className="text-xs text-neutral-600 hover:text-neutral-400 transition-colors"
-                >
-                  Generate another
-                </button>
-              </div>
-            )}
+            </div>
+            <p className="mt-3 text-xs text-neutral-600 text-center">
+              Paste any live website URL and we&apos;ll do the rest
+            </p>
 
             {error && (
               <div className="mt-4 p-3 bg-red-500/5 border border-red-500/20 rounded-xl text-red-400 text-xs">
@@ -421,7 +155,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
 
       {/* ═══════ HOW IT WORKS ═══════ */}
       <section id="how" className="relative py-24 px-6 border-t border-white/5 noise-bg">
@@ -541,10 +274,7 @@ export default function Home() {
             Show potential clients what their website could look like — and let the design sell your services for you.
           </p>
           <button
-            onClick={() => {
-              handleReset();
-              window.scrollTo({ top: 0, behavior: "smooth" });
-            }}
+            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
             className="inline-flex items-center gap-2 px-8 py-3.5 bg-accent hover:bg-accent-light text-black font-semibold rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-accent/20"
           >
             <span>Get Started</span>
