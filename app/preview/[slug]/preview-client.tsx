@@ -23,6 +23,25 @@ export default function PreviewClient({
 }: PreviewClientProps) {
   const [activeTab, setActiveTab] = useState<TabKey>("redesign");
   const [iframeLoading, setIframeLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
+
+  async function handleExport() {
+    setExporting(true);
+    try {
+      const res = await fetch(`/api/preview/${slug}/html`);
+      if (!res.ok) return;
+      const html = await res.text();
+      const blob = new Blob([html], { type: "text/html" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${slug}-redesign.html`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setExporting(false);
+    }
+  }
 
   const tabs: { key: TabKey; label: string }[] = [
     { key: "original", label: "Original Site" },
@@ -41,7 +60,19 @@ export default function PreviewClient({
         <span className="text-sm font-semibold text-white tracking-tight">
           Presell
         </span>
-        <span className="text-xs text-zinc-500">Powered by Presell</span>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleExport}
+            disabled={exporting}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-500 rounded-md transition-colors disabled:opacity-50"
+          >
+            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            {exporting ? "Exporting..." : "Export HTML"}
+          </button>
+          <span className="text-xs text-zinc-500">Powered by Presell</span>
+        </div>
       </header>
 
       {/* Tab Bar */}
