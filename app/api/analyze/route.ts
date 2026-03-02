@@ -2,11 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 import { scrapeWebsite } from "@/lib/scraper";
 import { analyzeBusinessContent } from "@/lib/ai";
 import { searchPexels } from "@/lib/pexels";
+import { rateLimit, getIP } from "@/lib/rate-limit";
 
 export const maxDuration = 120;
 
 export async function POST(req: NextRequest) {
   try {
+    // Rate limit: 5 analyses per 10 minutes per IP
+    const ip = getIP(req.headers);
+    const limit = rateLimit(`analyze:${ip}`, { maxRequests: 5, windowMs: 10 * 60 * 1000 });
+    if (!limit.success) {
+      return NextResponse.json(
+        { error: `Too many requests. Please try again in ${limit.retryAfter} seconds.` },
+        { status: 429 }
+      );
+    }
+
     const { url } = await req.json();
 
     // Validate URL

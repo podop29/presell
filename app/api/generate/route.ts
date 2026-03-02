@@ -2,12 +2,23 @@ import { NextRequest, NextResponse } from "next/server";
 import { nanoid } from "nanoid";
 import { supabase } from "@/lib/supabase";
 import { generateVariation } from "@/lib/ai";
+import { rateLimit, getIP } from "@/lib/rate-limit";
 import type { GenerateRequest } from "@/types";
 
 export const maxDuration = 300;
 
 export async function POST(req: NextRequest) {
   try {
+    // Rate limit: 3 generations per 10 minutes per IP
+    const ip = getIP(req.headers);
+    const limit = rateLimit(`generate:${ip}`, { maxRequests: 3, windowMs: 10 * 60 * 1000 });
+    if (!limit.success) {
+      return NextResponse.json(
+        { error: `Too many requests. Please try again in ${limit.retryAfter} seconds.` },
+        { status: 429 }
+      );
+    }
+
     const body: GenerateRequest = await req.json();
     const {
       url,

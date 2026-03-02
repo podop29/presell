@@ -66,9 +66,15 @@ function CreatePageInner() {
   const [previewUrl, setPreviewUrl] = useState("");
   const [copied, setCopied] = useState(false);
 
+  /* Validate URL param */
+  const isValidUrl = (() => {
+    if (!url) return false;
+    try { new URL(url); return true; } catch { return false; }
+  })();
+
   /* Auto-start analysis on mount */
   useEffect(() => {
-    if (!url || hasStarted.current) return;
+    if (!isValidUrl || hasStarted.current) return;
     hasStarted.current = true;
 
     async function analyze() {
@@ -151,7 +157,22 @@ function CreatePageInner() {
         <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-accent/8 rounded-full blur-[120px] pointer-events-none" />
 
         <div className="relative z-10 max-w-xl mx-auto">
+          {/* Missing or invalid URL */}
+          {!isValidUrl && (
+            <div className="text-center py-12 animate-fade-in">
+              <p className="text-white font-medium mb-2">No valid URL provided</p>
+              <p className="text-sm text-neutral-500 mb-6">Enter a website URL on the homepage to get started.</p>
+              <Link
+                href="/"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-accent hover:bg-accent-light text-black font-semibold text-sm rounded-lg transition-all duration-200"
+              >
+                &larr; Go to homepage
+              </Link>
+            </div>
+          )}
+
           {/* URL being analyzed */}
+          {isValidUrl && (<>
           <div className="mb-8 text-center">
             <p className="text-xs text-neutral-600 mb-1">Redesigning</p>
             <p className="text-sm font-mono text-neutral-400 truncate">{url}</p>
@@ -336,6 +357,7 @@ function CreatePageInner() {
               </Link>
             </div>
           )}
+          </>)}
         </div>
       </section>
     </div>
