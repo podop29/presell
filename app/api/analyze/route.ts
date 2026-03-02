@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { scrapeWebsite } from "@/lib/scraper";
 import { analyzeBusinessContent } from "@/lib/ai";
+import { searchPexels } from "@/lib/pexels";
 
 export const maxDuration = 120;
 
@@ -31,16 +32,25 @@ export async function POST(req: NextRequest) {
     }
 
     // Step 2: Analyze business content + generate style directions
-    const { profile, styles, pageStructure } = await analyzeBusinessContent(
-      url,
-      scrapedData
-    );
+    const { profile, styles, pageStructure, imageSearchQueries } =
+      await analyzeBusinessContent(url, scrapedData);
+
+    // Step 3: Fetch stock images from Pexels using AI-suggested queries
+    let stockImageUrls: string[] = [];
+    if (imageSearchQueries.length > 0) {
+      try {
+        stockImageUrls = await searchPexels(imageSearchQueries);
+      } catch (err) {
+        console.error("Pexels search error:", err);
+      }
+    }
 
     return NextResponse.json({
       profile,
       styles,
       pageStructure,
       imageUrls: scrapedData.imageUrls,
+      stockImageUrls,
     });
   } catch (err) {
     console.error("Analyze error:", err);

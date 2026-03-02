@@ -1,0 +1,49 @@
+interface PexelsPhoto {
+  src: {
+    large: string;
+    medium: string;
+    landscape: string;
+  };
+  alt: string;
+}
+
+interface PexelsResponse {
+  photos: PexelsPhoto[];
+}
+
+export async function searchPexels(
+  queries: string[],
+  perQuery: number = 3
+): Promise<string[]> {
+  const apiKey = process.env.PEXELS_API_KEY;
+  if (!apiKey) {
+    console.warn("PEXELS_API_KEY not set, skipping stock images");
+    return [];
+  }
+
+  const allUrls: string[] = [];
+
+  await Promise.all(
+    queries.slice(0, 3).map(async (query) => {
+      try {
+        const res = await fetch(
+          `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=${perQuery}&orientation=landscape`,
+          {
+            headers: { Authorization: apiKey },
+          }
+        );
+
+        if (!res.ok) return;
+
+        const data: PexelsResponse = await res.json();
+        for (const photo of data.photos) {
+          allUrls.push(photo.src.large);
+        }
+      } catch (err) {
+        console.error(`Pexels search failed for "${query}":`, err);
+      }
+    })
+  );
+
+  return allUrls;
+}

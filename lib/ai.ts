@@ -64,7 +64,7 @@ You always respond with valid JSON only — no explanation, no markdown, no code
       messages: [
         {
           role: "user",
-          content: `Analyze this website and return a JSON object with three top-level keys: "profile", "styles", and "pageStructure".
+          content: `Analyze this website and return a JSON object with four top-level keys: "profile", "styles", "pageStructure", and "imageSearchQueries".
 
 "profile" must have exactly these fields:
 {
@@ -84,6 +84,12 @@ You always respond with valid JSON only — no explanation, no markdown, no code
 - A plumber might have: ["Navigation with phone number", "Hero with emergency CTA", "Services list", "Service area map", "Before/after gallery", "Reviews from Google", "Pricing or free estimate CTA", "Footer with license number"]
 
 Be specific about what content each section contains — don't just say "Hero section", say "Hero with bakery name, 'Fresh baked daily' tagline, and order online button". Include 6-10 sections.
+
+"imageSearchQueries" must be an array of exactly 3 strings — search queries to find high-quality stock photos that would look great on this business's redesigned website. Be specific and descriptive:
+- Query 1: A hero/banner image query (e.g. "luxury spa massage therapy interior warm lighting" or "modern auto repair shop professional mechanic")
+- Query 2: A secondary/lifestyle image (e.g. "relaxed woman enjoying facial treatment" or "happy family in new car dealership")
+- Query 3: A background/atmosphere image (e.g. "zen spa stones candles peaceful" or "clean modern office workspace")
+Tailor these to the specific business and industry. Use descriptive keywords that will return professional, high-quality photos.
 
 "styles" must be an array of exactly 3 objects. Each object has:
 {
@@ -108,7 +114,7 @@ Page Content: ${data.content.slice(0, 3000)}`,
 
     const textBlock = message.content.find((block) => block.type === "text");
     if (!textBlock || textBlock.type !== "text") {
-      return { profile: DEFAULT_PROFILE, styles: DEFAULT_STYLES, pageStructure: DEFAULT_PAGE_STRUCTURE };
+      return { profile: DEFAULT_PROFILE, styles: DEFAULT_STYLES, pageStructure: DEFAULT_PAGE_STRUCTURE, imageSearchQueries: [] };
     }
 
     let jsonStr = textBlock.text.trim();
@@ -157,9 +163,17 @@ Page Content: ${data.content.slice(0, 3000)}`,
       pageStructure = parsed.pageStructure;
     }
 
-    return { profile, styles, pageStructure };
+    let imageSearchQueries: string[] = [];
+    if (
+      Array.isArray(parsed.imageSearchQueries) &&
+      parsed.imageSearchQueries.every((s: unknown) => typeof s === "string")
+    ) {
+      imageSearchQueries = parsed.imageSearchQueries;
+    }
+
+    return { profile, styles, pageStructure, imageSearchQueries };
   } catch {
-    return { profile: DEFAULT_PROFILE, styles: DEFAULT_STYLES, pageStructure: DEFAULT_PAGE_STRUCTURE };
+    return { profile: DEFAULT_PROFILE, styles: DEFAULT_STYLES, pageStructure: DEFAULT_PAGE_STRUCTURE, imageSearchQueries: [] };
   }
 }
 
@@ -200,13 +214,19 @@ Every single HTML element you generate MUST contain real, visible content. Never
 function buildVariationPrompt(
   profile: BusinessProfile,
   imageUrls: string[],
+  stockImageUrls: string[],
   style: StyleSuggestion,
   pageStructure: string[]
 ): string {
-  const images =
+  const originalImages =
     imageUrls.length > 0
       ? imageUrls.slice(0, 10).join("\n")
-      : "(no images found)";
+      : "(no images found on original site)";
+
+  const stockImages =
+    stockImageUrls.length > 0
+      ? stockImageUrls.join("\n")
+      : "(no stock images available)";
 
   const structureList = pageStructure
     .map((section, i) => `${i + 1}. ${section}`)
@@ -227,8 +247,18 @@ Design Style: ${style.styleName}
 Style Direction:
 ${style.styleBrief}
 
-Original Images (use these URLs directly in img tags — make them look stunning):
-${images}
+ORIGINAL IMAGES (from the business's current website — use these for authenticity):
+${originalImages}
+
+STOCK IMAGES (high-quality professional photos relevant to this business — use these to elevate the design):
+${stockImages}
+
+Image Usage Strategy:
+- Use ORIGINAL images for: logos, team photos, real product shots, storefront photos — anything that shows the real business
+- Use STOCK images for: hero backgrounds, section backgrounds, decorative lifestyle shots, about section imagery — anywhere you need a high-quality visual that the original site lacks
+- Mix both sets naturally throughout the page — don't cluster all stock images in one place
+- Every image must use object-cover, rounded corners, and proper aspect ratios
+- If a section needs an image but neither set has a good fit, skip the image rather than using a bad one
 
 ORIGINAL PAGE STRUCTURE — follow this structure closely:
 The original website has these sections. Your redesign must include upgraded versions of each of these, in a similar order. Don't invent sections that don't relate to this business. Instead, take what they already have and make each section dramatically more beautiful and polished.
@@ -281,6 +311,7 @@ function extractHtml(text: string): string {
 export async function generateVariation(
   profile: BusinessProfile,
   imageUrls: string[],
+  stockImageUrls: string[],
   style: StyleSuggestion,
   pageStructure: string[]
 ): Promise<string> {
@@ -291,7 +322,7 @@ export async function generateVariation(
     messages: [
       {
         role: "user",
-        content: buildVariationPrompt(profile, imageUrls, style, pageStructure),
+        content: buildVariationPrompt(profile, imageUrls, stockImageUrls, style, pageStructure),
       },
     ],
   });

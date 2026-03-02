@@ -18,6 +18,7 @@ export async function POST(req: NextRequest) {
       selectedStyle,
       pageStructure,
       imageUrls,
+      stockImageUrls,
     } = body;
 
     // Validate
@@ -44,7 +45,7 @@ export async function POST(req: NextRequest) {
     // Generate the selected variation
     let html;
     try {
-      html = await generateVariation(profile, imageUrls || [], selectedStyle, pageStructure);
+      html = await generateVariation(profile, imageUrls || [], stockImageUrls || [], selectedStyle, pageStructure);
     } catch {
       return NextResponse.json(
         { error: "Redesign generation failed. Please try again." },

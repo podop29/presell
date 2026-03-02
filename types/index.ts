@@ -27,6 +27,7 @@ export interface AnalyzeResponse {
   styles: [StyleSuggestion, StyleSuggestion, StyleSuggestion];
   pageStructure: string[];
   imageUrls: string[];
+  stockImageUrls: string[];
 }
 
 export interface GenerateRequest {
@@ -38,6 +39,7 @@ export interface GenerateRequest {
   selectedStyle: StyleSuggestion;
   pageStructure: string[];
   imageUrls: string[];
+  stockImageUrls: string[];
 }
 
 export interface GenerateResponse {
@@ -73,4 +75,5 @@ export interface AnalysisResult {
   profile: BusinessProfile;
   styles: [StyleSuggestion, StyleSuggestion, StyleSuggestion];
   pageStructure: string[];
+  imageSearchQueries: string[];
 }

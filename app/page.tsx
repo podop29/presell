@@ -26,6 +26,7 @@ export default function Home() {
   const [styles, setStyles] = useState<StyleSuggestion[]>([]);
   const [pageStructure, setPageStructure] = useState<string[]>([]);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [stockImageUrls, setStockImageUrls] = useState<string[]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
 
   // Final result
@@ -60,6 +61,7 @@ export default function Home() {
       setStyles(data.styles);
       setPageStructure(data.pageStructure);
       setImageUrls(data.imageUrls);
+      setStockImageUrls(data.stockImageUrls || []);
       setSelectedIndex(0);
       setPhase("pick-style");
     } catch {
@@ -90,6 +92,7 @@ export default function Home() {
           selectedStyle: styles[selectedIndex],
           pageStructure,
           imageUrls,
+          stockImageUrls,
         }),
       });
 
@@ -126,6 +129,7 @@ export default function Home() {
     setStyles([]);
     setPageStructure([]);
     setImageUrls([]);
+    setStockImageUrls([]);
     setSelectedIndex(0);
     setPhase("input");
   }
