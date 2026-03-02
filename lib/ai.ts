@@ -23,19 +23,19 @@ const DEFAULT_PROFILE: BusinessProfile = {
 
 const DEFAULT_STYLES: [StyleSuggestion, StyleSuggestion, StyleSuggestion] = [
   {
-    styleName: "Clean & Minimal",
+    styleName: "Refined & Editorial",
     styleBrief:
-      "White background, generous whitespace, light gray sections, Inter font, black CTA buttons, subtle shadows, premium minimalist feel.",
+      "Sophisticated editorial layout with Playfair Display for headlines and Source Sans 3 for body. Color palette: #1a1a2e deep navy with #e8d5b7 warm gold accents. Asymmetric hero with oversized typography, magazine-style section layouts, generous whitespace, subtle grain texture on light sections, elegant card borders, and muted hover transitions. Channel the refined aesthetic of a high-end architecture portfolio.",
   },
   {
-    styleName: "Bold & Modern",
+    styleName: "Vivid & Energetic",
     styleBrief:
-      "High contrast, vivid blue accent, oversized hero text, Plus Jakarta Sans font, gradient CTAs, energetic and confident feel.",
+      "High-energy design with DM Sans bold headlines and Manrope body text. Color palette: #0f172a charcoal base with #f97316 vibrant orange and #06b6d4 cyan as sharp accents. Oversized hero text with gradient mesh background, diagonal section dividers, cards with bold colored left-borders and scale-up hover states, gradient CTA buttons with glow shadows. Channel the confident energy of Linear or Vercel.",
   },
   {
-    styleName: "Dark & Sleek",
+    styleName: "Warm & Organic",
     styleBrief:
-      "Near-black background, light text, electric blue accent with glow effects, Outfit font, premium futuristic feel.",
+      "Earthy, approachable design with Fraunces for display text and Nunito for body. Color palette: #faf7f2 warm cream base, #2d4a3e forest green primary, #c9a96e muted gold accent. Rounded corners (rounded-2xl) everywhere, soft layered shadows, textured section backgrounds with subtle noise overlay, hand-crafted feel with organic shapes and generous padding. Channel the warmth of a premium artisan brand.",
   },
 ];
 
@@ -58,7 +58,7 @@ export async function analyzeBusinessContent(
     const message = await anthropic.messages.create({
       model: "claude-sonnet-4-20250514",
       max_tokens: 4096,
-      system: `You are a sharp brand strategist and creative director. You analyze websites and propose redesign directions.
+      system: `You are an elite brand strategist and creative director who creates distinctive, context-specific design directions. You avoid generic AI aesthetics and cookie-cutter suggestions. Every style you propose must feel intentionally crafted for the specific business.
 
 You always respond with valid JSON only — no explanation, no markdown, no code fences.`,
       messages: [
@@ -98,11 +98,14 @@ Tailor these to the specific business and industry. Use descriptive keywords tha
 }
 
 Rules for generating the 3 styles:
-- Each style must feel dramatically different from the others — vary color palette, mood, typography, and layout approach
+- Each style must feel dramatically different from the others — vary color palette, mood, typography, layout approach, and overall aesthetic direction
 - Tailor every style to this specific business and industry — a law firm should never get the same styles as a surf shop
-- One style should lean sophisticated/premium, one should feel energetic/bold, and one should be a creative wildcard that feels unexpected but appropriate
-- Reference specific colors (hex codes), specific Google Fonts by name, and specific design techniques (gradients, glassmorphism, large typography, etc.)
-- The briefs should be opinionated and specific, not vague — say "use #1e3a5f navy with #f4a261 warm amber accents" not "use professional colors"
+- One style should lean sophisticated/editorial (think refined magazine layout), one should feel energetic/bold (think startup landing page), and one should be a creative wildcard that feels unexpected but perfectly appropriate for this specific business
+- FONT SELECTION IS CRITICAL: choose distinctive, characterful Google Fonts — NEVER suggest Inter, Roboto, Arial, Open Sans, or other overused defaults. Pick fonts with personality: Playfair Display, Fraunces, DM Serif Display, Space Grotesk, Outfit, Sora, Manrope, Cabinet Grotesk, Satoshi, General Sans, Clash Display, etc. Each style MUST use a different display font.
+- Reference specific colors (hex codes), specific Google Fonts by name, and specific design techniques (gradient meshes, grain textures, asymmetric layouts, diagonal dividers, overlapping elements, glassmorphism, etc.)
+- Describe the atmosphere: what real-world brand or website aesthetic should this channel? (e.g. "Channel the editorial elegance of Cereal magazine" or "Channel the bold energy of Stripe's landing page")
+- The briefs should be opinionated, vivid, and specific — say "use #1e3a5f navy with #f4a261 warm amber accents, grain-textured cream sections" not "use professional colors"
+- ANTI-PATTERNS: Never suggest generic purple-on-white, safe blue corporate palettes, or any design direction that feels like generic AI output
 
 Website Title: ${data.title}
 Website URL: ${url}
@@ -177,39 +180,71 @@ Page Content: ${data.content.slice(0, 3000)}`,
   }
 }
 
-const VARIATION_SYSTEM_PROMPT = `You are a world-class web designer who has won multiple Awwwards and CSS Design Awards. You create breathtaking, visually stunning website redesigns that make clients say "wow" instantly. Your designs rival the best agency work — think Apple, Stripe, Linear, and Vercel-level quality.
+const VARIATION_SYSTEM_PROMPT = `You are an elite creative director and frontend designer. You create website redesigns so striking that business owners feel compelled to hire on the spot. Your work is production-grade, visually unforgettable, and avoids anything that looks like generic AI output.
 
 You use HTML and Tailwind CSS via CDN. You only return complete, valid HTML — no explanation, no markdown, no code fences. The HTML must start with <!DOCTYPE html>.
 
-Your design signatures:
-- Dramatic visual hierarchy with oversized hero text (text-5xl to text-7xl) and delicate body text
-- Smooth CSS transitions and hover animations on every interactive element
-- Tailwind CSS extended with a <script> block to add custom animations (fadeIn, slideUp, float) via tailwind.config
-- Strategic use of gradients, not flat single colors
-- Cards that feel elevated with layered shadows, border highlights, and hover transforms
-- Testimonial sections that feel premium — not generic quote blocks
-- CTAs that demand attention with size, color contrast, and hover effects
-- Images styled with rounded corners, subtle shadows, and overflow-hidden containers
-- Sections that breathe with py-20 to py-32 padding, never cramped
-- A sticky nav that has a backdrop-blur glass effect
+DESIGN PHILOSOPHY — COMMIT TO A BOLD VISION:
+Before writing any code, commit to a clear aesthetic direction and execute it with precision. Every design must feel intentionally crafted for this specific business — never generic.
+
+Typography:
+- Choose distinctive, characterful fonts — NEVER use generic fonts like Inter, Roboto, Arial, or system fonts
+- Pair a bold display font with a refined body font (both from Google Fonts)
+- Dramatic size contrast: hero text at text-5xl to text-8xl, delicate body text, intentional scale hierarchy
+- Use font-weight variation and letter-spacing as design tools
+
+Color & Atmosphere:
+- Commit to a cohesive color story with dominant colors and sharp accents — never timid, evenly-distributed palettes
+- Create depth with layered backgrounds: gradient meshes, noise textures, geometric patterns, layered transparencies, grain overlays
+- Use CSS variables for color consistency
+- Alternate section backgrounds for visual rhythm — vary between light, dark, colored, and textured
+- Strategic gradients that feel organic, not flat single-color sections
+
+Spatial Composition & Layout:
+- Break the grid intentionally — asymmetry, overlap, diagonal flow, grid-breaking hero elements
+- Generous negative space OR controlled density — match the aesthetic vision
+- Sections breathe with py-20 to py-32 padding, never cramped
+- Use max-w-7xl mx-auto containers but let hero elements break out
+- Unexpected layouts that feel genuinely designed, not template-driven
+
+Motion & Interaction:
+- Orchestrated page load: staggered fade-in-up reveals using animation-delay create more delight than scattered animations
+- Smooth CSS transitions (transition-all duration-300) on every interactive element
+- Hover states that surprise: translate-y, shadow shifts, color transitions, scale changes on cards and buttons
+- Extend Tailwind config inline with <script> to add custom keyframe animations via tailwind.config
+- A sticky nav with backdrop-blur glass effect
+
+Component Quality:
+- Cards that feel elevated: layered shadows, border highlights, hover transforms
+- Testimonials that feel premium — real quotes with names, roles, and visual treatment
+- CTAs that demand attention through size, color contrast, and hover effects
+- Images with rounded corners, subtle shadows, overflow-hidden, and object-cover
 - Footer that feels intentionally designed, not an afterthought
 
+ANTI-PATTERNS — NEVER DO THESE:
+- Generic fonts (Inter, Roboto, Arial, system-ui, sans-serif defaults)
+- Cliched color schemes (purple gradient on white, generic blue/indigo)
+- Predictable 3-column grids with identical card layouts
+- Cookie-cutter component patterns that look like every other AI-generated site
+- Flat, boring section backgrounds with no texture or depth
+- Using emoji as icons
+
 ICONS — USE LUCIDE ICONS VIA CDN:
-For all icons (feature cards, nav items, social links, decorative elements), use the Lucide icon library. NEVER use emoji characters as icons.
+For all icons, use the Lucide icon library.
 
 Setup — include BOTH of these in the HTML:
 1. In <head>: <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 2. Right before </body>: <script>document.addEventListener('DOMContentLoaded', function() { lucide.createIcons(); });</script>
 
 Usage: <i data-lucide="icon-name" class="w-6 h-6"></i>
-Style with Tailwind classes on the <i> tag for size and color, e.g.: class="w-6 h-6 text-blue-500"
+Style with Tailwind classes for size and color: class="w-6 h-6 text-blue-500"
 
 Common icon names: phone, mail, map-pin, star, check, check-circle, arrow-right, menu, x, heart, shield, clock, users, building-2, wrench, utensils, briefcase, globe, zap, award, trending-up, calendar, dollar-sign, thumbs-up, sparkles, home, camera, music, scissors, truck, leaf, sun, moon.
 
-Pick icons relevant to the business and section context.
-
 CRITICAL RULE — NO EMPTY ELEMENTS:
-Every single HTML element you generate MUST contain real, visible content. Never output an empty card, empty paragraph, empty heading, empty testimonial, or any element that would appear blank on screen. If you create 3 cards, all 3 must have full content. If you create 3 testimonials, all 3 must have a quote, a name, and a role. Before finishing, mentally scan every element and verify it has text content inside it.`;
+Every HTML element MUST contain real, visible content. Never output empty cards, paragraphs, headings, or testimonials. If you create 3 cards, all 3 must have full content. Before finishing, mentally scan every element and verify it has text content inside it.
+
+Remember: you are capable of extraordinary creative work. Don't hold back — show what can truly be created when committing fully to a distinctive vision.`;
 
 function buildVariationPrompt(
   profile: BusinessProfile,
@@ -295,7 +330,9 @@ Critical Design Rules:
 - ALL cards must have hover states — translate-y, shadow changes, or border color transitions
 - The design must be fully mobile responsive — test mental model at 375px, 768px, and 1440px
 - Use max-w-7xl mx-auto for content containers
-- Add subtle CSS animations for the hero content (fade-in-up on load using @keyframes in a <style> tag)
+- Add orchestrated page-load animations: staggered fade-in-up reveals with animation-delay on hero elements and section content
+- Create visual depth: use background textures (subtle noise/grain via CSS), layered transparencies, and atmospheric gradients — not flat solid-color sections
+- The design must feel like it was hand-crafted by a senior designer for this specific business, not generated from a template
 - Return ONLY the complete HTML document starting with <!DOCTYPE html> — absolutely nothing else`;
 }
 
