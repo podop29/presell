@@ -1,5 +1,6 @@
 interface PexelsPhoto {
   src: {
+    large2x: string;
     large: string;
     medium: string;
     landscape: string;
@@ -37,7 +38,7 @@ export async function searchPexels(
 
         const data: PexelsResponse = await res.json();
         for (const photo of data.photos) {
-          allUrls.push(photo.src.large);
+          allUrls.push(photo.src.large2x);
         }
       } catch (err) {
         console.error(`Pexels search failed for "${query}":`, err);

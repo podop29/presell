@@ -35,8 +35,12 @@ export async function scrapeWebsite(url: string): Promise<ScrapedData> {
     const imageUrls = await page.evaluate(() => {
       const imgs = Array.from(document.querySelectorAll("img"));
       return imgs
+        .filter((img) => {
+          const w = img.naturalWidth || img.width;
+          const h = img.naturalHeight || img.height;
+          return w >= 200 && h >= 150 && img.src.startsWith("http");
+        })
         .map((img) => img.src)
-        .filter((src) => src.startsWith("http"))
         .slice(0, 20);
     });
 

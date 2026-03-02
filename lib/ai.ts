@@ -289,11 +289,13 @@ STOCK IMAGES (high-quality professional photos relevant to this business — use
 ${stockImages}
 
 Image Usage Strategy:
-- Use ORIGINAL images for: logos, team photos, real product shots, storefront photos — anything that shows the real business
-- Use STOCK images for: hero backgrounds, section backgrounds, decorative lifestyle shots, about section imagery — anywhere you need a high-quality visual that the original site lacks
+- HERO SECTION: ALWAYS use a STOCK image for the hero/banner — stock images are guaranteed high-resolution (1880px wide) and landscape-oriented, perfect for hero backgrounds. Never use an original website image as the hero background — they are often too small or wrong aspect ratio.
+- Use ORIGINAL images for: logos, team photos, real product shots, storefront photos — smaller placements where authenticity matters
+- Use STOCK images for: hero backgrounds, section backgrounds, decorative lifestyle shots, about section imagery — anywhere you need a large, high-quality visual
+- Original images may be low-resolution — only use them at small sizes (cards, thumbnails, team grids), never as full-width backgrounds
 - Mix both sets naturally throughout the page — don't cluster all stock images in one place
 - Every image must use object-cover, rounded corners, and proper aspect ratios
-- If a section needs an image but neither set has a good fit, skip the image rather than using a bad one
+- If a section needs an image but neither set has a good fit, use a CSS gradient or textured background instead
 
 ORIGINAL PAGE STRUCTURE — follow this structure closely:
 The original website has these sections. Your redesign must include upgraded versions of each of these, in a similar order. Don't invent sections that don't relate to this business. Instead, take what they already have and make each section dramatically more beautiful and polished.
