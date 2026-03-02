@@ -2,39 +2,35 @@
 
 import { useState } from "react";
 
-type TabKey = "original" | "a" | "b" | "c";
+type TabKey = "original" | "redesign";
 
 interface PreviewClientProps {
   slug: string;
   originalUrl: string;
+  styleName: string;
   devName: string;
   devEmail: string;
   devMessage: string | null;
-  styleNames: [string, string, string];
 }
 
 export default function PreviewClient({
   slug,
   originalUrl,
+  styleName,
   devName,
   devEmail,
   devMessage,
-  styleNames,
 }: PreviewClientProps) {
-  const [activeTab, setActiveTab] = useState<TabKey>("a");
+  const [activeTab, setActiveTab] = useState<TabKey>("redesign");
   const [iframeLoading, setIframeLoading] = useState(true);
 
   const tabs: { key: TabKey; label: string }[] = [
     { key: "original", label: "Original Site" },
-    { key: "a", label: styleNames[0] },
-    { key: "b", label: styleNames[1] },
-    { key: "c", label: styleNames[2] },
+    { key: "redesign", label: styleName },
   ];
 
-  function getIframeSrc(tab: TabKey): string {
-    if (tab === "original") return originalUrl;
-    return `/api/preview/${slug}/variation-${tab}`;
-  }
+  const iframeSrc =
+    activeTab === "original" ? originalUrl : `/api/preview/${slug}/html`;
 
   const showCta = devName && devEmail;
 
@@ -49,7 +45,7 @@ export default function PreviewClient({
       </header>
 
       {/* Tab Bar */}
-      <nav className="bg-zinc-900 border-b border-zinc-800 px-4 flex shrink-0 overflow-x-auto">
+      <nav className="bg-zinc-900 border-b border-zinc-800 px-4 flex shrink-0">
         {tabs.map((tab) => (
           <button
             key={tab.key}
@@ -80,7 +76,7 @@ export default function PreviewClient({
         )}
         <iframe
           key={activeTab}
-          src={getIframeSrc(activeTab)}
+          src={iframeSrc}
           className="w-full h-full absolute inset-0 border-0"
           title={tabs.find((t) => t.key === activeTab)?.label || "Preview"}
           sandbox={activeTab === "original" ? "allow-scripts allow-same-origin" : undefined}

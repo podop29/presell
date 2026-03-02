@@ -43,14 +43,10 @@ export default async function PreviewPage({
     <PreviewClient
       slug={data.slug}
       originalUrl={data.original_url}
+      styleName={data.variation_a_style || "Redesign"}
       devName={data.dev_name}
       devEmail={data.dev_email}
       devMessage={data.dev_message}
-      styleNames={[
-        data.variation_a_style || "Variation A",
-        data.variation_b_style || "Variation B",
-        data.variation_c_style || "Variation C",
-      ]}
     />
   );
 }

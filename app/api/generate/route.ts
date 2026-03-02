@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { nanoid } from "nanoid";
 import { supabase } from "@/lib/supabase";
-import { scrapeWebsite } from "@/lib/scraper";
-import { analyzeBusinessContent, generateVariations } from "@/lib/ai";
+import { generateVariation } from "@/lib/ai";
 import type { GenerateRequest } from "@/types";
 
 export const maxDuration = 300;
@@ -10,9 +9,18 @@ export const maxDuration = 300;
 export async function POST(req: NextRequest) {
   try {
     const body: GenerateRequest = await req.json();
-    const { url, devName, devEmail, devMessage } = body;
+    const {
+      url,
+      devName,
+      devEmail,
+      devMessage,
+      profile,
+      selectedStyle,
+      pageStructure,
+      imageUrls,
+    } = body;
 
-    // Validate URL
+    // Validate
     try {
       new URL(url);
     } catch {
@@ -26,28 +34,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Step 1: Scrape the website
-    let scrapedData;
-    try {
-      scrapedData = await scrapeWebsite(url);
-    } catch (scrapeErr) {
-      console.error("Scrape error:", scrapeErr);
+    if (!profile || !selectedStyle || !pageStructure) {
       return NextResponse.json(
-        {
-          error:
-            "We couldn't access this website. It may be blocking automated access. Try a different URL.",
-        },
-        { status: 422 }
+        { error: "Missing analysis data. Please analyze the site first." },
+        { status: 400 }
       );
     }
 
-    // Step 2: Analyze business content + generate style directions (Pass 1)
-    const { profile, styles } = await analyzeBusinessContent(url, scrapedData);
-
-    // Step 3: Generate 3 variations in parallel (Pass 2)
-    let variations;
+    // Generate the selected variation
+    let html;
     try {
-      variations = await generateVariations(profile, scrapedData.imageUrls, styles);
+      html = await generateVariation(profile, imageUrls || [], selectedStyle, pageStructure);
     } catch {
       return NextResponse.json(
         { error: "Redesign generation failed. Please try again." },
@@ -55,7 +52,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Step 4: Save to Supabase
+    // Save to Supabase
     const slug = nanoid(8);
     const now = new Date();
     const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
@@ -63,19 +60,13 @@ export async function POST(req: NextRequest) {
     const { error: dbError } = await supabase.from("previews").insert({
       slug,
       original_url: url,
-      original_screenshot: scrapedData.screenshot,
-      redesign_html: variations.a,
+      redesign_html: html,
       dev_name: devName,
       dev_email: devEmail,
       dev_message: devMessage || null,
       created_at: now.toISOString(),
       expires_at: expiresAt.toISOString(),
-      variation_a_html: variations.a,
-      variation_a_style: styles[0].styleName,
-      variation_b_html: variations.b,
-      variation_b_style: styles[1].styleName,
-      variation_c_html: variations.c,
-      variation_c_style: styles[2].styleName,
+      variation_a_style: selectedStyle.styleName,
     });
 
     if (dbError) {

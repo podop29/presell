@@ -2,73 +2,110 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import type { BusinessProfile, StyleSuggestion } from "@/types";
 
-const STEPS = [
-  "Scraping website...",
-  "Analyzing business content...",
-  "Generating 3 variations in parallel...",
-  "Saving your preview...",
-  "Done!",
-];
+type Phase = "input" | "analyzing" | "pick-style" | "generating" | "done";
+
+function extractColors(text: string): string[] {
+  const matches = text.match(/#[0-9a-fA-F]{6}\b/g);
+  if (!matches) return [];
+  // Deduplicate and limit to 5
+  return Array.from(new Set(matches)).slice(0, 5);
+}
 
 export default function Home() {
   const [url, setUrl] = useState("");
   const [devName, setDevName] = useState("");
   const [devEmail, setDevEmail] = useState("");
   const [devMessage, setDevMessage] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [stepIndex, setStepIndex] = useState(0);
   const [error, setError] = useState("");
+  const [phase, setPhase] = useState<Phase>("input");
+
+  // Analysis results
+  const [profile, setProfile] = useState<BusinessProfile | null>(null);
+  const [styles, setStyles] = useState<StyleSuggestion[]>([]);
+  const [pageStructure, setPageStructure] = useState<string[]>([]);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [selectedIndex, setSelectedIndex] = useState<number>(0);
+
+  // Final result
   const [previewUrl, setPreviewUrl] = useState("");
   const [copied, setCopied] = useState(false);
 
-  async function handleGenerate() {
+  async function handleAnalyze() {
     setError("");
-    setPreviewUrl("");
-    setCopied(false);
-
-    if (!url || !devName || !devEmail) {
-      setError("Please fill in the URL, your name, and your email.");
+    if (!url) {
+      setError("Please enter a website URL.");
       return;
     }
 
-    setLoading(true);
-    setStepIndex(0);
+    setPhase("analyzing");
 
-    // Progress through steps on a timer
-    const stepTimings = [5000, 8000, 25000, 5000];
-    let currentStep = 0;
-    const interval = setInterval(() => {
-      currentStep++;
-      if (currentStep < STEPS.length - 1) {
-        setStepIndex(currentStep);
-      } else {
-        clearInterval(interval);
+    try {
+      const res = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Something went wrong.");
+        setPhase("input");
+        return;
       }
-    }, stepTimings[currentStep] || 8000);
+
+      setProfile(data.profile);
+      setStyles(data.styles);
+      setPageStructure(data.pageStructure);
+      setImageUrls(data.imageUrls);
+      setSelectedIndex(0);
+      setPhase("pick-style");
+    } catch {
+      setError("Network error. Please try again.");
+      setPhase("input");
+    }
+  }
+
+  async function handleGenerate() {
+    setError("");
+    if (!devName || !devEmail) {
+      setError("Please fill in your name and email.");
+      return;
+    }
+
+    setPhase("generating");
 
     try {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url, devName, devEmail, devMessage }),
+        body: JSON.stringify({
+          url,
+          devName,
+          devEmail,
+          devMessage,
+          profile,
+          selectedStyle: styles[selectedIndex],
+          pageStructure,
+          imageUrls,
+        }),
       });
 
       const data = await res.json();
-      clearInterval(interval);
 
       if (!res.ok) {
         setError(data.error || "Something went wrong.");
+        setPhase("pick-style");
         return;
       }
 
-      setStepIndex(STEPS.length - 1);
       setPreviewUrl(data.previewUrl);
+      setPhase("done");
     } catch {
-      clearInterval(interval);
       setError("Network error. Please try again.");
-    } finally {
-      setLoading(false);
+      setPhase("pick-style");
     }
   }
 
@@ -85,12 +122,19 @@ export default function Home() {
     setDevMessage("");
     setPreviewUrl("");
     setError("");
-    setStepIndex(0);
+    setProfile(null);
+    setStyles([]);
+    setPageStructure([]);
+    setImageUrls([]);
+    setSelectedIndex(0);
+    setPhase("input");
   }
+
+  const isLoading = phase === "analyzing" || phase === "generating";
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center px-4 py-16">
-      <div className="w-full max-w-xl space-y-8">
+      <div className="w-full max-w-2xl space-y-8">
         <div className="text-center space-y-3">
           <h1 className="text-4xl font-bold tracking-tight text-white">
             Presell
@@ -100,97 +144,147 @@ export default function Home() {
           </p>
         </div>
 
-        {!previewUrl && (
+        {/* Phase 1: URL Input */}
+        {(phase === "input" || phase === "analyzing") && (
           <div className="space-y-4">
-            <div>
-              <input
-                type="url"
-                placeholder="https://their-website.com"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                disabled={loading}
-                className="w-full px-4 py-4 bg-neutral-900 border border-neutral-800 rounded-lg text-white text-lg placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <input
-                type="text"
-                placeholder="Your Name"
-                value={devName}
-                onChange={(e) => setDevName(e.target.value)}
-                disabled={loading}
-                className="w-full px-4 py-3 bg-neutral-900 border border-neutral-800 rounded-lg text-white placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
-              />
-              <input
-                type="email"
-                placeholder="Your Email"
-                value={devEmail}
-                onChange={(e) => setDevEmail(e.target.value)}
-                disabled={loading}
-                className="w-full px-4 py-3 bg-neutral-900 border border-neutral-800 rounded-lg text-white placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
-              />
-            </div>
-
-            <textarea
-              placeholder="I noticed your website could use some love — here's what it could look like."
-              value={devMessage}
-              onChange={(e) => setDevMessage(e.target.value)}
-              disabled={loading}
-              rows={3}
-              className="w-full px-4 py-3 bg-neutral-900 border border-neutral-800 rounded-lg text-white placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 resize-none"
+            <input
+              type="url"
+              placeholder="https://their-website.com"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              disabled={isLoading}
+              className="w-full px-4 py-4 bg-neutral-900 border border-neutral-800 rounded-lg text-white text-lg placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
             />
-
             <button
-              onClick={handleGenerate}
-              disabled={loading}
+              onClick={handleAnalyze}
+              disabled={isLoading}
               className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white font-semibold text-lg rounded-lg transition-colors"
             >
-              {loading ? "Generating..." : "Generate Redesign"}
+              {phase === "analyzing" ? (
+                <span className="flex items-center justify-center gap-3">
+                  <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  Analyzing website...
+                </span>
+              ) : (
+                "Analyze Website"
+              )}
             </button>
           </div>
         )}
 
-        {loading && (
-          <div className="space-y-1 p-5 bg-neutral-900 border border-neutral-800 rounded-lg">
-            {STEPS.map((step, i) => (
-              <div
-                key={step}
-                className={`flex items-center gap-3 py-1.5 text-sm transition-colors ${
-                  i < stepIndex
-                    ? "text-green-400"
-                    : i === stepIndex
-                    ? "text-blue-400"
-                    : "text-neutral-600"
-                }`}
-              >
-                {i < stepIndex ? (
-                  <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                ) : i === stepIndex ? (
-                  <svg className="w-4 h-4 shrink-0 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                ) : (
-                  <span className="w-4 h-4 shrink-0 flex items-center justify-center">
-                    <span className="w-1.5 h-1.5 rounded-full bg-neutral-700" />
-                  </span>
-                )}
-                {step}
+        {/* Phase 2: Pick a Style */}
+        {(phase === "pick-style" || phase === "generating") && (
+          <div className="space-y-6">
+            {profile && (
+              <div className="p-4 bg-neutral-900 border border-neutral-800 rounded-lg">
+                <p className="text-sm text-neutral-400">Analyzed</p>
+                <p className="text-white font-medium">{profile.businessName}</p>
+                <p className="text-sm text-neutral-500">{profile.whatTheyDo}</p>
               </div>
-            ))}
+            )}
+
+            <div>
+              <p className="text-sm font-medium text-neutral-400 mb-3">
+                Choose a design direction
+              </p>
+              <div className="space-y-3">
+                {styles.map((style, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setSelectedIndex(i)}
+                    disabled={phase === "generating"}
+                    className={`w-full text-left p-4 rounded-lg border transition-all ${
+                      selectedIndex === i
+                        ? "bg-blue-600/10 border-blue-500 ring-1 ring-blue-500"
+                        : "bg-neutral-900 border-neutral-800 hover:border-neutral-700"
+                    } disabled:opacity-50`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <p className={`font-semibold ${selectedIndex === i ? "text-blue-400" : "text-white"}`}>
+                        {style.styleName}
+                      </p>
+                      {extractColors(style.styleBrief).length > 0 && (
+                        <div className="flex gap-1.5 shrink-0">
+                          {extractColors(style.styleBrief).map((color) => (
+                            <span
+                              key={color}
+                              className="w-5 h-5 rounded-full ring-1 ring-white/10"
+                              style={{ backgroundColor: color }}
+                              title={color}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-sm text-neutral-400 mt-1 line-clamp-2">
+                      {style.styleBrief}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-4 pt-2">
+              <div className="grid grid-cols-2 gap-4">
+                <input
+                  type="text"
+                  placeholder="Your Name"
+                  value={devName}
+                  onChange={(e) => setDevName(e.target.value)}
+                  disabled={phase === "generating"}
+                  className="w-full px-4 py-3 bg-neutral-900 border border-neutral-800 rounded-lg text-white placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
+                />
+                <input
+                  type="email"
+                  placeholder="Your Email"
+                  value={devEmail}
+                  onChange={(e) => setDevEmail(e.target.value)}
+                  disabled={phase === "generating"}
+                  className="w-full px-4 py-3 bg-neutral-900 border border-neutral-800 rounded-lg text-white placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
+                />
+              </div>
+              <textarea
+                placeholder="I noticed your website could use some love — here's what it could look like."
+                value={devMessage}
+                onChange={(e) => setDevMessage(e.target.value)}
+                disabled={phase === "generating"}
+                rows={3}
+                className="w-full px-4 py-3 bg-neutral-900 border border-neutral-800 rounded-lg text-white placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 resize-none"
+              />
+              <button
+                onClick={handleGenerate}
+                disabled={phase === "generating"}
+                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white font-semibold text-lg rounded-lg transition-colors"
+              >
+                {phase === "generating" ? (
+                  <span className="flex items-center justify-center gap-3">
+                    <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Generating redesign...
+                  </span>
+                ) : (
+                  "Generate Redesign"
+                )}
+              </button>
+            </div>
+
+            <button
+              onClick={handleReset}
+              disabled={phase === "generating"}
+              className="text-sm text-neutral-500 hover:text-neutral-300 transition-colors disabled:opacity-50"
+            >
+              &larr; Start over with a different URL
+            </button>
           </div>
         )}
 
-        {error && (
-          <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
-            {error}
-          </div>
-        )}
-
-        {previewUrl && (
+        {/* Phase 3: Done */}
+        {phase === "done" && previewUrl && (
           <div className="space-y-5 p-6 bg-neutral-900 border border-neutral-800 rounded-lg">
             <p className="text-lg font-semibold text-white text-center">
               Your preview is ready!
@@ -225,6 +319,12 @@ export default function Home() {
                 Generate Another
               </button>
             </div>
+          </div>
+        )}
+
+        {error && (
+          <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
+            {error}
           </div>
         )}
 

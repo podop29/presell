@@ -4,6 +4,7 @@ export interface Preview {
   original_url: string;
   original_screenshot: string | null;
   redesign_html: string;
+  style_name: string | null;
   dev_name: string;
   dev_email: string;
   dev_message: string | null;
@@ -17,11 +18,26 @@ export interface Preview {
   variation_c_style: string | null;
 }
 
+export interface AnalyzeRequest {
+  url: string;
+}
+
+export interface AnalyzeResponse {
+  profile: BusinessProfile;
+  styles: [StyleSuggestion, StyleSuggestion, StyleSuggestion];
+  pageStructure: string[];
+  imageUrls: string[];
+}
+
 export interface GenerateRequest {
   url: string;
   devName: string;
   devEmail: string;
   devMessage?: string;
+  profile: BusinessProfile;
+  selectedStyle: StyleSuggestion;
+  pageStructure: string[];
+  imageUrls: string[];
 }
 
 export interface GenerateResponse {
@@ -56,4 +72,5 @@ export interface StyleSuggestion {
 export interface AnalysisResult {
   profile: BusinessProfile;
   styles: [StyleSuggestion, StyleSuggestion, StyleSuggestion];
+  pageStructure: string[];
 }
