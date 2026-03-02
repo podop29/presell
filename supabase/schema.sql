@@ -10,8 +10,22 @@ create table if not exists previews (
   dev_email text not null,
   dev_message text,
   created_at timestamptz default now(),
-  expires_at timestamptz not null
+  expires_at timestamptz not null,
+  variation_a_html text,
+  variation_a_style text default 'Clean & Minimal',
+  variation_b_html text,
+  variation_b_style text default 'Bold & Modern',
+  variation_c_html text,
+  variation_c_style text default 'Dark & Sleek'
 );
 
 -- Index for fast slug lookups
 create index if not exists idx_previews_slug on previews (slug);
+
+-- Migration: run this if the table already exists to add the new columns
+-- alter table previews add column if not exists variation_a_html text;
+-- alter table previews add column if not exists variation_a_style text default 'Clean & Minimal';
+-- alter table previews add column if not exists variation_b_html text;
+-- alter table previews add column if not exists variation_b_style text default 'Bold & Modern';
+-- alter table previews add column if not exists variation_c_html text;
+-- alter table previews add column if not exists variation_c_style text default 'Dark & Sleek';

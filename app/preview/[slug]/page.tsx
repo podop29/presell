@@ -23,14 +23,17 @@ export default async function PreviewPage({
 
   if (isExpired) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-950">
         <div className="text-center space-y-4">
-          <h1 className="text-2xl font-semibold text-gray-900">
-            This preview has expired
+          <h1 className="text-3xl font-semibold text-white">
+            This preview has expired.
           </h1>
-          <p className="text-gray-500">
-            This redesign preview is no longer available.
-          </p>
+          <a
+            href="/"
+            className="inline-block text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
+          >
+            Powered by Presell
+          </a>
         </div>
       </div>
     );
@@ -43,6 +46,7 @@ export default async function PreviewPage({
       devName={data.dev_name}
       devEmail={data.dev_email}
       devMessage={data.dev_message}
+      hasVariations={!!data.variation_a_html}
     />
   );
 }

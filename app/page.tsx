@@ -5,9 +5,10 @@ import Link from "next/link";
 
 const STEPS = [
   "Scraping website...",
-  "Analyzing content...",
-  "Generating redesign...",
-  "Building your preview...",
+  "Analyzing business content...",
+  "Generating 3 variations in parallel...",
+  "Saving your preview...",
+  "Done!",
 ];
 
 export default function Home() {
@@ -34,9 +35,17 @@ export default function Home() {
     setLoading(true);
     setStepIndex(0);
 
+    // Progress through steps on a timer
+    const stepTimings = [5000, 8000, 25000, 5000];
+    let currentStep = 0;
     const interval = setInterval(() => {
-      setStepIndex((prev) => (prev < STEPS.length - 1 ? prev + 1 : prev));
-    }, 4000);
+      currentStep++;
+      if (currentStep < STEPS.length - 1) {
+        setStepIndex(currentStep);
+      } else {
+        clearInterval(interval);
+      }
+    }, stepTimings[currentStep] || 8000);
 
     try {
       const res = await fetch("/api/generate", {
@@ -53,6 +62,7 @@ export default function Home() {
         return;
       }
 
+      setStepIndex(STEPS.length - 1);
       setPreviewUrl(data.previewUrl);
     } catch {
       clearInterval(interval);
@@ -68,6 +78,16 @@ export default function Home() {
     setTimeout(() => setCopied(false), 2000);
   }
 
+  function handleReset() {
+    setUrl("");
+    setDevName("");
+    setDevEmail("");
+    setDevMessage("");
+    setPreviewUrl("");
+    setError("");
+    setStepIndex(0);
+  }
+
   return (
     <main className="min-h-screen flex flex-col items-center justify-center px-4 py-16">
       <div className="w-full max-w-xl space-y-8">
@@ -80,89 +100,83 @@ export default function Home() {
           </p>
         </div>
 
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-neutral-400 mb-1.5">
-              {"Client's website URL"}
-            </label>
-            <input
-              type="url"
-              placeholder="https://example.com"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              disabled={loading}
-              className="w-full px-4 py-3 bg-neutral-900 border border-neutral-800 rounded-lg text-white placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
+        {!previewUrl && (
+          <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-neutral-400 mb-1.5">
-                Your Name
-              </label>
+              <input
+                type="url"
+                placeholder="https://their-website.com"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                disabled={loading}
+                className="w-full px-4 py-4 bg-neutral-900 border border-neutral-800 rounded-lg text-white text-lg placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
               <input
                 type="text"
-                placeholder="Jane Smith"
+                placeholder="Your Name"
                 value={devName}
                 onChange={(e) => setDevName(e.target.value)}
                 disabled={loading}
                 className="w-full px-4 py-3 bg-neutral-900 border border-neutral-800 rounded-lg text-white placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-neutral-400 mb-1.5">
-                Your Email
-              </label>
               <input
                 type="email"
-                placeholder="jane@dev.com"
+                placeholder="Your Email"
                 value={devEmail}
                 onChange={(e) => setDevEmail(e.target.value)}
                 disabled={loading}
                 className="w-full px-4 py-3 bg-neutral-900 border border-neutral-800 rounded-lg text-white placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
               />
             </div>
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium text-neutral-400 mb-1.5">
-              Custom Message{" "}
-              <span className="text-neutral-600">(optional)</span>
-            </label>
             <textarea
-              placeholder="I'd love to help you modernize your website..."
+              placeholder="I noticed your website could use some love — here's what it could look like."
               value={devMessage}
               onChange={(e) => setDevMessage(e.target.value)}
               disabled={loading}
               rows={3}
               className="w-full px-4 py-3 bg-neutral-900 border border-neutral-800 rounded-lg text-white placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 resize-none"
             />
-          </div>
 
-          <button
-            onClick={handleGenerate}
-            disabled={loading}
-            className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white font-medium rounded-lg transition-colors"
-          >
-            {loading ? "Generating..." : "Generate Redesign"}
-          </button>
-        </div>
+            <button
+              onClick={handleGenerate}
+              disabled={loading}
+              className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white font-semibold text-lg rounded-lg transition-colors"
+            >
+              {loading ? "Generating..." : "Generate Redesign"}
+            </button>
+          </div>
+        )}
 
         {loading && (
-          <div className="space-y-2 p-4 bg-neutral-900 border border-neutral-800 rounded-lg">
+          <div className="space-y-1 p-5 bg-neutral-900 border border-neutral-800 rounded-lg">
             {STEPS.map((step, i) => (
               <div
                 key={step}
-                className={`flex items-center gap-2 text-sm ${
-                  i <= stepIndex ? "text-blue-400" : "text-neutral-600"
+                className={`flex items-center gap-3 py-1.5 text-sm transition-colors ${
+                  i < stepIndex
+                    ? "text-green-400"
+                    : i === stepIndex
+                    ? "text-blue-400"
+                    : "text-neutral-600"
                 }`}
               >
                 {i < stepIndex ? (
-                  <span className="text-green-400">&#10003;</span>
+                  <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
                 ) : i === stepIndex ? (
-                  <span className="animate-pulse">&#9679;</span>
+                  <svg className="w-4 h-4 shrink-0 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
                 ) : (
-                  <span>&#9675;</span>
+                  <span className="w-4 h-4 shrink-0 flex items-center justify-center">
+                    <span className="w-1.5 h-1.5 rounded-full bg-neutral-700" />
+                  </span>
                 )}
                 {step}
               </div>
@@ -177,29 +191,40 @@ export default function Home() {
         )}
 
         {previewUrl && (
-          <div className="space-y-3 p-4 bg-neutral-900 border border-neutral-800 rounded-lg">
-            <p className="text-sm text-green-400 font-medium">
-              Preview generated!
+          <div className="space-y-5 p-6 bg-neutral-900 border border-neutral-800 rounded-lg">
+            <p className="text-lg font-semibold text-white text-center">
+              Your preview is ready!
             </p>
+
             <div className="flex items-center gap-2">
-              <code className="flex-1 px-3 py-2 bg-black rounded text-sm font-mono text-neutral-300 truncate">
+              <code className="flex-1 px-3 py-2.5 bg-black rounded-lg text-sm font-mono text-neutral-300 truncate">
                 {previewUrl}
               </code>
               <button
                 onClick={handleCopy}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded transition-colors whitespace-nowrap"
+                className="px-5 py-2.5 bg-white hover:bg-neutral-200 text-black text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
               >
                 {copied ? "Copied!" : "Copy Link"}
               </button>
             </div>
+
             <a
               href={previewUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-block text-sm text-blue-400 hover:text-blue-300 underline"
+              className="block w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors text-center"
             >
-              Open preview &rarr;
+              View Preview
             </a>
+
+            <div className="text-center">
+              <button
+                onClick={handleReset}
+                className="text-sm text-neutral-500 hover:text-neutral-300 transition-colors"
+              >
+                Generate Another
+              </button>
+            </div>
           </div>
         )}
 

@@ -2,10 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { nanoid } from "nanoid";
 import { supabase } from "@/lib/supabase";
 import { scrapeWebsite } from "@/lib/scraper";
-import { generateRedesign } from "@/lib/ai";
+import { analyzeBusinessContent, generateVariations } from "@/lib/ai";
 import type { GenerateRequest } from "@/types";
 
+export const maxDuration = 120;
+
 export async function POST(req: NextRequest) {
+  const startTime = Date.now();
+
   try {
     const body: GenerateRequest = await req.json();
     const { url, devName, devEmail, devMessage } = body;
@@ -24,7 +28,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Scrape the website
+    // Step 1: Scrape the website
     let scrapedData;
     try {
       scrapedData = await scrapeWebsite(url);
@@ -39,10 +43,29 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Generate redesign with Claude
-    let redesignHtml;
+    // Check timeout
+    if (Date.now() - startTime > 100_000) {
+      return NextResponse.json(
+        { error: "Generation is taking too long. Please try again." },
+        { status: 504 }
+      );
+    }
+
+    // Step 2: Analyze business content (Pass 1)
+    const profile = await analyzeBusinessContent(url, scrapedData);
+
+    // Check timeout
+    if (Date.now() - startTime > 100_000) {
+      return NextResponse.json(
+        { error: "Generation is taking too long. Please try again." },
+        { status: 504 }
+      );
+    }
+
+    // Step 3: Generate 3 variations in parallel (Pass 2)
+    let variations;
     try {
-      redesignHtml = await generateRedesign(url, scrapedData);
+      variations = await generateVariations(profile, scrapedData.imageUrls);
     } catch {
       return NextResponse.json(
         { error: "Redesign generation failed. Please try again." },
@@ -50,7 +73,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Generate slug and save to Supabase
+    // Check timeout
+    if (Date.now() - startTime > 100_000) {
+      return NextResponse.json(
+        { error: "Generation is taking too long. Please try again." },
+        { status: 504 }
+      );
+    }
+
+    // Step 4: Save to Supabase
     const slug = nanoid(8);
     const now = new Date();
     const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
@@ -59,12 +90,18 @@ export async function POST(req: NextRequest) {
       slug,
       original_url: url,
       original_screenshot: scrapedData.screenshot,
-      redesign_html: redesignHtml,
+      redesign_html: variations.a,
       dev_name: devName,
       dev_email: devEmail,
       dev_message: devMessage || null,
       created_at: now.toISOString(),
       expires_at: expiresAt.toISOString(),
+      variation_a_html: variations.a,
+      variation_a_style: "Clean & Minimal",
+      variation_b_html: variations.b,
+      variation_b_style: "Bold & Modern",
+      variation_c_html: variations.c,
+      variation_c_style: "Dark & Sleek",
     });
 
     if (dbError) {
