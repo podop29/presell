@@ -47,3 +47,13 @@ export interface BusinessProfile {
   primaryColors: string;
   location: string;
 }
+
+export interface StyleSuggestion {
+  styleName: string;
+  styleBrief: string;
+}
+
+export interface AnalysisResult {
+  profile: BusinessProfile;
+  styles: [StyleSuggestion, StyleSuggestion, StyleSuggestion];
+}

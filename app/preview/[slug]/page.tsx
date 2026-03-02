@@ -46,7 +46,11 @@ export default async function PreviewPage({
       devName={data.dev_name}
       devEmail={data.dev_email}
       devMessage={data.dev_message}
-      hasVariations={!!data.variation_a_html}
+      styleNames={[
+        data.variation_a_style || "Variation A",
+        data.variation_b_style || "Variation B",
+        data.variation_c_style || "Variation C",
+      ]}
     />
   );
 }

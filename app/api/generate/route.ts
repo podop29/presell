@@ -5,11 +5,9 @@ import { scrapeWebsite } from "@/lib/scraper";
 import { analyzeBusinessContent, generateVariations } from "@/lib/ai";
 import type { GenerateRequest } from "@/types";
 
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 export async function POST(req: NextRequest) {
-  const startTime = Date.now();
-
   try {
     const body: GenerateRequest = await req.json();
     const { url, devName, devEmail, devMessage } = body;
@@ -43,41 +41,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check timeout
-    if (Date.now() - startTime > 100_000) {
-      return NextResponse.json(
-        { error: "Generation is taking too long. Please try again." },
-        { status: 504 }
-      );
-    }
-
-    // Step 2: Analyze business content (Pass 1)
-    const profile = await analyzeBusinessContent(url, scrapedData);
-
-    // Check timeout
-    if (Date.now() - startTime > 100_000) {
-      return NextResponse.json(
-        { error: "Generation is taking too long. Please try again." },
-        { status: 504 }
-      );
-    }
+    // Step 2: Analyze business content + generate style directions (Pass 1)
+    const { profile, styles } = await analyzeBusinessContent(url, scrapedData);
 
     // Step 3: Generate 3 variations in parallel (Pass 2)
     let variations;
     try {
-      variations = await generateVariations(profile, scrapedData.imageUrls);
+      variations = await generateVariations(profile, scrapedData.imageUrls, styles);
     } catch {
       return NextResponse.json(
         { error: "Redesign generation failed. Please try again." },
         { status: 500 }
-      );
-    }
-
-    // Check timeout
-    if (Date.now() - startTime > 100_000) {
-      return NextResponse.json(
-        { error: "Generation is taking too long. Please try again." },
-        { status: 504 }
       );
     }
 
@@ -97,11 +71,11 @@ export async function POST(req: NextRequest) {
       created_at: now.toISOString(),
       expires_at: expiresAt.toISOString(),
       variation_a_html: variations.a,
-      variation_a_style: "Clean & Minimal",
+      variation_a_style: styles[0].styleName,
       variation_b_html: variations.b,
-      variation_b_style: "Bold & Modern",
+      variation_b_style: styles[1].styleName,
       variation_c_html: variations.c,
-      variation_c_style: "Dark & Sleek",
+      variation_c_style: styles[2].styleName,
     });
 
     if (dbError) {

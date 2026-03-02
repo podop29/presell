@@ -4,25 +4,13 @@ import { useState } from "react";
 
 type TabKey = "original" | "a" | "b" | "c";
 
-interface Tab {
-  key: TabKey;
-  label: string;
-}
-
-const TABS: Tab[] = [
-  { key: "original", label: "Original Site" },
-  { key: "a", label: "Variation A — Clean & Minimal" },
-  { key: "b", label: "Variation B — Bold & Modern" },
-  { key: "c", label: "Variation C — Dark & Sleek" },
-];
-
 interface PreviewClientProps {
   slug: string;
   originalUrl: string;
   devName: string;
   devEmail: string;
   devMessage: string | null;
-  hasVariations: boolean;
+  styleNames: [string, string, string];
 }
 
 export default function PreviewClient({
@@ -31,9 +19,17 @@ export default function PreviewClient({
   devName,
   devEmail,
   devMessage,
+  styleNames,
 }: PreviewClientProps) {
   const [activeTab, setActiveTab] = useState<TabKey>("a");
   const [iframeLoading, setIframeLoading] = useState(true);
+
+  const tabs: { key: TabKey; label: string }[] = [
+    { key: "original", label: "Original Site" },
+    { key: "a", label: styleNames[0] },
+    { key: "b", label: styleNames[1] },
+    { key: "c", label: styleNames[2] },
+  ];
 
   function getIframeSrc(tab: TabKey): string {
     if (tab === "original") return originalUrl;
@@ -54,7 +50,7 @@ export default function PreviewClient({
 
       {/* Tab Bar */}
       <nav className="bg-zinc-900 border-b border-zinc-800 px-4 flex shrink-0 overflow-x-auto">
-        {TABS.map((tab) => (
+        {tabs.map((tab) => (
           <button
             key={tab.key}
             onClick={() => {
@@ -86,7 +82,7 @@ export default function PreviewClient({
           key={activeTab}
           src={getIframeSrc(activeTab)}
           className="w-full h-full absolute inset-0 border-0"
-          title={TABS.find((t) => t.key === activeTab)?.label || "Preview"}
+          title={tabs.find((t) => t.key === activeTab)?.label || "Preview"}
           sandbox={activeTab === "original" ? "allow-scripts allow-same-origin" : undefined}
           onLoad={() => setIframeLoading(false)}
         />
