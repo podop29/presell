@@ -187,33 +187,35 @@ export default function PreviewClient({
   return (
     <div className="h-screen flex flex-col bg-zinc-950 overflow-hidden">
       {/* ── Top bar ── */}
-      <header className="relative z-30 shrink-0 h-12 flex items-center justify-between px-4 bg-black/60 backdrop-blur-xl border-b border-white/10">
-        {/* Left — domain */}
-        <span className="text-xs text-zinc-400 font-medium tracking-wide shrink-0">
+      <header className="relative z-30 shrink-0 h-12 flex items-center gap-2 px-4 bg-black/60 backdrop-blur-xl border-b border-white/10">
+        {/* Left — domain (hidden on mobile to give tabs room) */}
+        <span className="hidden sm:block text-xs text-zinc-400 font-medium tracking-wide shrink-0">
           {domain}
         </span>
 
         {/* Center — segmented control */}
-        <nav className="absolute left-1/2 -translate-x-1/2 flex items-center bg-white/[0.06] rounded-full p-0.5 border border-white/[0.08]">
-          {tabs.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => switchView(tab.key)}
-              disabled={!!pendingRevisionHtml}
-              className={`px-3.5 py-1 text-xs font-medium rounded-full transition-all whitespace-nowrap ${
-                activeView === tab.key
-                  ? "bg-white text-zinc-900 shadow-sm"
-                  : "text-zinc-400 hover:text-white"
-              } disabled:opacity-50 disabled:cursor-not-allowed`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </nav>
+        <div className="flex-1 flex justify-center min-w-0 sm:absolute sm:left-1/2 sm:-translate-x-1/2">
+          <nav className="flex items-center bg-white/[0.06] rounded-full p-0.5 border border-white/[0.08] max-w-full overflow-x-auto">
+            {tabs.map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => switchView(tab.key)}
+                disabled={!!pendingRevisionHtml}
+                className={`px-2.5 sm:px-3.5 py-1 text-[11px] sm:text-xs font-medium rounded-full transition-all whitespace-nowrap ${
+                  activeView === tab.key
+                    ? "bg-white text-zinc-900 shadow-sm"
+                    : "text-zinc-400 hover:text-white"
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </nav>
+        </div>
 
         {/* Right — revise + export (owner only) */}
         {isOwner ? (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 shrink-0">
             <button
               onClick={() => {
                 setReviseOpen((o) => !o);
@@ -292,7 +294,7 @@ export default function PreviewClient({
             </button>
           </div>
         ) : (
-          <div className="w-8" />
+          <div className="hidden sm:block w-8" />
         )}
       </header>
 
@@ -396,9 +398,9 @@ export default function PreviewClient({
 
       {/* ── Iframe(s) ── */}
       {pendingRevisionHtml ? (
-        <div className="flex-1 flex relative">
+        <div className="flex-1 flex flex-col sm:flex-row relative">
           {/* Before */}
-          <div className="w-1/2 relative border-r border-white/10">
+          <div className="h-1/2 sm:h-auto sm:w-1/2 relative border-b sm:border-b-0 sm:border-r border-white/10">
             <span className="absolute top-3 left-3 z-20 px-2 py-0.5 bg-black/70 backdrop-blur text-[11px] font-medium text-zinc-400 rounded">
               Before
             </span>
@@ -411,7 +413,7 @@ export default function PreviewClient({
             />
           </div>
           {/* After */}
-          <div className="w-1/2 relative">
+          <div className="h-1/2 sm:h-auto sm:w-1/2 relative">
             <span className="absolute top-3 left-3 z-20 px-2 py-0.5 bg-black/70 backdrop-blur text-[11px] font-medium text-emerald-400 rounded">
               After
             </span>
@@ -466,9 +468,9 @@ export default function PreviewClient({
       {/* ── Bottom CTA bar ── */}
       {showCta && (
         <footer className="relative z-30 shrink-0 bg-black/60 backdrop-blur-xl border-t border-white/10 px-4 sm:px-6 py-3">
-          <div className="max-w-5xl mx-auto flex items-center justify-between gap-4">
+          <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center sm:justify-between gap-3 sm:gap-4">
             {/* Left — logo/avatar + dev info */}
-            <div className="flex items-center gap-3 shrink-0">
+            <div className="flex items-center gap-3 shrink-0 w-full sm:w-auto">
               {logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -481,12 +483,19 @@ export default function PreviewClient({
                   {initial}
                 </div>
               )}
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-white truncate">
                   {displayName}
                 </p>
                 <p className="text-xs text-zinc-400 truncate">{devEmail}</p>
               </div>
+              {/* CTA inline on mobile */}
+              <a
+                href={`mailto:${devEmail}?subject=Website Redesign&body=Hi ${encodeURIComponent(displayName)}, I saw the redesign preview and I'm interested in learning more.`}
+                className="sm:hidden shrink-0 px-4 py-2 bg-white hover:bg-neutral-200 text-zinc-900 text-xs font-semibold rounded-lg transition-colors"
+              >
+                Get in Touch
+              </a>
             </div>
 
             {/* Center — dev message (hidden on mobile) */}
@@ -496,10 +505,10 @@ export default function PreviewClient({
               </p>
             )}
 
-            {/* Right — CTA button */}
+            {/* Right — CTA button (hidden on mobile, shown inline above) */}
             <a
               href={`mailto:${devEmail}?subject=Website Redesign&body=Hi ${encodeURIComponent(displayName)}, I saw the redesign preview and I'm interested in learning more.`}
-              className="shrink-0 px-5 py-2 bg-white hover:bg-neutral-200 text-zinc-900 text-sm font-semibold rounded-lg transition-colors"
+              className="hidden sm:block shrink-0 px-5 py-2 bg-white hover:bg-neutral-200 text-zinc-900 text-sm font-semibold rounded-lg transition-colors"
             >
               Get in Touch
             </a>
