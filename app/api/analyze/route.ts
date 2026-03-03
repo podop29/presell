@@ -43,8 +43,17 @@ export async function POST(req: NextRequest) {
     }
 
     // Step 2: Analyze business content + generate style directions
-    const { profile, styles, pageStructure, imageSearchQueries } =
-      await analyzeBusinessContent(url, scrapedData);
+    let profile, styles, pageStructure, imageSearchQueries;
+    try {
+      ({ profile, styles, pageStructure, imageSearchQueries } =
+        await analyzeBusinessContent(url, scrapedData));
+    } catch (aiErr) {
+      console.error("AI analysis error:", aiErr);
+      return NextResponse.json(
+        { error: "AI analysis failed — please check your API key or credits and try again." },
+        { status: 502 }
+      );
+    }
 
     // Step 3: Fetch stock images from Pexels using AI-suggested queries
     let stockImageUrls: string[] = [];

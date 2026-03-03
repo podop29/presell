@@ -58,11 +58,13 @@ export async function POST(req: NextRequest) {
     let html;
     try {
       html = await generateVariation(profile, imageUrls || [], stockImageUrls || [], selectedStyle, pageStructure);
-    } catch {
-      return NextResponse.json(
-        { error: "Redesign generation failed. Please try again." },
-        { status: 500 }
-      );
+    } catch (aiErr) {
+      console.error("AI generation error:", aiErr);
+      const message =
+        aiErr instanceof Error && (aiErr.message.includes("401") || aiErr.message.includes("auth"))
+          ? "AI generation failed — please check your API key or credits and try again."
+          : "Redesign generation failed. Please try again.";
+      return NextResponse.json({ error: message }, { status: 502 });
     }
 
     // Save to Supabase
@@ -85,9 +87,9 @@ export async function POST(req: NextRequest) {
     });
 
     if (dbError) {
-      console.error("Supabase insert error:", dbError);
+      console.error("Supabase insert error:", dbError.message, dbError.details, dbError.hint);
       return NextResponse.json(
-        { error: "Failed to save preview. Please try again." },
+        { error: `Failed to save preview: ${dbError.message}` },
         { status: 500 }
       );
     }

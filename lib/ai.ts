@@ -175,7 +175,18 @@ Page Content: ${data.content.slice(0, 3000)}`,
     }
 
     return { profile, styles, pageStructure, imageSearchQueries };
-  } catch {
+  } catch (err) {
+    // Let API-level errors (auth, credits, rate limit) propagate
+    // so the route can return a proper error to the client
+    if (
+      err instanceof Anthropic.APIError ||
+      err instanceof Anthropic.APIConnectionError ||
+      err instanceof Anthropic.AuthenticationError ||
+      err instanceof Anthropic.RateLimitError
+    ) {
+      throw err;
+    }
+    // Parsing/validation errors — fall back to defaults
     return { profile: DEFAULT_PROFILE, styles: DEFAULT_STYLES, pageStructure: DEFAULT_PAGE_STRUCTURE, imageSearchQueries: [] };
   }
 }
