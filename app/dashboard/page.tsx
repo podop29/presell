@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import AuthButton from "@/components/auth-button";
 
 interface PreviewRow {
   id: string;
@@ -56,16 +57,26 @@ export default function Dashboard() {
 
   return (
     <main className="min-h-screen px-4 py-12 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-8">
+      {/* Nav */}
+      <nav className="fixed top-0 inset-x-0 z-50 border-b border-white/5 bg-[#0a0a0a]/80 backdrop-blur-xl">
+        <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
+          <Link href="/" className="text-sm font-semibold tracking-tight text-white">
+            presell<span className="text-accent">.</span>
+          </Link>
+          <AuthButton />
+        </div>
+      </nav>
+
+      <div className="flex items-center justify-between mb-8 pt-14">
         <div>
           <h1 className="text-2xl font-bold text-white">Dashboard</h1>
           <p className="text-sm text-neutral-500 mt-1">
-            All generated previews
+            Your generated previews
           </p>
         </div>
         <Link
           href="/"
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+          className="px-4 py-2 bg-accent hover:bg-accent-light text-black text-sm font-semibold rounded-lg transition-colors"
         >
           + New Preview
         </Link>

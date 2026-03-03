@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { nanoid } from "nanoid";
-import { supabase } from "@/lib/supabase";
+import { supabaseAdmin as supabase } from "@/lib/supabase/admin";
 import { generateVariation } from "@/lib/ai";
 import { rateLimit, getIP } from "@/lib/rate-limit";
+import { getUser } from "@/lib/auth";
 import type { GenerateRequest } from "@/types";
 
 export const maxDuration = 300;
@@ -65,6 +66,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Save to Supabase
+    const user = await getUser();
     const slug = nanoid(8);
     const now = new Date();
     const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
@@ -79,6 +81,7 @@ export async function POST(req: NextRequest) {
       created_at: now.toISOString(),
       expires_at: expiresAt.toISOString(),
       variation_a_style: selectedStyle.styleName,
+      user_id: user?.id ?? null,
     });
 
     if (dbError) {

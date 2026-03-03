@@ -16,6 +16,7 @@ export interface Preview {
   variation_b_style: string | null;
   variation_c_html: string | null;
   variation_c_style: string | null;
+  user_id: string | null;
 }
 
 export interface AnalyzeRequest {

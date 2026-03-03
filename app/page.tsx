@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import AuthButton from "@/components/auth-button";
 
 /* ───── tiny icon components ───── */
 function ArrowRight({ className = "w-4 h-4" }: { className?: string }) {
@@ -71,12 +71,7 @@ export default function Home() {
           <div className="flex items-center gap-6">
             <a href="#how" className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors hidden sm:block">How it works</a>
             <a href="#features" className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors hidden sm:block">Features</a>
-            <Link
-              href="/dashboard"
-              className="text-xs text-neutral-400 hover:text-white transition-colors px-3 py-1.5 rounded-md border border-white/10 hover:border-white/20"
-            >
-              Dashboard
-            </Link>
+            <AuthButton />
           </div>
         </div>
       </nav>
