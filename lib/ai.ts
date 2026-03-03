@@ -386,3 +386,114 @@ export async function generateVariation(
 
   return extractHtml(textBlock.text);
 }
+
+// ── Revision (surgical edit of existing HTML via search-and-replace) ──
+
+const REVISION_SYSTEM_PROMPT = `You are a minimally-invasive website editor. You receive HTML and a revision request. Return ONLY the search-and-replace operations strictly necessary to fulfill the request — nothing more.
+
+Rules:
+1. Return a valid JSON object with two keys: "imageSearch" (string or null) and "operations" (array).
+2. Each operation has "search" and "replace" string fields.
+3. "search" must be an EXACT substring copied from the existing HTML — character-for-character, including whitespace and quotes.
+4. "replace" is the string to substitute in its place.
+5. Make each "search" string long enough to be unique in the document.
+6. Use the FEWEST operations possible. If the user asks to change a headline, return 1 operation — not 5.
+7. NEVER touch anything the user didn't ask about. No "while I'm at it" fixes. No adjusting colors for contrast. No improving hover states. No fixing things that look wrong to you. ONLY what was explicitly requested.
+8. Return ONLY the JSON object — no explanation, no markdown, no code fences.
+
+IMAGE CHANGES:
+When the user asks to change, replace, or swap an image, set "imageSearch" to a descriptive Pexels search query for the desired image (e.g. "modern kitchen interior bright lighting"). Then in your operation, use the placeholder {{STOCK_IMAGE_URL}} as the new src value. The system will replace it with a real image URL before applying.
+For the "search" string, include the entire <img tag so the URL doesn't need to match exactly.
+
+Example — "Change the hero headline to Welcome Home":
+{"imageSearch":null,"operations":[{"search":"<h1 class=\\"text-5xl font-bold\\">Original Headline</h1>","replace":"<h1 class=\\"text-5xl font-bold\\">Welcome Home</h1>"}]}
+
+Example — "Change the hero image to a sunset beach":
+{"imageSearch":"sunset beach ocean golden hour","operations":[{"search":"<img src=\\"https://images.pexels.com/old-image.jpg\\" class=\\"w-full h-full object-cover\\" alt=\\"hero\\">","replace":"<img src=\\"{{STOCK_IMAGE_URL}}\\" class=\\"w-full h-full object-cover\\" alt=\\"sunset beach\\">"}]}`;
+
+interface SearchReplace {
+  search: string;
+  replace: string;
+}
+
+interface RevisionResponse {
+  imageSearch: string | null;
+  operations: SearchReplace[];
+}
+
+export async function reviseVariation(
+  existingHtml: string,
+  userPrompt: string
+): Promise<string> {
+  const message = await anthropic.messages.create({
+    model: "claude-sonnet-4-20250514",
+    max_tokens: 4096,
+    system: REVISION_SYSTEM_PROMPT,
+    messages: [
+      {
+        role: "user",
+        content: `Here is the current HTML document:\n\n${existingHtml}\n\n---\n\nRevision request: ${userPrompt}`,
+      },
+    ],
+  });
+
+  const textBlock = message.content.find((block) => block.type === "text");
+  if (!textBlock || textBlock.type !== "text") {
+    throw new Error("No text response from Claude");
+  }
+
+  // Parse the revision response
+  let jsonStr = textBlock.text.trim();
+  if (jsonStr.startsWith("```")) {
+    jsonStr = jsonStr.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+  }
+
+  let revision: RevisionResponse;
+  try {
+    revision = JSON.parse(jsonStr);
+  } catch {
+    throw new Error("Failed to parse revision response as JSON");
+  }
+
+  const operations = revision.operations;
+  if (!Array.isArray(operations) || operations.length === 0) {
+    throw new Error("No revision operations returned");
+  }
+
+  // If the revision needs a stock image, fetch one from Pexels
+  let stockImageUrl: string | null = null;
+  if (revision.imageSearch) {
+    const { searchPexels } = await import("@/lib/pexels");
+    const urls = await searchPexels([revision.imageSearch], 1);
+    stockImageUrl = urls[0] ?? null;
+  }
+
+  // Apply each search-and-replace operation
+  let html = existingHtml;
+  let appliedCount = 0;
+
+  for (const op of operations) {
+    if (typeof op.search !== "string" || typeof op.replace !== "string") {
+      continue;
+    }
+
+    // Substitute the stock image placeholder if we have one
+    let replaceStr = op.replace;
+    if (stockImageUrl && replaceStr.includes("{{STOCK_IMAGE_URL}}")) {
+      replaceStr = replaceStr.replace("{{STOCK_IMAGE_URL}}", stockImageUrl);
+    }
+
+    if (html.includes(op.search)) {
+      html = html.replace(op.search, replaceStr);
+      appliedCount++;
+    }
+  }
+
+  if (appliedCount === 0) {
+    throw new Error(
+      "None of the revision operations matched the existing HTML"
+    );
+  }
+
+  return html;
+}
