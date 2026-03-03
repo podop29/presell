@@ -245,6 +245,9 @@ function CreatePageInner() {
         });
         const data = await res.json();
         if (!res.ok) {
+          if (res.status === 402 && data.insufficientCredits) {
+            setInsufficientCredits(true);
+          }
           setError(data.error || "Something went wrong.");
           return;
         }

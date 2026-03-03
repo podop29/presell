@@ -3,11 +3,31 @@ import { scrapeWebsite } from "@/lib/scraper";
 import { analyzeBusinessContent } from "@/lib/ai";
 import { searchPexels } from "@/lib/pexels";
 import { rateLimit, getIP } from "@/lib/rate-limit";
+import { getUser } from "@/lib/auth";
+import { getBalance } from "@/lib/credits";
 
 export const maxDuration = 120;
 
 export async function POST(req: NextRequest) {
   try {
+    // Require auth
+    const user = await getUser();
+    if (!user) {
+      return NextResponse.json(
+        { error: "You must be signed in to analyze a site." },
+        { status: 401 }
+      );
+    }
+
+    // Check credits before doing expensive scrape + AI work
+    const balance = await getBalance(user.id);
+    if (balance < 1) {
+      return NextResponse.json(
+        { error: "You don't have enough credits.", insufficientCredits: true, balance: 0 },
+        { status: 402 }
+      );
+    }
+
     // Rate limit: 5 analyses per 10 minutes per IP
     const ip = getIP(req.headers);
     const limit = rateLimit(`analyze:${ip}`, { maxRequests: 5, windowMs: 10 * 60 * 1000 });
