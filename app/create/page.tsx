@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, Suspense } from "react";
+import { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import AuthButton from "@/components/auth-button";
@@ -45,6 +45,149 @@ function Spinner({ className = "w-5 h-5" }: { className?: string }) {
   );
 }
 
+/* ───── Stepped Progress Component ───── */
+interface StepConfig {
+  label: string;
+}
+
+// Intervals before advancing to the next step (ms).
+// Spread across ~90s total so no single step hogs the wait.
+const STEP_INTERVALS = [6000, 12000, 18000, 25000, 30000];
+
+function SteppedProgress({ steps, done, subtitle }: { steps: StepConfig[]; done: boolean; subtitle: string }) {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [barWidth, setBarWidth] = useState(0);
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  // Advance steps on timers (simulated). Never advances past second-to-last unless done.
+  useEffect(() => {
+    if (done) return;
+    const timers = timersRef.current;
+    const maxSimulated = steps.length - 2; // hold with one pending step still visible
+    let current = 0;
+
+    function scheduleNext() {
+      if (current >= maxSimulated) return;
+      const delay = STEP_INTERVALS[current] ?? STEP_INTERVALS[STEP_INTERVALS.length - 1];
+      const timer = setTimeout(() => {
+        current++;
+        setActiveIndex(current);
+        scheduleNext();
+      }, delay);
+      timers.push(timer);
+    }
+
+    scheduleNext();
+    return () => timers.forEach(clearTimeout);
+  }, [done, steps.length]);
+
+  // Progress bar: smoothly advances per step, fills the gap between steps slowly
+  useEffect(() => {
+    if (done) {
+      setBarWidth(100);
+      setActiveIndex(steps.length);
+      return;
+    }
+    // Base progress = percentage of completed steps
+    const stepPercent = ((activeIndex) / steps.length) * 100;
+    // Add a slow creep within the current step segment
+    const segmentSize = 100 / steps.length;
+    setBarWidth(stepPercent + segmentSize * 0.3);
+  }, [activeIndex, done, steps.length]);
+
+  return (
+    <div className="animate-fade-in py-8">
+      {/* Progress bar */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-sm font-medium text-white">
+            {done ? "Complete" : steps[Math.min(activeIndex, steps.length - 1)].label}
+          </p>
+          <span className="text-xs font-mono text-neutral-600">
+            {Math.min(Math.round(barWidth), 100)}%
+          </span>
+        </div>
+        <div className="h-1.5 bg-neutral-800 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-gradient-to-r from-accent to-accent-light rounded-full transition-all duration-1000 ease-out"
+            style={{ width: `${barWidth}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Steps list */}
+      <div className="space-y-1">
+        {steps.map((step, i) => {
+          const isComplete = done ? true : i < activeIndex;
+          const isActive = !done && i === activeIndex;
+          const isPending = !done && i > activeIndex;
+
+          return (
+            <div
+              key={step.label}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-500 ${
+                isActive
+                  ? "bg-accent/5 border border-accent/20"
+                  : isComplete
+                    ? "border border-transparent"
+                    : "border border-transparent opacity-40"
+              }`}
+            >
+              {/* Icon */}
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-all duration-300 ${
+                isComplete
+                  ? "bg-accent/15"
+                  : isActive
+                    ? "bg-accent/10"
+                    : "bg-neutral-800"
+              }`}>
+                {isComplete ? (
+                  <Check className="w-3.5 h-3.5 text-accent" />
+                ) : isActive ? (
+                  <Spinner className="w-3.5 h-3.5 text-accent" />
+                ) : (
+                  <div className="w-1.5 h-1.5 rounded-full bg-neutral-600" />
+                )}
+              </div>
+
+              {/* Label */}
+              <span className={`text-sm transition-colors duration-300 ${
+                isComplete ? "text-neutral-400" : isActive ? "text-white font-medium" : "text-neutral-600"
+              }`}>
+                {step.label}
+              </span>
+
+              {/* Completed checkmark text */}
+              {isComplete && !isPending && (
+                <span className="ml-auto text-[11px] text-accent/60 font-medium">Done</span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Subtitle */}
+      <p className="text-xs text-neutral-600 text-center mt-6">{subtitle}</p>
+    </div>
+  );
+}
+
+const ANALYZE_STEPS: StepConfig[] = [
+  { label: "Scraping website content" },
+  { label: "Analyzing business profile" },
+  { label: "Identifying brand & audience" },
+  { label: "Generating design styles" },
+  { label: "Preparing image assets" },
+];
+
+const GENERATE_STEPS: StepConfig[] = [
+  { label: "Preparing content structure" },
+  { label: "Mapping page layout" },
+  { label: "Selecting imagery" },
+  { label: "Building redesign" },
+  { label: "Finalizing preview" },
+];
+
 /* ───── Main component ───── */
 function CreatePageInner() {
   const searchParams = useSearchParams();
@@ -67,11 +210,24 @@ function CreatePageInner() {
   const [previewUrl, setPreviewUrl] = useState("");
   const [copied, setCopied] = useState(false);
 
+  // Track when analysis/generation finishes so progress can complete before phase transition
+  const [analysisDone, setAnalysisDone] = useState(false);
+  const [generationDone, setGenerationDone] = useState(false);
+
   /* Validate URL param */
   const isValidUrl = (() => {
     if (!url) return false;
     try { new URL(url); return true; } catch { return false; }
   })();
+
+  // Delayed phase transition after progress completes
+  const transitionToPickStyle = useCallback(() => {
+    setTimeout(() => setPhase("pick-style"), 600);
+  }, []);
+
+  const transitionToDone = useCallback(() => {
+    setTimeout(() => setPhase("done"), 600);
+  }, []);
 
   /* Auto-start analysis on mount */
   useEffect(() => {
@@ -96,18 +252,20 @@ function CreatePageInner() {
         setImageUrls(data.imageUrls);
         setStockImageUrls(data.stockImageUrls || []);
         setSelectedIndex(0);
-        setPhase("pick-style");
+        setAnalysisDone(true);
+        transitionToPickStyle();
       } catch {
         setError("Network error. Please try again.");
       }
     }
 
     analyze();
-  }, [url]);
+  }, [url, isValidUrl, transitionToPickStyle]);
 
   async function handleGenerate() {
     setError("");
     if (!devName || !devEmail) { setError("Please fill in your name and email."); return; }
+    setGenerationDone(false);
     setPhase("generating");
     try {
       const res = await fetch("/api/generate", {
@@ -122,7 +280,8 @@ function CreatePageInner() {
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setPhase("pick-style"); return; }
       setPreviewUrl(data.previewUrl);
-      setPhase("done");
+      setGenerationDone(true);
+      transitionToDone();
     } catch {
       setError("Network error. Please try again.");
       setPhase("pick-style");
@@ -176,17 +335,24 @@ function CreatePageInner() {
 
           {/* Phase: Analyzing */}
           {phase === "analyzing" && !error && (
-            <div className="animate-fade-in flex flex-col items-center gap-4 py-12">
-              <Spinner className="w-8 h-8 text-accent" />
-              <div className="text-center">
-                <p className="text-white font-medium">Analyzing website...</p>
-                <p className="text-xs text-neutral-500 mt-1">Scraping content, identifying business details, and crafting styles</p>
-              </div>
-            </div>
+            <SteppedProgress
+              steps={ANALYZE_STEPS}
+              done={analysisDone}
+              subtitle="This usually takes 1-2 minutes"
+            />
+          )}
+
+          {/* Phase: Generating */}
+          {phase === "generating" && !error && (
+            <SteppedProgress
+              steps={GENERATE_STEPS}
+              done={generationDone}
+              subtitle="Building your custom redesign — almost there"
+            />
           )}
 
           {/* Phase: Pick Style + Details */}
-          {(phase === "pick-style" || phase === "generating") && (
+          {phase === "pick-style" && (
             <div className="text-left space-y-5 animate-fade-in">
               {/* Analyzed badge */}
               {profile && (
@@ -211,12 +377,11 @@ function CreatePageInner() {
                     <button
                       key={i}
                       onClick={() => setSelectedIndex(i)}
-                      disabled={phase === "generating"}
                       className={`w-full text-left p-4 rounded-xl border transition-all duration-200 group ${
                         selectedIndex === i
                           ? "bg-accent/5 border-accent/40 shadow-lg shadow-accent/5"
                           : "bg-surface border-[var(--border)] hover:border-[var(--border-light)]"
-                      } disabled:opacity-50`}
+                      }`}
                     >
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-3 min-w-0">
@@ -256,48 +421,35 @@ function CreatePageInner() {
                     placeholder="Your name"
                     value={devName}
                     onChange={(e) => setDevName(e.target.value)}
-                    disabled={phase === "generating"}
-                    className="px-3.5 py-2.5 bg-surface border border-[var(--border)] rounded-lg text-sm text-white placeholder:text-neutral-600 focus:outline-none focus:border-accent/40 transition-colors disabled:opacity-50"
+                    className="px-3.5 py-2.5 bg-surface border border-[var(--border)] rounded-lg text-sm text-white placeholder:text-neutral-600 focus:outline-none focus:border-accent/40 transition-colors"
                   />
                   <input
                     type="email"
                     placeholder="Your email"
                     value={devEmail}
                     onChange={(e) => setDevEmail(e.target.value)}
-                    disabled={phase === "generating"}
-                    className="px-3.5 py-2.5 bg-surface border border-[var(--border)] rounded-lg text-sm text-white placeholder:text-neutral-600 focus:outline-none focus:border-accent/40 transition-colors disabled:opacity-50"
+                    className="px-3.5 py-2.5 bg-surface border border-[var(--border)] rounded-lg text-sm text-white placeholder:text-neutral-600 focus:outline-none focus:border-accent/40 transition-colors"
                   />
                 </div>
                 <textarea
                   placeholder="Message to the client (optional)"
                   value={devMessage}
                   onChange={(e) => setDevMessage(e.target.value)}
-                  disabled={phase === "generating"}
                   rows={2}
-                  className="w-full px-3.5 py-2.5 bg-surface border border-[var(--border)] rounded-lg text-sm text-white placeholder:text-neutral-600 focus:outline-none focus:border-accent/40 transition-colors disabled:opacity-50 resize-none"
+                  className="w-full px-3.5 py-2.5 bg-surface border border-[var(--border)] rounded-lg text-sm text-white placeholder:text-neutral-600 focus:outline-none focus:border-accent/40 transition-colors resize-none"
                 />
                 <button
                   onClick={handleGenerate}
-                  disabled={phase === "generating"}
-                  className="w-full py-3 bg-accent hover:bg-accent-light disabled:opacity-50 text-black font-semibold text-sm rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-accent/20 flex items-center justify-center gap-2"
+                  className="w-full py-3 bg-accent hover:bg-accent-light text-black font-semibold text-sm rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-accent/20 flex items-center justify-center gap-2"
                 >
-                  {phase === "generating" ? (
-                    <>
-                      <Spinner className="w-4 h-4" />
-                      <span>Generating redesign...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4" />
-                      <span>Generate Redesign</span>
-                    </>
-                  )}
+                  <Sparkles className="w-4 h-4" />
+                  <span>Generate Redesign</span>
                 </button>
               </div>
 
               <Link
                 href="/"
-                className={`text-xs text-neutral-600 hover:text-neutral-400 transition-colors ${phase === "generating" ? "pointer-events-none opacity-50" : ""}`}
+                className="text-xs text-neutral-600 hover:text-neutral-400 transition-colors"
               >
                 &larr; Start over
               </Link>
