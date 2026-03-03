@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin as supabase } from "@/lib/supabase/admin";
+import { injectLucide } from "@/lib/inject-lucide";
 
 export async function GET(
   _req: NextRequest,
@@ -21,7 +22,7 @@ export async function GET(
     return new NextResponse("This preview has expired", { status: 410 });
   }
 
-  return new NextResponse(data.redesign_html, {
+  return new NextResponse(injectLucide(data.redesign_html), {
     headers: { "Content-Type": "text/html; charset=utf-8" },
   });
 }
