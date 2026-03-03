@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 
 interface Variation {
   key: string;
@@ -43,7 +43,12 @@ export default function PreviewClient({
   const [iframeVersion, setIframeVersion] = useState(0);
   const [pendingRevisionHtml, setPendingRevisionHtml] = useState<string | null>(null);
   const [accepting, setAccepting] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [hasEdits, setHasEdits] = useState(false);
+  const [saving, setSaving] = useState(false);
   const pendingBlobUrl = useRef<string | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const editStyleRef = useRef<HTMLStyleElement | null>(null);
 
   const domain = useMemo(() => {
     try {
@@ -105,6 +110,12 @@ export default function PreviewClient({
 
   function switchView(key: string) {
     if (key === activeView || pendingRevisionHtml) return;
+    // Exit edit mode when switching tabs
+    if (editMode) {
+      disableEditMode();
+      setEditMode(false);
+      setHasEdits(false);
+    }
     setIframeLoading(true);
     setActiveView(key);
     if (key === "original") {
@@ -182,6 +193,158 @@ export default function PreviewClient({
     setReviseError(null);
   }
 
+  const EDITABLE_SELECTOR =
+    "h1, h2, h3, h4, h5, h6, p, span, a, li, td, th, label, button, blockquote";
+
+  const EDIT_STYLE_ID = "presell-edit-style";
+
+  const enableEditMode = useCallback(() => {
+    const doc = iframeRef.current?.contentDocument;
+    if (!doc) return;
+
+    // Inject styles
+    let style = doc.getElementById(EDIT_STYLE_ID) as HTMLStyleElement | null;
+    if (!style) {
+      style = doc.createElement("style");
+      style.id = EDIT_STYLE_ID;
+      style.textContent = `
+        [data-presell-editable] {
+          cursor: text !important;
+          transition: outline 0.15s ease;
+          outline: 2px dashed transparent;
+          outline-offset: 2px;
+        }
+        [data-presell-editable]:hover {
+          outline-color: rgb(129 140 248) !important;
+        }
+        [data-presell-editable][contenteditable="true"] {
+          outline: 2px solid rgb(99 102 241) !important;
+          outline-offset: 2px;
+        }
+      `;
+      doc.head.appendChild(style);
+    }
+    editStyleRef.current = style;
+
+    const elements = doc.querySelectorAll(EDITABLE_SELECTOR);
+    elements.forEach((el) => {
+      if (el.closest("[data-presell-editable]") && el !== el.closest("[data-presell-editable]")) return;
+      el.setAttribute("data-presell-editable", "true");
+
+      el.addEventListener("click", handleEditClick as EventListener);
+      el.addEventListener("blur", handleEditBlur as EventListener);
+      el.addEventListener("keydown", handleEditKeydown as EventListener);
+    });
+  }, []);
+
+  const disableEditMode = useCallback(() => {
+    const doc = iframeRef.current?.contentDocument;
+    if (!doc) return;
+
+    // Remove styles
+    const style = doc.getElementById(EDIT_STYLE_ID);
+    if (style) style.remove();
+    editStyleRef.current = null;
+
+    // Clean up editable elements
+    const elements = doc.querySelectorAll("[data-presell-editable]");
+    elements.forEach((el) => {
+      el.removeAttribute("data-presell-editable");
+      (el as HTMLElement).contentEditable = "false";
+      el.removeEventListener("click", handleEditClick as EventListener);
+      el.removeEventListener("blur", handleEditBlur as EventListener);
+      el.removeEventListener("keydown", handleEditKeydown as EventListener);
+    });
+  }, []);
+
+  function handleEditClick(e: MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    const el = e.currentTarget as HTMLElement;
+    el.contentEditable = "true";
+    el.focus();
+  }
+
+  function handleEditBlur(e: FocusEvent) {
+    const el = e.currentTarget as HTMLElement;
+    el.contentEditable = "false";
+    setHasEdits(true);
+  }
+
+  function handleEditKeydown(e: KeyboardEvent) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      (e.currentTarget as HTMLElement).blur();
+    }
+  }
+
+  function toggleEditMode() {
+    if (editMode) {
+      // Turning off — if edits exist, cancel (reload iframe)
+      if (hasEdits) {
+        cancelEdits();
+      } else {
+        disableEditMode();
+        setEditMode(false);
+      }
+    } else {
+      // Turning on — close revise bar first
+      setReviseOpen(false);
+      setReviseError(null);
+      setEditMode(true);
+      setHasEdits(false);
+      // enableEditMode runs after iframe is confirmed loaded via useEffect
+      enableEditMode();
+    }
+  }
+
+  async function saveEdits() {
+    if (saving) return;
+    setSaving(true);
+    try {
+      disableEditMode();
+      const doc = iframeRef.current?.contentDocument;
+      if (!doc) {
+        setSaving(false);
+        setEditMode(false);
+        return;
+      }
+      // Clean up any contenteditable="false" artifacts left by disableEditMode
+      doc.querySelectorAll('[contenteditable="false"]').forEach((el) => {
+        el.removeAttribute("contenteditable");
+      });
+      const html = `<!DOCTYPE html>\n${doc.documentElement.outerHTML}`;
+      const res = await fetch(`/api/preview/${slug}/accept-revision`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ variationKey: activeView, html }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setReviseError(data.error || "Failed to save edits.");
+        enableEditMode(); // re-enable so user doesn't lose work
+        return;
+      }
+      setEditMode(false);
+      setHasEdits(false);
+      setIframeLoading(true);
+      setIframeVersion((v) => v + 1);
+    } catch {
+      setReviseError("Network error. Please try again.");
+      enableEditMode();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function cancelEdits() {
+    disableEditMode();
+    setEditMode(false);
+    setHasEdits(false);
+    setIframeLoading(true);
+    setIframeVersion((v) => v + 1);
+  }
+
   const showCta = devName && devEmail;
 
   return (
@@ -213,11 +376,16 @@ export default function PreviewClient({
           </nav>
         </div>
 
-        {/* Right — revise + export (owner only) */}
+        {/* Right — revise + edit + export (owner only) */}
         {isOwner ? (
           <div className="flex items-center gap-1 shrink-0">
             <button
               onClick={() => {
+                if (editMode) {
+                  disableEditMode();
+                  setEditMode(false);
+                  setHasEdits(false);
+                }
                 setReviseOpen((o) => !o);
                 setReviseError(null);
               }}
@@ -242,7 +410,37 @@ export default function PreviewClient({
                 strokeLinecap="round"
                 strokeLinejoin="round"
               >
-                <path d="M17 3a2.85 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5Z" />
+                <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
+                <path d="M20 3v4" />
+                <path d="M22 5h-4" />
+              </svg>
+            </button>
+            <button
+              onClick={toggleEditMode}
+              disabled={activeView === "original" || !!pendingRevisionHtml}
+              title={
+                activeView === "original"
+                  ? "Switch to a redesign to edit text"
+                  : editMode
+                    ? "Exit text editing"
+                    : "Edit text directly"
+              }
+              className={`flex items-center justify-center w-8 h-8 rounded-lg transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-zinc-400 ${
+                editMode
+                  ? "bg-white/15 text-white"
+                  : "text-zinc-400 hover:text-white hover:bg-white/10"
+              }`}
+            >
+              <svg
+                className="w-4 h-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
                 <path d="m15 5 4 4" />
               </svg>
             </button>
@@ -396,6 +594,65 @@ export default function PreviewClient({
         </div>
       )}
 
+      {/* ── Edit toolbar (owner only) ── */}
+      {isOwner && editMode && !pendingRevisionHtml && (
+        <div className="relative z-20 shrink-0 bg-black/60 backdrop-blur-xl border-b border-white/10 px-4 py-2.5">
+          <div className="max-w-3xl mx-auto flex items-center justify-between gap-3">
+            <p className="text-sm text-zinc-300">
+              {hasEdits ? (
+                <span className="text-amber-400">Unsaved changes</span>
+              ) : (
+                "Click any text in the preview to edit it"
+              )}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={cancelEdits}
+                disabled={saving}
+                className="px-4 py-1.5 text-sm font-medium text-zinc-400 hover:text-white rounded-lg border border-white/10 hover:border-white/20 transition-colors disabled:opacity-40"
+              >
+                Cancel
+              </button>
+              {hasEdits && (
+                <button
+                  onClick={saveEdits}
+                  disabled={saving}
+                  className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-40 flex items-center gap-2"
+                >
+                  {saving && (
+                    <svg
+                      className="w-3.5 h-3.5 animate-spin"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                      />
+                    </svg>
+                  )}
+                  Save
+                </button>
+              )}
+            </div>
+          </div>
+          {reviseError && (
+            <p className="max-w-3xl mx-auto mt-1.5 text-xs text-red-400">
+              {reviseError}
+            </p>
+          )}
+        </div>
+      )}
+
       {/* ── Iframe(s) ── */}
       {pendingRevisionHtml ? (
         <div className="flex-1 flex flex-col sm:flex-row relative">
@@ -451,6 +708,7 @@ export default function PreviewClient({
             </div>
           )}
           <iframe
+            ref={activeView !== "original" ? iframeRef : undefined}
             key={`${activeView}-${iframeVersion}`}
             src={iframeSrc}
             className="w-full h-full absolute inset-0 border-0"
@@ -460,7 +718,12 @@ export default function PreviewClient({
                 ? "allow-scripts allow-same-origin"
                 : undefined
             }
-            onLoad={() => setIframeLoading(false)}
+            onLoad={() => {
+              setIframeLoading(false);
+              if (editMode && activeView !== "original") {
+                enableEditMode();
+              }
+            }}
           />
         </div>
       )}
