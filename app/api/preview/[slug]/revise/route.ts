@@ -4,6 +4,7 @@ import { reviseVariation } from "@/lib/ai";
 import { rateLimit, getIP } from "@/lib/rate-limit";
 import { getUser } from "@/lib/auth";
 import { injectLucide } from "@/lib/inject-lucide";
+import { getRevisionInfo } from "@/lib/credits";
 
 export const maxDuration = 300;
 
@@ -110,6 +111,19 @@ export async function POST(
       );
     }
 
+    // Check revision limit
+    const revisionInfo = await getRevisionInfo(slug);
+    if (!revisionInfo.canRevise) {
+      return NextResponse.json(
+        {
+          error: "Revision limit reached. Unlock more revisions to continue.",
+          revisionLimitReached: true,
+          ...revisionInfo,
+        },
+        { status: 402 }
+      );
+    }
+
     const existingHtml = data[column as keyof typeof data] as string | null;
     if (!existingHtml) {
       return NextResponse.json(
@@ -131,10 +145,12 @@ export async function POST(
       return NextResponse.json({ error: message }, { status: 502 });
     }
 
-    // Return revised HTML for preview (not saved yet)
+    // Return revised HTML for preview (not saved yet) with revision info
+    const updatedRevisionInfo = await getRevisionInfo(slug);
     return NextResponse.json({
       success: true,
       revisedHtml: injectLucide(revisedHtml),
+      revisionInfo: updatedRevisionInfo,
     });
   } catch (err) {
     console.error("Revise error:", err);

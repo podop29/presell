@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin as supabase } from "@/lib/supabase/admin";
 import { getUser } from "@/lib/auth";
+import { incrementRevisionCount } from "@/lib/credits";
 
 const VARIATION_COLUMNS: Record<string, string> = {
   redesign: "redesign_html",
@@ -23,9 +24,10 @@ export async function POST(
     }
 
     const body = await req.json();
-    const { variationKey, html } = body as {
+    const { variationKey, html, isManualEdit } = body as {
       variationKey: string;
       html: string;
+      isManualEdit?: boolean;
     };
 
     const column = VARIATION_COLUMNS[variationKey];
@@ -82,6 +84,11 @@ export async function POST(
         { error: "Failed to save revision." },
         { status: 500 }
       );
+    }
+
+    // Only increment revision count for AI revisions, not manual text edits
+    if (!isManualEdit) {
+      await incrementRevisionCount(slug);
     }
 
     return NextResponse.json({ success: true });

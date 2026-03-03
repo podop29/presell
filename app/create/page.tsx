@@ -209,6 +209,7 @@ function CreatePageInner() {
 
   const [previewUrl, setPreviewUrl] = useState("");
   const [copied, setCopied] = useState(false);
+  const [insufficientCredits, setInsufficientCredits] = useState(false);
 
   // Track when analysis/generation finishes so progress can complete before phase transition
   const [analysisDone, setAnalysisDone] = useState(false);
@@ -264,6 +265,7 @@ function CreatePageInner() {
 
   async function handleGenerate() {
     setError("");
+    setInsufficientCredits(false);
     if (!devName || !devEmail) { setError("Please fill in your name and email."); return; }
     setGenerationDone(false);
     setPhase("generating");
@@ -278,7 +280,16 @@ function CreatePageInner() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error || "Something went wrong."); setPhase("pick-style"); return; }
+      if (!res.ok) {
+        if (res.status === 402 && data.insufficientCredits) {
+          setInsufficientCredits(true);
+          setPhase("pick-style");
+          return;
+        }
+        setError(data.error || "Something went wrong.");
+        setPhase("pick-style");
+        return;
+      }
       setPreviewUrl(data.previewUrl);
       setGenerationDone(true);
       transitionToDone();
@@ -497,7 +508,22 @@ function CreatePageInner() {
             </div>
           )}
 
-          {error && (
+          {insufficientCredits && (
+            <div className="mt-4 p-4 bg-amber-500/5 border border-amber-500/20 rounded-xl text-center">
+              <p className="text-sm font-medium text-amber-400">Out of credits</p>
+              <p className="text-xs text-neutral-500 mt-1">
+                You need at least 1 credit to generate a preview.
+              </p>
+              <Link
+                href="/credits"
+                className="inline-flex items-center gap-2 mt-3 px-5 py-2 bg-accent hover:bg-accent-light text-black font-semibold text-sm rounded-lg transition-all duration-200"
+              >
+                Buy Credits
+              </Link>
+            </div>
+          )}
+
+          {error && !insufficientCredits && (
             <div className="mt-4 p-3 bg-red-500/5 border border-red-500/20 rounded-xl text-red-400 text-xs text-center">
               <p>{error}</p>
               <Link href="/" className="inline-block mt-2 text-neutral-500 hover:text-neutral-300 underline underline-offset-2">

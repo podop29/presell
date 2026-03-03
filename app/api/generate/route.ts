@@ -4,12 +4,31 @@ import { supabaseAdmin as supabase } from "@/lib/supabase/admin";
 import { generateVariation } from "@/lib/ai";
 import { rateLimit, getIP } from "@/lib/rate-limit";
 import { getUser } from "@/lib/auth";
+import { getBalance, deductCredit } from "@/lib/credits";
 import type { GenerateRequest } from "@/types";
 
 export const maxDuration = 300;
 
 export async function POST(req: NextRequest) {
   try {
+    // Require auth
+    const user = await getUser();
+    if (!user) {
+      return NextResponse.json(
+        { error: "You must be signed in to generate a preview." },
+        { status: 401 }
+      );
+    }
+
+    // Check credits
+    const balance = await getBalance(user.id);
+    if (balance < 1) {
+      return NextResponse.json(
+        { error: "You don't have enough credits.", insufficientCredits: true, balance: 0 },
+        { status: 402 }
+      );
+    }
+
     // Rate limit: 3 generations per 10 minutes per IP
     const ip = getIP(req.headers);
     const limit = rateLimit(`generate:${ip}`, { maxRequests: 3, windowMs: 10 * 60 * 1000 });
@@ -68,7 +87,6 @@ export async function POST(req: NextRequest) {
     }
 
     // Save to Supabase
-    const user = await getUser();
     const slug = nanoid(8);
     const now = new Date();
     const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
@@ -83,7 +101,7 @@ export async function POST(req: NextRequest) {
       created_at: now.toISOString(),
       expires_at: expiresAt.toISOString(),
       variation_a_style: selectedStyle.styleName,
-      user_id: user?.id ?? null,
+      user_id: user.id,
     });
 
     if (dbError) {
@@ -93,6 +111,9 @@ export async function POST(req: NextRequest) {
         { status: 500 }
       );
     }
+
+    // Deduct credit AFTER successful DB insert
+    await deductCredit(user.id, 1, "generation", `Generated preview for ${url}`, slug);
 
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
     return NextResponse.json({

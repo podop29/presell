@@ -1,11 +1,19 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import Link from "next/link";
 
 interface Variation {
   key: string;
   label: string;
   src: string;
+}
+
+interface RevisionInfo {
+  revisionCount: number;
+  revisionLimit: number;
+  freeRemaining: number;
+  canRevise: boolean;
 }
 
 interface PreviewClientProps {
@@ -46,6 +54,10 @@ export default function PreviewClient({
   const [editMode, setEditMode] = useState(false);
   const [hasEdits, setHasEdits] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [revisionInfo, setRevisionInfo] = useState<RevisionInfo | null>(null);
+  const [revisionLimitReached, setRevisionLimitReached] = useState(false);
+  const [unlocking, setUnlocking] = useState(false);
+  const [unlockError, setUnlockError] = useState<string | null>(null);
   const pendingBlobUrl = useRef<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const editStyleRef = useRef<HTMLStyleElement | null>(null);
@@ -71,6 +83,15 @@ export default function PreviewClient({
   useEffect(() => {
     return () => revokePendingBlob();
   }, []);
+
+  useEffect(() => {
+    if (isOwner) {
+      fetch(`/api/preview/${slug}/revision-info`)
+        .then((r) => r.json())
+        .then((data) => setRevisionInfo(data))
+        .catch(() => {});
+    }
+  }, [isOwner, slug]);
 
   const tabs: { key: string; label: string }[] = [
     { key: "original", label: "Current" },
@@ -140,6 +161,11 @@ export default function PreviewClient({
       });
       const data = await res.json();
       if (!res.ok) {
+        if (res.status === 402 && data.revisionLimitReached) {
+          setRevisionLimitReached(true);
+          setRevisionInfo(data);
+          return;
+        }
         setReviseError(data.error || "Revision failed.");
         return;
       }
@@ -150,6 +176,9 @@ export default function PreviewClient({
       pendingBlobUrl.current = blobUrl;
       setPendingRevisionHtml(data.revisedHtml);
       setRevisePrompt("");
+      if (data.revisionInfo) {
+        setRevisionInfo(data.revisionInfo);
+      }
     } catch {
       setReviseError("Network error. Please try again.");
     } finally {
@@ -180,6 +209,11 @@ export default function PreviewClient({
       setIframeLoading(true);
       setIframeVersion((v) => v + 1);
       setReviseOpen(false);
+      // Re-fetch revision info after accepting
+      fetch(`/api/preview/${slug}/revision-info`)
+        .then((r) => r.json())
+        .then((data) => setRevisionInfo(data))
+        .catch(() => {});
     } catch {
       setReviseError("Network error. Please try again.");
     } finally {
@@ -191,6 +225,37 @@ export default function PreviewClient({
     revokePendingBlob();
     setPendingRevisionHtml(null);
     setReviseError(null);
+  }
+
+  async function handleUnlockRevisions() {
+    if (unlocking) return;
+    setUnlocking(true);
+    setUnlockError(null);
+    try {
+      const res = await fetch(`/api/preview/${slug}/unlock-revisions`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        if (res.status === 402 && data.insufficientCredits) {
+          setUnlockError("insufficient_credits");
+          return;
+        }
+        setUnlockError(data.error || "Failed to unlock revisions.");
+        return;
+      }
+      setRevisionLimitReached(false);
+      setRevisionInfo({
+        revisionCount: revisionInfo?.revisionCount ?? 0,
+        revisionLimit: data.newLimit,
+        freeRemaining: data.newLimit - (revisionInfo?.revisionCount ?? 0),
+        canRevise: true,
+      });
+    } catch {
+      setUnlockError("Network error. Please try again.");
+    } finally {
+      setUnlocking(false);
+    }
   }
 
   const EDITABLE_SELECTOR =
@@ -317,7 +382,7 @@ export default function PreviewClient({
       const res = await fetch(`/api/preview/${slug}/accept-revision`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ variationKey: activeView, html }),
+        body: JSON.stringify({ variationKey: activeView, html, isManualEdit: true }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -542,49 +607,96 @@ export default function PreviewClient({
                 </button>
               </div>
             </div>
+          ) : revisionLimitReached ? (
+            <div className="max-w-3xl mx-auto">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm text-amber-400">
+                    You&apos;ve used all {revisionInfo?.revisionLimit ?? 0} revisions
+                  </p>
+                  <p className="text-xs text-zinc-500 mt-0.5">
+                    Unlock 5 more revisions for 1 credit
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {unlockError === "insufficient_credits" ? (
+                    <Link
+                      href="/credits"
+                      className="px-4 py-1.5 bg-accent hover:bg-accent-light text-black text-sm font-medium rounded-lg transition-colors"
+                    >
+                      Buy Credits
+                    </Link>
+                  ) : (
+                    <button
+                      onClick={handleUnlockRevisions}
+                      disabled={unlocking}
+                      className="px-4 py-1.5 bg-white hover:bg-neutral-200 text-zinc-900 text-sm font-medium rounded-lg transition-colors disabled:opacity-40 flex items-center gap-2"
+                    >
+                      {unlocking && (
+                        <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                      )}
+                      Unlock Revisions
+                    </button>
+                  )}
+                </div>
+              </div>
+              {unlockError && unlockError !== "insufficient_credits" && (
+                <p className="mt-1.5 text-xs text-red-400">{unlockError}</p>
+              )}
+            </div>
           ) : (
-            <form
-              onSubmit={handleRevise}
-              className="max-w-3xl mx-auto flex items-center gap-2"
-            >
-              <input
-                type="text"
-                value={revisePrompt}
-                onChange={(e) => setRevisePrompt(e.target.value)}
-                placeholder="Describe what to change..."
-                maxLength={2000}
-                disabled={revising}
-                className="flex-1 bg-white/[0.06] border border-white/[0.08] rounded-lg px-3 py-1.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-white/20 transition-colors disabled:opacity-50"
-              />
-              <button
-                type="submit"
-                disabled={revising || !revisePrompt.trim()}
-                className="shrink-0 px-4 py-1.5 bg-white hover:bg-neutral-200 text-zinc-900 text-sm font-medium rounded-lg transition-colors disabled:opacity-40 disabled:hover:bg-white flex items-center gap-2"
+            <div className="max-w-3xl mx-auto">
+              <form
+                onSubmit={handleRevise}
+                className="flex items-center gap-2"
               >
-                {revising && (
-                  <svg
-                    className="w-3.5 h-3.5 animate-spin"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                    />
-                  </svg>
-                )}
-                Revise
-              </button>
-            </form>
+                <input
+                  type="text"
+                  value={revisePrompt}
+                  onChange={(e) => setRevisePrompt(e.target.value)}
+                  placeholder="Describe what to change..."
+                  maxLength={2000}
+                  disabled={revising}
+                  className="flex-1 bg-white/[0.06] border border-white/[0.08] rounded-lg px-3 py-1.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-white/20 transition-colors disabled:opacity-50"
+                />
+                <button
+                  type="submit"
+                  disabled={revising || !revisePrompt.trim()}
+                  className="shrink-0 px-4 py-1.5 bg-white hover:bg-neutral-200 text-zinc-900 text-sm font-medium rounded-lg transition-colors disabled:opacity-40 disabled:hover:bg-white flex items-center gap-2"
+                >
+                  {revising && (
+                    <svg
+                      className="w-3.5 h-3.5 animate-spin"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                      />
+                    </svg>
+                  )}
+                  Revise
+                </button>
+              </form>
+              {revisionInfo && (
+                <p className="mt-1.5 text-[11px] text-zinc-600">
+                  {revisionInfo.revisionCount}/{revisionInfo.revisionLimit} revisions used
+                </p>
+              )}
+            </div>
           )}
           {reviseError && (
             <p className="max-w-3xl mx-auto mt-1.5 text-xs text-red-400">
