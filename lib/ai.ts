@@ -64,7 +64,22 @@ You always respond with valid JSON only — no explanation, no markdown, no code
       messages: [
         {
           role: "user",
-          content: `Analyze this website and return a JSON object with four top-level keys: "profile", "styles", "pageStructure", and "imageSearchQueries".
+          content: [
+            ...(data.screenshot
+              ? [
+                  {
+                    type: "image" as const,
+                    source: {
+                      type: "base64" as const,
+                      media_type: "image/png" as const,
+                      data: data.screenshot,
+                    },
+                  },
+                ]
+              : []),
+            {
+              type: "text" as const,
+              text: `Analyze this website (and the screenshot above if provided) and return a JSON object with four top-level keys: "profile", "styles", "pageStructure", and "imageSearchQueries".
 
 "profile" must have exactly these fields:
 {
@@ -74,7 +89,7 @@ You always respond with valid JSON only — no explanation, no markdown, no code
   "targetCustomer": "string",
   "keySellingPoints": ["string"] (3-5 points),
   "brandTone": "string (e.g. 'professional and trustworthy' or 'fun and casual')",
-  "primaryColors": "string (describe any obvious brand colors, or 'unknown')",
+  "primaryColors": "string (list the specific hex codes of the site's dominant brand colors visible in the screenshot, e.g. '#2b5797 blue, #ff6600 orange'. Say 'unknown' only if truly unclear)",
   "location": "string (city/region if mentioned, or 'unknown')"
 }
 
@@ -98,9 +113,21 @@ Tailor these to the specific business and industry. Use descriptive keywords tha
 }
 
 Rules for generating the 3 styles:
-- Each style must feel dramatically different from the others — vary color palette, mood, typography, layout approach, and overall aesthetic direction
-- Tailor every style to this specific business and industry — a law firm should never get the same styles as a surf shop
-- One style should lean sophisticated/editorial (think refined magazine layout), one should feel energetic/bold (think startup landing page), and one should be a creative wildcard that feels unexpected but perfectly appropriate for this specific business
+
+STYLE 1 — "Refined Evolution" (preserve original brand colors):
+- This style MUST keep the site's existing brand color palette intact. Use the exact hex codes from the "primaryColors" field and the screenshot. These are the client's brand colors — do not change them.
+- Improve everything ELSE: typography (pick a distinctive, characterful Google Font), layout, whitespace, component design, hover states, animations, and visual hierarchy.
+- The styleBrief MUST include the original hex codes as the color palette, explicitly stating they are preserved from the original brand.
+- Give it a name that signals continuity and refinement (e.g. "Elevated [Brand]", "Refined Classic", "[Brand] Polished").
+
+STYLES 2 & 3 — Bold alternatives:
+- These two styles must feel dramatically different from each other — vary color palette, mood, typography, layout approach, and overall aesthetic direction.
+- Style 2 should lean sophisticated/editorial (think refined magazine layout).
+- Style 3 should feel energetic/bold (think startup landing page) or be a creative wildcard that feels unexpected but perfectly appropriate for this specific business.
+- Both must propose completely NEW color palettes that differ from the original site's colors.
+
+ALL STYLES:
+- Tailor every style to this specific business and industry — a law firm should never get the same styles as a surf shop.
 - FONT SELECTION IS CRITICAL: choose distinctive, characterful Google Fonts — NEVER suggest Inter, Roboto, Arial, Open Sans, or other overused defaults. Pick fonts with personality: Playfair Display, Fraunces, DM Serif Display, Space Grotesk, Outfit, Sora, Manrope, Cabinet Grotesk, Satoshi, General Sans, Clash Display, etc. Each style MUST use a different display font.
 - Reference specific colors (hex codes), specific Google Fonts by name, and specific design techniques (gradient meshes, grain textures, asymmetric layouts, diagonal dividers, overlapping elements, glassmorphism, etc.)
 - Describe the atmosphere: what real-world brand or website aesthetic should this channel? (e.g. "Channel the editorial elegance of Cereal magazine" or "Channel the bold energy of Stripe's landing page")
@@ -111,6 +138,8 @@ Website Title: ${data.title}
 Website URL: ${url}
 Meta Description: ${data.description}
 Page Content: ${data.content.slice(0, 3000)}`,
+            },
+          ],
         },
       ],
     });
@@ -264,7 +293,8 @@ function buildVariationPrompt(
   imageUrls: string[],
   stockImageUrls: string[],
   style: StyleSuggestion,
-  pageStructure: string[]
+  pageStructure: string[],
+  pageContent: string
 ): string {
   const originalImages =
     imageUrls.length > 0
@@ -301,14 +331,17 @@ ${originalImages}
 STOCK IMAGES (high-quality professional photos relevant to this business — use these to elevate the design):
 ${stockImages}
 
-Image Usage Strategy:
-- HERO SECTION: ALWAYS use a STOCK image for the hero/banner — stock images are guaranteed high-resolution (1880px wide) and landscape-oriented, perfect for hero backgrounds. Never use an original website image as the hero background — they are often too small or wrong aspect ratio.
-- Use ORIGINAL images for: logos, team photos, real product shots, storefront photos — smaller placements where authenticity matters
-- Use STOCK images for: hero backgrounds, section backgrounds, decorative lifestyle shots, about section imagery — anywhere you need a large, high-quality visual
-- Original images may be low-resolution — only use them at small sizes (cards, thumbnails, team grids), never as full-width backgrounds
-- Mix both sets naturally throughout the page — don't cluster all stock images in one place
-- Every image must use object-cover, rounded corners, and proper aspect ratios
-- If a section needs an image but neither set has a good fit, use a CSS gradient or textured background instead
+Image Usage Strategy — USE ORIGINAL IMAGES WHERE THEY FIT:
+- ORIGINAL images are the business's REAL photos — their shop, team, products, storefront, food, work, etc. The business owner will recognize their own photos and feel an immediate connection.
+- Use original images where they are a good fit and appear to be decent quality — about sections, service/product showcases, galleries, team photos, storefront shots.
+- HERO SECTION: Use a STOCK image for the hero unless an original image is clearly high-quality and well-suited as a hero background (e.g. a professional storefront photo or wide product shot). Most original images are too small, low-res, or wrong aspect ratio for a full-width hero — when in doubt, use stock.
+- Use STOCK images for: hero backgrounds, section backgrounds, decorative lifestyle shots — anywhere you need a large, guaranteed high-quality visual.
+- Mix both sets naturally throughout the page — use original images for authenticity in smaller placements, stock images for visual impact in large placements.
+- Every image must use object-cover, rounded corners where appropriate, and proper aspect ratios.
+- If a section needs an image but neither set has a good fit, use a CSS gradient or textured background instead.
+
+ORIGINAL PAGE CONTENT (scraped from the real website — use this as your primary content source):
+${pageContent || "(no page content available)"}
 
 ORIGINAL PAGE STRUCTURE — follow this structure closely:
 The original website has these sections. Your redesign must include upgraded versions of each of these, in a similar order. Don't invent sections that don't relate to this business. Instead, take what they already have and make each section dramatically more beautiful and polished.
@@ -322,10 +355,19 @@ For each section above:
 - You may split a dense section into two cleaner sections, or combine thin sections — use your design judgment
 - Rewrite headlines and copy to be more compelling, but keep the same meaning and facts
 
+USE REAL CONTENT FROM THE ORIGINAL SITE — THIS IS CRITICAL:
+- Extract and use REAL information from the page content above: addresses, phone numbers, email addresses, business hours, service lists, menu items, pricing, team member names, and any other factual details.
+- If the site has real customer reviews or testimonials, use those exact quotes and names — do NOT invent fake ones.
+- If the site lists real services, menu items, or products, use those — do NOT replace them with generic alternatives.
+- Real addresses and phone numbers must appear in the contact/footer sections exactly as they do on the original site.
+- Business hours should be displayed if they appear in the original content.
+- You may polish the wording of descriptions and headlines, but NEVER change factual details (names, numbers, addresses, prices).
+- Only invent content (e.g. testimonial quotes) if the original site has NO real content for that section.
+
 CONTENT COMPLETENESS — MANDATORY:
 - Every card, testimonial, feature block, or repeated element MUST be fully populated with real text content
 - If you create a grid of 3 cards, ALL 3 must have a heading, description, and any visual element — zero empty cards
-- If you create testimonials, EVERY one must have: a realistic quote (2-3 sentences), a full name, a job title, and a company name
+- If you create testimonials, prefer REAL reviews from the original site. Only create fictional ones if no real reviews exist — and if so, every one must have: a realistic quote (2-3 sentences), a full name, and a role or context.
 - If you create a stats section, EVERY stat must have a number and a label
 - Do NOT create placeholder or skeleton elements — if you can't fill it, don't create it
 - Before completing your response, verify: does every visible HTML element contain actual text content? If not, fix it.
@@ -365,7 +407,8 @@ export async function generateVariation(
   imageUrls: string[],
   stockImageUrls: string[],
   style: StyleSuggestion,
-  pageStructure: string[]
+  pageStructure: string[],
+  pageContent: string
 ): Promise<string> {
   const message = await anthropic.messages.create({
     model: "claude-sonnet-4-20250514",
@@ -374,7 +417,7 @@ export async function generateVariation(
     messages: [
       {
         role: "user",
-        content: buildVariationPrompt(profile, imageUrls, stockImageUrls, style, pageStructure),
+        content: buildVariationPrompt(profile, imageUrls, stockImageUrls, style, pageStructure, pageContent),
       },
     ],
   });

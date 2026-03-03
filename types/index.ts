@@ -29,6 +29,7 @@ export interface AnalyzeResponse {
   pageStructure: string[];
   imageUrls: string[];
   stockImageUrls: string[];
+  pageContent: string;
 }
 
 export interface GenerateRequest {
@@ -41,6 +42,7 @@ export interface GenerateRequest {
   pageStructure: string[];
   imageUrls: string[];
   stockImageUrls: string[];
+  pageContent: string;
 }
 
 export interface GenerateResponse {

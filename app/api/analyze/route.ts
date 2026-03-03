@@ -71,6 +71,7 @@ export async function POST(req: NextRequest) {
       pageStructure,
       imageUrls: scrapedData.imageUrls,
       stockImageUrls,
+      pageContent: scrapedData.content.slice(0, 5000),
     });
   } catch (err) {
     console.error("Analyze error:", err);

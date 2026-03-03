@@ -15,7 +15,16 @@ export async function scrapeWebsite(url: string): Promise<ScrapedData> {
     // Use domcontentloaded — networkidle can hang on sites with long-polling/websockets
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
     // Give the page a moment to render dynamic content
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(3000);
+
+    // Detect bot-challenge pages (Cloudflare, wp.com, etc.) and wait for them to clear
+    const bodyText = await page.evaluate(() => document.body.innerText || "");
+    const isChallenged =
+      bodyText.length < 200 &&
+      /checking your browser|just a moment|verify you are human|security check/i.test(bodyText);
+    if (isChallenged) {
+      await page.waitForTimeout(7000);
+    }
 
     const title = await page.title();
 
@@ -34,14 +43,24 @@ export async function scrapeWebsite(url: string): Promise<ScrapedData> {
 
     const imageUrls = await page.evaluate(() => {
       const imgs = Array.from(document.querySelectorAll("img"));
-      return imgs
-        .filter((img) => {
-          const w = img.naturalWidth || img.width;
-          const h = img.naturalHeight || img.height;
-          return w >= 200 && h >= 150 && img.src.startsWith("http");
-        })
-        .map((img) => img.src)
-        .slice(0, 20);
+      const seen = new Set<string>();
+      const results: string[] = [];
+      for (const img of imgs) {
+        const src = img.src || img.getAttribute("data-src") || "";
+        if (!src.startsWith("http") || seen.has(src)) continue;
+        // Skip tiny icons, gravatars, and tracking pixels
+        if (/gravatar\.com|pixel\.wp\.com|\/emoji\/|twemoji/i.test(src)) continue;
+        const w = img.naturalWidth || img.width || parseInt(img.getAttribute("width") || "0");
+        const h = img.naturalHeight || img.height || parseInt(img.getAttribute("height") || "0");
+        // Accept images that are large enough OR where dimensions are unknown (lazy-loaded)
+        const knownLarge = w >= 200 && h >= 100;
+        const unknownSize = w === 0 && h === 0;
+        if (knownLarge || unknownSize) {
+          seen.add(src);
+          results.push(src);
+        }
+      }
+      return results.slice(0, 20);
     });
 
     const screenshotBuffer = await page.screenshot({

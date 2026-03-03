@@ -205,6 +205,7 @@ function CreatePageInner() {
   const [pageStructure, setPageStructure] = useState<string[]>([]);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [stockImageUrls, setStockImageUrls] = useState<string[]>([]);
+  const [pageContent, setPageContent] = useState<string>("");
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
 
   const [previewUrl, setPreviewUrl] = useState("");
@@ -252,6 +253,7 @@ function CreatePageInner() {
         setPageStructure(data.pageStructure);
         setImageUrls(data.imageUrls);
         setStockImageUrls(data.stockImageUrls || []);
+        setPageContent(data.pageContent || "");
         setSelectedIndex(0);
         setAnalysisDone(true);
         transitionToPickStyle();
@@ -276,7 +278,7 @@ function CreatePageInner() {
         body: JSON.stringify({
           url, devName, devEmail, devMessage, profile,
           selectedStyle: styles[selectedIndex],
-          pageStructure, imageUrls, stockImageUrls,
+          pageStructure, imageUrls, stockImageUrls, pageContent,
         }),
       });
       const data = await res.json();
