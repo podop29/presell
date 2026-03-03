@@ -16,6 +16,8 @@ interface PreviewClientProps {
   devMessage: string | null;
   variations: Variation[];
   isOwner: boolean;
+  companyName?: string;
+  logoUrl?: string;
 }
 
 export default function PreviewClient({
@@ -26,6 +28,8 @@ export default function PreviewClient({
   devMessage,
   variations,
   isOwner,
+  companyName,
+  logoUrl,
 }: PreviewClientProps) {
   const [activeView, setActiveView] = useState<string>(
     variations[0]?.key ?? "original"
@@ -49,7 +53,8 @@ export default function PreviewClient({
     }
   }, [originalUrl]);
 
-  const initial = devName.charAt(0).toUpperCase();
+  const displayName = companyName || devName;
+  const initial = displayName.charAt(0).toUpperCase();
 
   function revokePendingBlob() {
     if (pendingBlobUrl.current) {
@@ -462,14 +467,23 @@ export default function PreviewClient({
       {showCta && (
         <footer className="relative z-30 shrink-0 bg-black/60 backdrop-blur-xl border-t border-white/10 px-4 sm:px-6 py-3">
           <div className="max-w-5xl mx-auto flex items-center justify-between gap-4">
-            {/* Left — avatar + dev info */}
+            {/* Left — logo/avatar + dev info */}
             <div className="flex items-center gap-3 shrink-0">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-sm font-semibold shrink-0">
-                {initial}
-              </div>
+              {logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={logoUrl}
+                  alt={displayName}
+                  className="w-9 h-9 rounded-lg object-contain shrink-0"
+                />
+              ) : (
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-sm font-semibold shrink-0">
+                  {initial}
+                </div>
+              )}
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-white truncate">
-                  {devName}
+                  {displayName}
                 </p>
                 <p className="text-xs text-zinc-400 truncate">{devEmail}</p>
               </div>
@@ -484,7 +498,7 @@ export default function PreviewClient({
 
             {/* Right — CTA button */}
             <a
-              href={`mailto:${devEmail}?subject=Website Redesign&body=Hi ${devName}, I saw the redesign preview and I'm interested in learning more.`}
+              href={`mailto:${devEmail}?subject=Website Redesign&body=Hi ${encodeURIComponent(displayName)}, I saw the redesign preview and I'm interested in learning more.`}
               className="shrink-0 px-5 py-2 bg-white hover:bg-neutral-200 text-zinc-900 text-sm font-semibold rounded-lg transition-colors"
             >
               Get in Touch

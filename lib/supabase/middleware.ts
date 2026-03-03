@@ -32,7 +32,7 @@ export async function updateSession(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Protected pages — redirect to login
-  const protectedPages = ["/create", "/dashboard"];
+  const protectedPages = ["/create", "/dashboard", "/settings"];
   if (!user && protectedPages.some((p) => pathname.startsWith(p))) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
@@ -41,7 +41,7 @@ export async function updateSession(request: NextRequest) {
   }
 
   // Protected API routes — return 401
-  const protectedApi = ["/api/analyze", "/api/generate", "/api/previews"];
+  const protectedApi = ["/api/analyze", "/api/generate", "/api/previews", "/api/settings"];
   if (!user && protectedApi.some((p) => pathname.startsWith(p))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

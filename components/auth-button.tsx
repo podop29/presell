@@ -61,6 +61,12 @@ export default function AuthButton() {
       >
         Dashboard
       </Link>
+      <Link
+        href="/settings"
+        className="text-xs text-neutral-400 hover:text-white transition-colors"
+      >
+        Settings
+      </Link>
       <button
         onClick={handleSignOut}
         className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors px-3 py-1.5 rounded-md border border-white/10 hover:border-white/20"

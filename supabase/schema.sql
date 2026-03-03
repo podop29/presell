@@ -22,6 +22,11 @@ create table if not exists previews (
 -- Index for fast slug lookups
 create index if not exists idx_previews_slug on previews (slug);
 
+-- Storage: create a public "logos" bucket (run in Supabase dashboard or via SQL)
+-- insert into storage.buckets (id, name, public, file_size_limit)
+-- values ('logos', 'logos', true, 2097152)
+-- on conflict (id) do nothing;
+
 -- Migration: run this if the table already exists to add the new columns
 -- alter table previews add column if not exists variation_a_html text;
 -- alter table previews add column if not exists variation_a_style text default 'Clean & Minimal';

@@ -13,7 +13,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { data } = await supabase
     .from("previews")
-    .select("original_url, dev_name")
+    .select("original_url, dev_name, user_id")
     .eq("slug", params.slug)
     .single();
 
@@ -24,8 +24,19 @@ export async function generateMetadata({
     domain = new URL(data.original_url).hostname.replace(/^www\./, "");
   } catch {}
 
+  // Prefer company name from owner's branding settings
+  let brandName = data.dev_name;
+  if (data.user_id) {
+    const { data: owner } = await supabase.auth.admin.getUserById(
+      data.user_id
+    );
+    if (owner?.user?.user_metadata?.company_name) {
+      brandName = owner.user.user_metadata.company_name;
+    }
+  }
+
   return {
-    title: `${domain} — Redesign by ${data.dev_name}`,
+    title: `${domain} — Redesign by ${brandName}`,
   };
 }
 
@@ -65,6 +76,19 @@ export default async function PreviewPage({
   const user = await getUser();
   const isOwner = !!user && user.id === data.user_id;
 
+  // Fetch owner branding
+  let companyName = "";
+  let logoUrl = "";
+  if (data.user_id) {
+    const { data: owner } = await supabase.auth.admin.getUserById(
+      data.user_id
+    );
+    if (owner?.user?.user_metadata) {
+      companyName = owner.user.user_metadata.company_name ?? "";
+      logoUrl = owner.user.user_metadata.logo_url ?? "";
+    }
+  }
+
   const variations: { key: string; label: string; src: string }[] = [];
   if (data.variation_a_html)
     variations.push({
@@ -100,6 +124,8 @@ export default async function PreviewPage({
       devMessage={data.dev_message}
       variations={variations}
       isOwner={isOwner}
+      companyName={companyName}
+      logoUrl={logoUrl}
     />
   );
 }
