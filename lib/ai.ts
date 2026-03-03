@@ -195,10 +195,10 @@ Typography:
 
 Color & Atmosphere:
 - Commit to a cohesive color story with dominant colors and sharp accents — never timid, evenly-distributed palettes
-- Create depth with layered backgrounds: gradient meshes, noise textures, geometric patterns, layered transparencies, grain overlays
+- Create depth with layered backgrounds: noise textures, geometric patterns, layered transparencies, grain overlays
 - Use CSS variables for color consistency
 - Alternate section backgrounds for visual rhythm — vary between light, dark, colored, and textured
-- Strategic gradients that feel organic, not flat single-color sections
+- Gradients should be used sparingly and only on large surfaces (hero backgrounds, section dividers) — never on buttons or small UI elements
 
 Spatial Composition & Layout:
 - Break the grid intentionally — asymmetry, overlap, diagonal flow, grid-breaking hero elements
@@ -217,6 +217,7 @@ Motion & Interaction:
 Component Quality:
 - Cards that feel elevated: layered shadows, border highlights, hover transforms
 - Testimonials that feel premium — real quotes with names, roles, and visual treatment
+- Buttons must use flat solid background colors — NEVER gradient backgrounds on buttons. Use hover:brightness, hover:shadow, or hover:translate for interactivity. A button with a single strong brand color is always more polished than a gradient button.
 - CTAs that demand attention through size, color contrast, and hover effects
 - Images with rounded corners, subtle shadows, overflow-hidden, and object-cover
 - Footer that feels intentionally designed, not an afterthought
@@ -224,6 +225,7 @@ Component Quality:
 ANTI-PATTERNS — NEVER DO THESE:
 - Generic fonts (Inter, Roboto, Arial, system-ui, sans-serif defaults)
 - Cliched color schemes (purple gradient on white, generic blue/indigo)
+- Gradient backgrounds on buttons or links — this is the #1 tell of cheap AI-generated sites
 - Predictable 3-column grids with identical card layouts
 - Cookie-cutter component patterns that look like every other AI-generated site
 - Flat, boring section backgrounds with no texture or depth
