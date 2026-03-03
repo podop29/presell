@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 
 interface Variation {
   key: string;
@@ -37,6 +37,9 @@ export default function PreviewClient({
   const [revising, setRevising] = useState(false);
   const [reviseError, setReviseError] = useState<string | null>(null);
   const [iframeVersion, setIframeVersion] = useState(0);
+  const [pendingRevisionHtml, setPendingRevisionHtml] = useState<string | null>(null);
+  const [accepting, setAccepting] = useState(false);
+  const pendingBlobUrl = useRef<string | null>(null);
 
   const domain = useMemo(() => {
     try {
@@ -47,6 +50,17 @@ export default function PreviewClient({
   }, [originalUrl]);
 
   const initial = devName.charAt(0).toUpperCase();
+
+  function revokePendingBlob() {
+    if (pendingBlobUrl.current) {
+      URL.revokeObjectURL(pendingBlobUrl.current);
+      pendingBlobUrl.current = null;
+    }
+  }
+
+  useEffect(() => {
+    return () => revokePendingBlob();
+  }, []);
 
   const tabs: { key: string; label: string }[] = [
     { key: "original", label: "Current" },
@@ -85,7 +99,7 @@ export default function PreviewClient({
   }
 
   function switchView(key: string) {
-    if (key === activeView) return;
+    if (key === activeView || pendingRevisionHtml) return;
     setIframeLoading(true);
     setActiveView(key);
     if (key === "original") {
@@ -96,7 +110,7 @@ export default function PreviewClient({
 
   async function handleRevise(e: React.FormEvent) {
     e.preventDefault();
-    if (!revisePrompt.trim() || revising) return;
+    if (!revisePrompt.trim() || revising || pendingRevisionHtml) return;
     setRevising(true);
     setReviseError(null);
     try {
@@ -113,14 +127,54 @@ export default function PreviewClient({
         setReviseError(data.error || "Revision failed.");
         return;
       }
+      revokePendingBlob();
+      const blobUrl = URL.createObjectURL(
+        new Blob([data.revisedHtml], { type: "text/html" })
+      );
+      pendingBlobUrl.current = blobUrl;
+      setPendingRevisionHtml(data.revisedHtml);
       setRevisePrompt("");
-      setIframeLoading(true);
-      setIframeVersion((v) => v + 1);
     } catch {
       setReviseError("Network error. Please try again.");
     } finally {
       setRevising(false);
     }
+  }
+
+  async function handleAcceptRevision() {
+    if (!pendingRevisionHtml || accepting) return;
+    setAccepting(true);
+    setReviseError(null);
+    try {
+      const res = await fetch(`/api/preview/${slug}/accept-revision`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          variationKey: activeView,
+          html: pendingRevisionHtml,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setReviseError(data.error || "Failed to save revision.");
+        return;
+      }
+      revokePendingBlob();
+      setPendingRevisionHtml(null);
+      setIframeLoading(true);
+      setIframeVersion((v) => v + 1);
+      setReviseOpen(false);
+    } catch {
+      setReviseError("Network error. Please try again.");
+    } finally {
+      setAccepting(false);
+    }
+  }
+
+  function handleDiscardRevision() {
+    revokePendingBlob();
+    setPendingRevisionHtml(null);
+    setReviseError(null);
   }
 
   const showCta = devName && devEmail;
@@ -140,11 +194,12 @@ export default function PreviewClient({
             <button
               key={tab.key}
               onClick={() => switchView(tab.key)}
+              disabled={!!pendingRevisionHtml}
               className={`px-3.5 py-1 text-xs font-medium rounded-full transition-all whitespace-nowrap ${
                 activeView === tab.key
                   ? "bg-white text-zinc-900 shadow-sm"
                   : "text-zinc-400 hover:text-white"
-              }`}
+              } disabled:opacity-50 disabled:cursor-not-allowed`}
             >
               {tab.label}
             </button>
@@ -239,48 +294,93 @@ export default function PreviewClient({
       {/* ── Revision bar (owner only) ── */}
       {isOwner && reviseOpen && activeView !== "original" && (
         <div className="relative z-20 shrink-0 bg-black/60 backdrop-blur-xl border-b border-white/10 px-4 py-2.5">
-          <form
-            onSubmit={handleRevise}
-            className="max-w-3xl mx-auto flex items-center gap-2"
-          >
-            <input
-              type="text"
-              value={revisePrompt}
-              onChange={(e) => setRevisePrompt(e.target.value)}
-              placeholder="Describe what to change..."
-              maxLength={2000}
-              disabled={revising}
-              className="flex-1 bg-white/[0.06] border border-white/[0.08] rounded-lg px-3 py-1.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-white/20 transition-colors disabled:opacity-50"
-            />
-            <button
-              type="submit"
-              disabled={revising || !revisePrompt.trim()}
-              className="shrink-0 px-4 py-1.5 bg-white hover:bg-neutral-200 text-zinc-900 text-sm font-medium rounded-lg transition-colors disabled:opacity-40 disabled:hover:bg-white flex items-center gap-2"
-            >
-              {revising && (
-                <svg
-                  className="w-3.5 h-3.5 animate-spin"
-                  fill="none"
-                  viewBox="0 0 24 24"
+          {pendingRevisionHtml ? (
+            <div className="max-w-3xl mx-auto flex items-center justify-between gap-3">
+              <p className="text-sm text-zinc-300">
+                Review the changes below
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleDiscardRevision}
+                  disabled={accepting}
+                  className="px-4 py-1.5 text-sm font-medium text-zinc-400 hover:text-white rounded-lg border border-white/10 hover:border-white/20 transition-colors disabled:opacity-40"
                 >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                  />
-                </svg>
-              )}
-              Revise
-            </button>
-          </form>
+                  Discard
+                </button>
+                <button
+                  onClick={handleAcceptRevision}
+                  disabled={accepting}
+                  className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-40 flex items-center gap-2"
+                >
+                  {accepting && (
+                    <svg
+                      className="w-3.5 h-3.5 animate-spin"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                      />
+                    </svg>
+                  )}
+                  Accept
+                </button>
+              </div>
+            </div>
+          ) : (
+            <form
+              onSubmit={handleRevise}
+              className="max-w-3xl mx-auto flex items-center gap-2"
+            >
+              <input
+                type="text"
+                value={revisePrompt}
+                onChange={(e) => setRevisePrompt(e.target.value)}
+                placeholder="Describe what to change..."
+                maxLength={2000}
+                disabled={revising}
+                className="flex-1 bg-white/[0.06] border border-white/[0.08] rounded-lg px-3 py-1.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-white/20 transition-colors disabled:opacity-50"
+              />
+              <button
+                type="submit"
+                disabled={revising || !revisePrompt.trim()}
+                className="shrink-0 px-4 py-1.5 bg-white hover:bg-neutral-200 text-zinc-900 text-sm font-medium rounded-lg transition-colors disabled:opacity-40 disabled:hover:bg-white flex items-center gap-2"
+              >
+                {revising && (
+                  <svg
+                    className="w-3.5 h-3.5 animate-spin"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                    />
+                  </svg>
+                )}
+                Revise
+              </button>
+            </form>
+          )}
           {reviseError && (
             <p className="max-w-3xl mx-auto mt-1.5 text-xs text-red-400">
               {reviseError}
@@ -289,44 +389,74 @@ export default function PreviewClient({
         </div>
       )}
 
-      {/* ── Iframe ── */}
-      <div className="flex-1 relative">
-        {iframeLoading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-zinc-950 z-10">
-            <svg
-              className="w-6 h-6 text-zinc-500 animate-spin"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-              />
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-              />
-            </svg>
+      {/* ── Iframe(s) ── */}
+      {pendingRevisionHtml ? (
+        <div className="flex-1 flex relative">
+          {/* Before */}
+          <div className="w-1/2 relative border-r border-white/10">
+            <span className="absolute top-3 left-3 z-20 px-2 py-0.5 bg-black/70 backdrop-blur text-[11px] font-medium text-zinc-400 rounded">
+              Before
+            </span>
+            <iframe
+              key={`before-${activeView}-${iframeVersion}`}
+              src={iframeSrc}
+              className="w-full h-full absolute inset-0 border-0"
+              title="Before"
+              onLoad={() => setIframeLoading(false)}
+            />
           </div>
-        )}
-        <iframe
-          key={`${activeView}-${iframeVersion}`}
-          src={iframeSrc}
-          className="w-full h-full absolute inset-0 border-0"
-          title={tabs.find((t) => t.key === activeView)?.label || "Preview"}
-          sandbox={
-            activeView === "original"
-              ? "allow-scripts allow-same-origin"
-              : undefined
-          }
-          onLoad={() => setIframeLoading(false)}
-        />
-      </div>
+          {/* After */}
+          <div className="w-1/2 relative">
+            <span className="absolute top-3 left-3 z-20 px-2 py-0.5 bg-black/70 backdrop-blur text-[11px] font-medium text-emerald-400 rounded">
+              After
+            </span>
+            <iframe
+              key={`after-${activeView}`}
+              src={pendingBlobUrl.current ?? ""}
+              className="w-full h-full absolute inset-0 border-0"
+              title="After"
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="flex-1 relative">
+          {iframeLoading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-zinc-950 z-10">
+              <svg
+                className="w-6 h-6 text-zinc-500 animate-spin"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                />
+              </svg>
+            </div>
+          )}
+          <iframe
+            key={`${activeView}-${iframeVersion}`}
+            src={iframeSrc}
+            className="w-full h-full absolute inset-0 border-0"
+            title={tabs.find((t) => t.key === activeView)?.label || "Preview"}
+            sandbox={
+              activeView === "original"
+                ? "allow-scripts allow-same-origin"
+                : undefined
+            }
+            onLoad={() => setIframeLoading(false)}
+          />
+        </div>
+      )}
 
       {/* ── Bottom CTA bar ── */}
       {showCta && (

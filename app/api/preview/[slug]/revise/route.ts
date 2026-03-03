@@ -3,6 +3,7 @@ import { supabaseAdmin as supabase } from "@/lib/supabase/admin";
 import { reviseVariation } from "@/lib/ai";
 import { rateLimit, getIP } from "@/lib/rate-limit";
 import { getUser } from "@/lib/auth";
+import { injectLucide } from "@/lib/inject-lucide";
 
 export const maxDuration = 300;
 
@@ -130,21 +131,11 @@ export async function POST(
       return NextResponse.json({ error: message }, { status: 502 });
     }
 
-    // Save revised HTML back to DB
-    const { error: updateError } = await supabase
-      .from("previews")
-      .update({ [column]: revisedHtml })
-      .eq("slug", slug);
-
-    if (updateError) {
-      console.error("Supabase update error:", updateError.message);
-      return NextResponse.json(
-        { error: "Failed to save revision." },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({ success: true });
+    // Return revised HTML for preview (not saved yet)
+    return NextResponse.json({
+      success: true,
+      revisedHtml: injectLucide(revisedHtml),
+    });
   } catch (err) {
     console.error("Revise error:", err);
     return NextResponse.json(
