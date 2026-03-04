@@ -98,7 +98,7 @@ const faqs = [
   },
   {
     q: "Do I need to know how to code?",
-    a: "Not at all. Presell generates full visual redesigns from a URL — no coding, no Figma, no templates. If you can paste a link, you can use Presell.",
+    a: "Not at all. PitchKit generates full visual redesigns from a URL — no coding, no Figma, no templates. If you can paste a link, you can use PitchKit.",
   },
   {
     q: "How long do preview links stay live?",
@@ -169,7 +169,7 @@ export default function Home() {
       <nav className="fixed top-0 inset-x-0 z-50 border-b border-white/5 bg-[#0a0a0a]/80 backdrop-blur-xl">
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
           <span className="text-sm font-semibold tracking-tight text-white">
-            presell<span className="text-accent">.</span>
+            pitchkit<span className="text-accent">.</span>
           </span>
           <div className="flex items-center gap-6">
             <a href="#how" className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors hidden sm:block">How it works</a>
@@ -474,7 +474,7 @@ export default function Home() {
       <footer className="border-t border-white/5 py-8 px-6">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <span className="text-sm font-semibold tracking-tight text-neutral-600">
-            presell<span className="text-accent/50">.</span>
+            pitchkit<span className="text-accent/50">.</span>
           </span>
           <p className="text-xs text-neutral-700">
             Built for freelancers and agencies who let their work do the talking.

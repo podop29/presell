@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
             unit_amount: pack.price,
             product_data: {
               name: pack.label,
-              description: `${pack.credits} credits for presell`,
+              description: `${pack.credits} credits for PitchKit`,
             },
           },
           quantity: 1,

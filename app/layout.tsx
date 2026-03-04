@@ -14,7 +14,7 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Presell — Turn any bad website into your next client",
+  title: "PitchKit — Turn any bad website into your next client",
   description:
     "Generate AI-powered website redesigns and share them as a hosted preview link to pitch potential clients.",
 };

@@ -261,7 +261,7 @@ export default function PreviewClient({
   const EDITABLE_SELECTOR =
     "h1, h2, h3, h4, h5, h6, p, span, a, li, td, th, label, button, blockquote";
 
-  const EDIT_STYLE_ID = "presell-edit-style";
+  const EDIT_STYLE_ID = "pitchkit-edit-style";
 
   const enableEditMode = useCallback(() => {
     const doc = iframeRef.current?.contentDocument;
@@ -273,16 +273,16 @@ export default function PreviewClient({
       style = doc.createElement("style");
       style.id = EDIT_STYLE_ID;
       style.textContent = `
-        [data-presell-editable] {
+        [data-pitchkit-editable] {
           cursor: text !important;
           transition: outline 0.15s ease;
           outline: 2px dashed transparent;
           outline-offset: 2px;
         }
-        [data-presell-editable]:hover {
+        [data-pitchkit-editable]:hover {
           outline-color: rgb(129 140 248) !important;
         }
-        [data-presell-editable][contenteditable="true"] {
+        [data-pitchkit-editable][contenteditable="true"] {
           outline: 2px solid rgb(99 102 241) !important;
           outline-offset: 2px;
         }
@@ -293,8 +293,8 @@ export default function PreviewClient({
 
     const elements = doc.querySelectorAll(EDITABLE_SELECTOR);
     elements.forEach((el) => {
-      if (el.closest("[data-presell-editable]") && el !== el.closest("[data-presell-editable]")) return;
-      el.setAttribute("data-presell-editable", "true");
+      if (el.closest("[data-pitchkit-editable]") && el !== el.closest("[data-pitchkit-editable]")) return;
+      el.setAttribute("data-pitchkit-editable", "true");
 
       el.addEventListener("click", handleEditClick as EventListener);
       el.addEventListener("blur", handleEditBlur as EventListener);
@@ -312,9 +312,9 @@ export default function PreviewClient({
     editStyleRef.current = null;
 
     // Clean up editable elements
-    const elements = doc.querySelectorAll("[data-presell-editable]");
+    const elements = doc.querySelectorAll("[data-pitchkit-editable]");
     elements.forEach((el) => {
-      el.removeAttribute("data-presell-editable");
+      el.removeAttribute("data-pitchkit-editable");
       (el as HTMLElement).contentEditable = "false";
       el.removeEventListener("click", handleEditClick as EventListener);
       el.removeEventListener("blur", handleEditBlur as EventListener);

@@ -75,7 +75,7 @@ function LoginInner() {
         {/* Logo */}
         <div className="text-center mb-8">
           <Link href="/" className="text-lg font-semibold tracking-tight text-white">
-            presell<span className="text-accent">.</span>
+            pitchkit<span className="text-accent">.</span>
           </Link>
           <p className="text-sm text-neutral-500 mt-2">Sign in to your account</p>
         </div>

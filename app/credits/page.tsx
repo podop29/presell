@@ -81,7 +81,7 @@ function CreditsPageInner() {
             href="/"
             className="text-sm font-semibold tracking-tight text-white"
           >
-            presell<span className="text-accent">.</span>
+            pitchkit<span className="text-accent">.</span>
           </Link>
           <AuthButton />
         </div>
