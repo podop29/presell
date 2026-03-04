@@ -112,21 +112,25 @@ Tailor these to the specific business and industry. Use descriptive keywords tha
   "styleBrief": "string — a detailed 150-250 word design brief covering: color palette (specific hex codes), typography (specific Google Font name), overall mood, hero section approach, card/component style, CTA button style, and what real-world brand or website aesthetic this should channel"
 }
 
-Rules for generating the 3 styles:
+IMPORTANT — RESPECT THE EXISTING BRAND:
+First, assess whether the site has a strong existing brand identity (clear logo, consistent color scheme, recognizable style) or a weak/generic one (default template, no clear colors, no brand personality). This determines how you approach ALL 3 styles.
 
-STYLE 1 — "Refined Evolution" (preserve original brand colors):
-- This style MUST keep the site's existing brand color palette intact. Use the exact hex codes from the "primaryColors" field and the screenshot. These are the client's brand colors — do not change them.
-- Improve everything ELSE: typography (pick a distinctive, characterful Google Font), layout, whitespace, component design, hover states, animations, and visual hierarchy.
-- The styleBrief MUST include the original hex codes as the color palette, explicitly stating they are preserved from the original brand.
-- Give it a name that signals continuity and refinement (e.g. "Elevated [Brand]", "Refined Classic", "[Brand] Polished").
+IF THE SITE HAS STRONG BRANDING (clear colors, logo, identity):
+- ALL 3 styles MUST preserve the brand's core color palette. Use the exact hex codes from "primaryColors" and the screenshot. These are the client's colors — do not replace them.
+- The 3 styles should differ in DESIGN APPROACH, not brand identity: vary the typography, layout style, component design, spacing, visual effects, and overall mood — but keep the same brand colors across all three.
+- Think of it as 3 different designers all working with the same brand guidelines — each brings a different aesthetic sensibility but respects the brand.
+- Example differences: one might use an editorial magazine layout with serif fonts, another might use a modern minimal approach with clean sans-serif, a third might use bold asymmetric layouts with strong whitespace.
 
-STYLES 2 & 3 — Bold alternatives:
-- These two styles must feel dramatically different from each other — vary color palette, mood, typography, layout approach, and overall aesthetic direction.
-- Style 2 should lean sophisticated/editorial (think refined magazine layout).
-- Style 3 should feel energetic/bold (think startup landing page) or be a creative wildcard that feels unexpected but perfectly appropriate for this specific business.
-- Both must propose completely NEW color palettes that differ from the original site's colors.
+IF THE SITE HAS WEAK/NO BRANDING (generic template, unclear colors, no identity):
+- You have more freedom to suggest color palettes, but still keep them appropriate for the industry and business.
+- The 3 styles can each propose a different color direction, but they should all feel like plausible brand identities for THIS specific business — not random experiments.
+- Each style should feel like a cohesive brand proposal, not just a color swap.
 
-ALL STYLES:
+Rules for all 3 styles:
+- Style 1: The most polished, refined elevation — closest to the original site's feel but dramatically better in execution. Name it something that signals continuity (e.g. "Elevated [Brand]", "Refined Classic").
+- Style 2: A sophisticated/editorial take — think refined magazine layout, elegant typography, generous whitespace.
+- Style 3: A modern/energetic take — think clean startup landing page, bold typography, strong visual hierarchy.
+- The goal is ELEVATION, not reinvention. The business owner should see their site made beautiful, not a completely foreign design.
 - Tailor every style to this specific business and industry — a law firm should never get the same styles as a surf shop.
 - FONT SELECTION IS CRITICAL: choose distinctive, characterful Google Fonts — NEVER suggest Inter, Roboto, Arial, Open Sans, or other overused defaults. Pick fonts with personality: Playfair Display, Fraunces, DM Serif Display, Space Grotesk, Outfit, Sora, Manrope, Cabinet Grotesk, Satoshi, General Sans, Clash Display, etc. Each style MUST use a different display font.
 - Reference specific colors (hex codes), specific Google Fonts by name, and specific design techniques (gradient meshes, grain textures, asymmetric layouts, diagonal dividers, overlapping elements, glassmorphism, etc.)
