@@ -7,9 +7,9 @@ import PreviewClient from "./preview-client";
 export const dynamic = "force-dynamic";
 
 /** Race a promise against a timeout — returns null if it takes too long */
-function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | null> {
+function withTimeout<T>(promise: PromiseLike<T>, ms: number): Promise<T | null> {
   return Promise.race([
-    promise,
+    Promise.resolve(promise),
     new Promise<null>((resolve) => setTimeout(() => resolve(null), ms)),
   ]);
 }
@@ -27,7 +27,7 @@ export async function generateMetadata({
 }: {
   params: { slug: string };
 }): Promise<Metadata> {
-  const { data } = await withTimeout(
+  const metaResult = await withTimeout(
     supabase
       .from("previews")
       .select("original_url, dev_name, user_id, business_name")
@@ -36,6 +36,7 @@ export async function generateMetadata({
     10000
   );
 
+  const data = metaResult?.data;
   if (!data) return { title: "Preview" };
 
   let domain = data.business_name || data.original_url;
@@ -63,7 +64,7 @@ export default async function PreviewPage({
 }: {
   params: { slug: string };
 }) {
-  const result = await withTimeout(
+  const pageResult = await withTimeout(
     supabase
       .from("previews")
       .select("*")
@@ -72,11 +73,12 @@ export default async function PreviewPage({
     10000
   );
 
-  if (!result || result.error || !result.data) {
+  if (!pageResult?.data) {
     notFound();
   }
 
-  const data = result.data;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data = pageResult.data as any;
   const isExpired = new Date(data.expires_at) < new Date();
 
   if (isExpired) {
