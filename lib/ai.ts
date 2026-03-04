@@ -407,6 +407,15 @@ Color & Atmosphere:
 - Alternate section backgrounds for visual rhythm — vary between light, dark, colored, and textured
 - Gradients should be used sparingly and only on large surfaces (hero backgrounds, section dividers) — never on buttons or small UI elements
 
+TEXT CONTRAST — THIS IS A HARD RULE:
+- EVERY piece of text must have strong contrast against its background. No exceptions.
+- On light backgrounds: use dark text (text-gray-900, text-zinc-800, text-black). NEVER use white, light gray, or pale colors on light backgrounds.
+- On dark backgrounds: use white or very light text. NEVER use dark gray or muted colors on dark backgrounds.
+- For text over images: ALWAYS add a dark overlay (bg-black/50 or bg-gradient-to-t from-black/70) beneath the text. Never place bare text directly on an image.
+- Subheadings and body text on colored sections must still be clearly readable — use text-white/90 or text-gray-100 on dark sections, text-gray-700 or darker on light sections.
+- If a section has a medium-tone background (gray-300, gray-400, etc.), use either very dark or very white text — never mid-tone grays.
+- BEFORE FINISHING: mentally scan every section and verify all text is clearly readable against its direct background. If any text blends into its background, fix it immediately.
+
 Spatial Composition & Layout:
 - Break the grid intentionally — asymmetry, overlap, diagonal flow, grid-breaking hero elements
 - Generous negative space OR controlled density — match the aesthetic vision
@@ -437,6 +446,10 @@ ANTI-PATTERNS — NEVER DO THESE:
 - Cookie-cutter component patterns that look like every other AI-generated site
 - Flat, boring section backgrounds with no texture or depth
 - Using emoji as icons
+- White or light text on white or light backgrounds — UNREADABLE
+- Gray text on gray backgrounds — UNREADABLE
+- Text placed directly on images without a dark overlay — UNREADABLE
+- Low-contrast color combinations (e.g. light blue text on white, light gray on beige)
 
 ICONS — USE LUCIDE ICONS VIA CDN:
 For all icons, use the Lucide icon library. Do NOT use emoji, Font Awesome, Heroicons, or inline SVGs for icons.
@@ -558,6 +571,8 @@ Critical Design Rules:
 - Add orchestrated page-load animations: staggered fade-in-up reveals with animation-delay on hero elements and section content
 - Create visual depth: use background textures (subtle noise/grain via CSS), layered transparencies, and atmospheric gradients — not flat solid-color sections
 - The design must feel like it was hand-crafted by a senior designer for this specific business, not generated from a template
+- HERO SECTIONS WITH BACKGROUND IMAGES: Always add a dark overlay div (absolute inset-0 bg-black/50 or bg-gradient-to-t from-black/70 to-black/30) between the image and the text content. The text container must be relative with z-10. This is MANDATORY — never skip the overlay.
+- FINAL CONTRAST CHECK: After generating the full HTML, scan every section top to bottom. For each section, verify the text color has high contrast against the section background. If any text would be hard to read, fix it before outputting.
 - Return ONLY the complete HTML document starting with <!DOCTYPE html> — absolutely nothing else`;
 }
 
@@ -753,8 +768,17 @@ export interface ColdEmail {
 export async function generateColdEmail(
   profile: BusinessProfile,
   previewUrl: string,
-  devName: string
+  devName: string,
+  isNewSite: boolean = false
 ): Promise<ColdEmail> {
+  const context = isNewSite
+    ? "I built a free website for this business that currently has no website (or only a Google Maps listing)."
+    : "I built a free redesign preview showing how this business's existing website could look with a modern upgrade.";
+
+  const hook = isNewSite
+    ? "The hook is that you built them a complete website they can see right now — for free, no strings attached. They currently have no website, so this is a huge value-add."
+    : "The hook is that you already built them a free redesign preview they can see right now — showing a direct upgrade over their current site.";
+
   const message = await anthropic.messages.create({
     model: "claude-haiku-4-5-20251001",
     max_tokens: 1024,
@@ -763,18 +787,20 @@ export async function generateColdEmail(
 Rules:
 - Keep the email SHORT — 3-5 sentences in the body, max. Business owners are busy.
 - Lead with something specific about THEIR business, not about you.
-- The hook is that you already built them a free redesign preview they can see right now.
+- ${hook}
 - Sound human and genuine — not salesy, not corporate, not desperate. Like a friendly neighbor who happens to be a web developer.
 - No exclamation marks in the subject line. One at most in the body.
 - End with a simple, low-pressure CTA (reply, quick call, etc.)
 - Do NOT include "[Your Name]" or any placeholder — use the actual dev name provided.
-- The subject line should be specific to their business, not generic like "Your website redesign" or "I redesigned your website".`,
+- The subject line should be specific to their business, not generic like "Your website redesign" or "I redesigned your website".
+- ${isNewSite ? 'Do NOT say "redesign" — this is a brand new website, not a redesign. Say "website", "site", or "page" instead.' : ""}
+- Vary your tone and approach — never use the same opening line or structure twice.`,
     messages: [
       {
         role: "user",
         content: `Write a cold email for this situation:
 
-I'm ${devName}, a web developer. I just built a free redesign preview for this business:
+I'm ${devName}, a web developer. ${context}
 
 Business: ${profile.businessName}
 Industry: ${profile.industry}
