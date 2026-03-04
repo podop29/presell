@@ -11,7 +11,7 @@
 const LUCIDE_CDN = `<script src="https://unpkg.com/lucide@0.473.0/dist/umd/lucide.min.js"></script>`;
 
 const LUCIDE_INIT = `
-<script>
+<script data-lucide-init>
 (function(){
   var attempts=0;
   function init(){
@@ -30,16 +30,17 @@ const LUCIDE_INIT = `
 </script>`;
 
 export function injectLucide(html: string): string {
-  // Remove any existing lucide script tags the AI may have inserted
+  // Remove any existing lucide script tags (attribute-based: CDN, data-lucide-init, AI-added)
   let cleaned = html.replace(
     /<script[^>]*lucide[^>]*>[\s\S]*?<\/script>/gi,
     ""
   );
 
-  // Also remove standalone createIcons calls that might be orphaned
+  // Remove old-format init scripts (no lucide in attributes, but lucide.createIcons in body)
+  // Uses a callback to check each individual script block without crossing </script> boundaries
   cleaned = cleaned.replace(
-    /<script>[^<]*lucide\.createIcons\(\)[^<]*<\/script>/gi,
-    ""
+    /<script>[\s\S]*?<\/script>/gi,
+    (match) => (match.includes("lucide.createIcons()") ? "" : match)
   );
 
   // Inject CDN link in <head> for early loading
