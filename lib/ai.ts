@@ -610,8 +610,10 @@ Rules:
 5. NEVER touch anything the user didn't ask about. No "while I'm at it" fixes. No adjusting colors for contrast. No improving hover states. No fixing things that look wrong to you. ONLY what was explicitly requested.
 
 IMAGE CHANGES:
-When the user asks to change, replace, or swap an image, set "image_search" to a descriptive Pexels search query for the desired image (e.g. "modern kitchen interior bright lighting"). Then in your operation, use the placeholder {{STOCK_IMAGE_URL}} as the new src value. The system will replace it with a real image URL before applying.
-For the "search" string, include the entire <img tag so the URL doesn't need to match exactly.`;
+When the user asks to change, replace, or swap an image:
+1. Set "image_search" to a descriptive Pexels search query for the desired image (e.g. "modern kitchen interior bright lighting").
+2. For the "search" string, copy the EXACT <img> tag from the HTML — include the full tag from <img to the closing > or />. Copy it character-for-character. The src URL must be IDENTICAL to what appears in the HTML.
+3. For the "replace" string, write a new <img> tag with src="{{STOCK_IMAGE_URL}}" — the system will replace this placeholder with a real image URL. Keep the same class, alt, and other attributes.`;
 
 const REVISION_TOOL = {
   name: "apply_revisions" as const,
@@ -708,12 +710,27 @@ export async function reviseVariation(
     // Substitute the stock image placeholder if we have one
     let replaceStr = op.replace;
     if (stockImageUrl && replaceStr.includes("{{STOCK_IMAGE_URL}}")) {
-      replaceStr = replaceStr.replace("{{STOCK_IMAGE_URL}}", stockImageUrl);
+      replaceStr = replaceStr.replace(/\{\{STOCK_IMAGE_URL\}\}/g, stockImageUrl);
     }
 
     if (html.includes(op.search)) {
       html = html.replace(op.search, replaceStr);
       appliedCount++;
+    } else if (op.search.includes("<img") || op.replace.includes("{{STOCK_IMAGE_URL}}") || (stockImageUrl && op.replace.includes(stockImageUrl))) {
+      // Fallback for image operations: the AI often copies <img> tags inexactly
+      // Try to find the img tag by extracting the src URL from the search string
+      const srcMatch = op.search.match(/src=["']([^"']+)["']/);
+      if (srcMatch) {
+        const srcUrl = srcMatch[1];
+        // Find the full <img ...> or <img ... /> tag containing this src
+        const escapedSrc = srcUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const imgRegex = new RegExp(`<img[^>]*src=["']${escapedSrc}["'][^>]*/?>`, "i");
+        const imgMatch = html.match(imgRegex);
+        if (imgMatch) {
+          html = html.replace(imgMatch[0], replaceStr);
+          appliedCount++;
+        }
+      }
     }
   }
 
