@@ -94,11 +94,15 @@ function Building({ className = "w-5 h-5" }: { className?: string }) {
 const faqs = [
   {
     q: "What does the prospect actually see?",
-    a: "They get a clean, shareable page with a side-by-side before/after of their current site and the redesign — plus your name, contact info, and a ready-to-send email. No login required on their end.",
+    a: "They get a clean, shareable preview page with the redesigned (or brand new) website, your name, contact info, and a way to reach out. No login required on their end.",
   },
   {
     q: "Do I need to know how to code?",
-    a: "Not at all. PitchKit generates full visual redesigns from a URL — no coding, no Figma, no templates. If you can paste a link, you can use PitchKit.",
+    a: "Not at all. PitchKit generates full websites from a URL or Google Maps link — no coding, no Figma, no templates. If you can paste a link, you can use PitchKit.",
+  },
+  {
+    q: "What's the difference between a URL and a Google Maps link?",
+    a: "Paste a website URL to generate a modern redesign of their existing site. Paste a Google Maps link for businesses with no website — PitchKit will build them one from scratch using their business info, photos, and reviews.",
   },
   {
     q: "How long do preview links stay live?",
@@ -106,11 +110,11 @@ const faqs = [
   },
   {
     q: "How much does it cost?",
-    a: "You get free credits to start. Each redesign costs one credit. No subscriptions, no monthly fees — just pay for what you use.",
+    a: "You get free credits to start. Each generation costs one credit. No subscriptions, no monthly fees — just pay for what you use.",
   },
   {
-    q: "Can I customize the redesign before sending it?",
-    a: "You choose from 3 AI-generated style directions, each tailored to the prospect's brand. The AI uses their real content, colors, and images — so every preview feels custom, not cookie-cutter.",
+    q: "Can I customize the design before sending it?",
+    a: "You choose from 3 AI-generated style directions, each tailored to the prospect's brand. After generating, you can refine the design with AI-powered revisions or edit text directly.",
   },
 ];
 
@@ -224,14 +228,14 @@ export default function Home() {
           </div>
 
           <h1 className="animate-fade-in-up delay-100 text-5xl sm:text-6xl md:text-7xl font-bold tracking-tight leading-[1.05]">
-            <span className="text-white">Turn ugly websites</span>
+            <span className="text-white">Show the website.</span>
             <br />
-            <span className="text-gradient">into signed clients</span>
+            <span className="text-gradient">Close the client.</span>
           </h1>
 
           <p className="animate-fade-in-up delay-200 mt-6 text-lg sm:text-xl text-neutral-400 max-w-2xl mx-auto leading-relaxed">
-            Paste a website URL or Google Maps link. Get an AI-generated
-            website in minutes. Send it as a preview link to land the deal.
+            Paste any website URL to generate a stunning redesign — or drop a Google Maps
+            link to build a brand new site from scratch. Send it as a shareable preview to land the deal.
           </p>
 
           {/* ─── URL INPUT ─── */}
@@ -259,20 +263,20 @@ export default function Home() {
               {
                 icon: <Globe className="w-5 h-5" />,
                 step: "01",
-                title: "Paste their URL",
-                desc: "Our AI scrapes their real content, photos, and brand colors — then analyzes the business to understand what they do.",
+                title: "Paste a link",
+                desc: "Drop a website URL to redesign an existing site, or a Google Maps link to build a new one. Our AI analyzes the business, content, and photos automatically.",
               },
               {
                 icon: <Sparkles className="w-5 h-5" />,
                 step: "02",
                 title: "Pick a design direction",
-                desc: "Choose from 3 elevated redesign styles, each tailored to their industry and brand identity. No generic templates.",
+                desc: "Choose from 3 AI-generated styles, each tailored to the business. Refine with AI revisions or edit text directly until it's perfect.",
               },
               {
                 icon: <Send className="w-5 h-5" />,
                 step: "03",
                 title: "Send and close",
-                desc: "Get a shareable link with a before/after comparison, your contact info, and an auto-generated cold email ready to send.",
+                desc: "Get a shareable preview link with your contact info and an auto-generated cold email — ready to send and start the conversation.",
               },
             ].map((item, i) => (
               <div
@@ -308,12 +312,12 @@ export default function Home() {
               {
                 icon: <Mail className="w-5 h-5" />,
                 title: "Cold emails get ignored",
-                desc: "\"I can build you a better website\" sounds like every other pitch in their inbox. No proof, no reply.",
+                desc: "\"I can build you a website\" sounds like every other pitch in their inbox. Without proof, there's no reply.",
               },
               {
                 icon: <FileText className="w-5 h-5" />,
                 title: "Portfolios don't convert",
-                desc: "Your past work looks great — but it's someone else's brand. Prospects can't picture what you'd do for them.",
+                desc: "Your past work looks great — but it's someone else's brand. Prospects can't picture what you'd build for them.",
               },
               {
                 icon: <Clock className="w-5 h-5" />,
@@ -345,17 +349,22 @@ export default function Home() {
             <h2 className="text-3xl sm:text-4xl font-bold text-white">Everything you need to close</h2>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
               {
                 icon: <Zap className="w-4 h-4" />,
                 title: "AI business analysis",
-                desc: "Understands their industry, customers, and brand tone — so the redesign actually fits.",
+                desc: "Understands their industry, customers, and brand tone — whether from their website or Google Maps listing.",
+              },
+              {
+                icon: <MapPin className="w-4 h-4" />,
+                title: "Google Maps to website",
+                desc: "Businesses with no website? Paste their Maps link and PitchKit builds a complete site from their listing, photos, and reviews.",
               },
               {
                 icon: <Sparkles className="w-4 h-4" />,
-                title: "Brand-preserving styles",
-                desc: "3 unique design directions that build on their existing identity, never generic templates.",
+                title: "3 style directions",
+                desc: "Choose from 3 unique design directions tailored to the business — never generic templates.",
               },
               {
                 icon: <Check className="w-4 h-4" />,
@@ -363,19 +372,19 @@ export default function Home() {
                 desc: "Uses their actual copy, images, and details — so the preview feels like a real project.",
               },
               {
-                icon: <Globe className="w-4 h-4" />,
-                title: "Professional stock photos",
-                desc: "Pulls relevant photos from Pexels to fill gaps and elevate the visual quality.",
-              },
-              {
                 icon: <Send className="w-4 h-4" />,
                 title: "Shareable preview links",
-                desc: "One URL with before/after comparison and your contact info built right in.",
+                desc: "One URL with your contact info built right in. Send it and let the work speak for itself.",
               },
               {
                 icon: <Mail className="w-4 h-4" />,
                 title: "Auto-generated cold email",
-                desc: "Get a ready-to-send outreach email with subject line — personalized to the prospect.",
+                desc: "Get a ready-to-send outreach email personalized to the prospect and their business.",
+              },
+              {
+                icon: <Globe className="w-4 h-4" />,
+                title: "AI revisions + text editing",
+                desc: "Refine the design with AI-powered revisions or edit text directly — get it perfect before sending.",
               },
               {
                 icon: <Clock className="w-4 h-4" />,
@@ -417,7 +426,7 @@ export default function Home() {
               <h3 className="text-xl font-bold text-white mb-4">Freelancers</h3>
               <ul className="space-y-3">
                 {[
-                  "Prospect local businesses by showing them a redesign of their actual site",
+                  "Prospect local businesses — redesign their site or build one from their Google Maps listing",
                   "Skip the free consultation — let the preview do the talking",
                   "Stand out from every other \"I build websites\" DM in their inbox",
                 ].map((item) => (
@@ -437,9 +446,9 @@ export default function Home() {
               <h3 className="text-xl font-bold text-white mb-4">Agencies</h3>
               <ul className="space-y-3">
                 {[
-                  "Scale your outbound pipeline without burning designer hours on unpaid pitches",
+                  "Scale outbound without burning designer hours — target businesses with or without websites",
                   "Send personalized previews to dozens of prospects per week",
-                  "Use the auto-generated cold email to arm your sales team with better outreach",
+                  "Arm your sales team with auto-generated cold emails and shareable preview links",
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-3 text-sm text-neutral-400">
                     <Check className="w-4 h-4 text-accent shrink-0 mt-0.5" />
