@@ -468,38 +468,65 @@ interface RevisionResponse {
   operations: SearchReplace[];
 }
 
+function parseRevisionJSON(raw: string): RevisionResponse {
+  let jsonStr = raw.trim();
+
+  // Strip markdown code fences if present
+  const fenceMatch = jsonStr.match(/```(?:json)?\s*\n?([\s\S]*?)\n?\s*```/);
+  if (fenceMatch) {
+    jsonStr = fenceMatch[1].trim();
+  }
+
+  // If it still doesn't start with {, try to find the JSON object in the text
+  if (!jsonStr.startsWith("{")) {
+    const braceStart = jsonStr.indexOf("{");
+    const braceEnd = jsonStr.lastIndexOf("}");
+    if (braceStart !== -1 && braceEnd > braceStart) {
+      jsonStr = jsonStr.slice(braceStart, braceEnd + 1);
+    }
+  }
+
+  return JSON.parse(jsonStr);
+}
+
 export async function reviseVariation(
   existingHtml: string,
   userPrompt: string
 ): Promise<string> {
-  const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-20250514",
-    max_tokens: 4096,
-    system: REVISION_SYSTEM_PROMPT,
-    messages: [
-      {
-        role: "user",
-        content: `Here is the current HTML document:\n\n${existingHtml}\n\n---\n\nRevision request: ${userPrompt}`,
-      },
-    ],
-  });
+  const MAX_RETRIES = 2;
+  let revision: RevisionResponse | null = null;
+  let lastError: Error | null = null;
 
-  const textBlock = message.content.find((block) => block.type === "text");
-  if (!textBlock || textBlock.type !== "text") {
-    throw new Error("No text response from Claude");
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const message = await anthropic.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 8192,
+      system: REVISION_SYSTEM_PROMPT,
+      messages: [
+        {
+          role: "user",
+          content: `Here is the current HTML document:\n\n${existingHtml}\n\n---\n\nRevision request: ${userPrompt}`,
+        },
+      ],
+    });
+
+    const textBlock = message.content.find((block) => block.type === "text");
+    if (!textBlock || textBlock.type !== "text") {
+      lastError = new Error("No text response from Claude");
+      continue;
+    }
+
+    try {
+      revision = parseRevisionJSON(textBlock.text);
+      break;
+    } catch {
+      lastError = new Error("Failed to parse revision response as JSON");
+      console.warn(`Revision JSON parse failed (attempt ${attempt + 1}/${MAX_RETRIES + 1}), retrying...`);
+    }
   }
 
-  // Parse the revision response
-  let jsonStr = textBlock.text.trim();
-  if (jsonStr.startsWith("```")) {
-    jsonStr = jsonStr.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
-  }
-
-  let revision: RevisionResponse;
-  try {
-    revision = JSON.parse(jsonStr);
-  } catch {
-    throw new Error("Failed to parse revision response as JSON");
+  if (!revision) {
+    throw lastError ?? new Error("Failed to parse revision response as JSON");
   }
 
   const operations = revision.operations;
