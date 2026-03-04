@@ -438,6 +438,14 @@ export default function PreviewClient({
   }
 
   const showCta = devName && devEmail;
+  const [contactOpen, setContactOpen] = useState(false);
+  const [emailCopied, setEmailCopied] = useState(false);
+
+  function handleCopyEmail() {
+    navigator.clipboard.writeText(devEmail);
+    setEmailCopied(true);
+    setTimeout(() => setEmailCopied(false), 2000);
+  }
 
   return (
     <div className="h-screen flex flex-col bg-zinc-950 overflow-hidden">
@@ -892,12 +900,12 @@ export default function PreviewClient({
                 <p className="text-xs text-zinc-400 truncate">{devEmail}</p>
               </div>
               {/* CTA inline on mobile */}
-              <a
-                href={`mailto:${devEmail}?subject=Website Redesign&body=Hi ${encodeURIComponent(displayName)}, I saw the redesign preview and I'm interested in learning more.`}
+              <button
+                onClick={() => setContactOpen(true)}
                 className="sm:hidden shrink-0 px-4 py-2 bg-white hover:bg-neutral-200 text-zinc-900 text-xs font-semibold rounded-lg transition-colors"
               >
                 Get in Touch
-              </a>
+              </button>
             </div>
 
             {/* Center — dev message (hidden on mobile) */}
@@ -908,14 +916,89 @@ export default function PreviewClient({
             )}
 
             {/* Right — CTA button (hidden on mobile, shown inline above) */}
-            <a
-              href={`mailto:${devEmail}?subject=Website Redesign&body=Hi ${encodeURIComponent(displayName)}, I saw the redesign preview and I'm interested in learning more.`}
+            <button
+              onClick={() => setContactOpen(true)}
               className="hidden sm:block shrink-0 px-5 py-2 bg-white hover:bg-neutral-200 text-zinc-900 text-sm font-semibold rounded-lg transition-colors"
             >
               Get in Touch
-            </a>
+            </button>
           </div>
         </footer>
+      )}
+
+      {/* ── Contact Modal ── */}
+      {contactOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          onClick={() => setContactOpen(false)}
+        >
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div
+            className="relative w-full max-w-sm bg-zinc-900 border border-white/10 rounded-2xl p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close button */}
+            <button
+              onClick={() => setContactOpen(false)}
+              className="absolute top-4 right-4 text-zinc-500 hover:text-white transition-colors"
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+
+            {/* Avatar / Logo */}
+            <div className="flex flex-col items-center text-center mb-5">
+              {logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={logoUrl}
+                  alt={displayName}
+                  className="w-14 h-14 rounded-xl object-contain mb-3"
+                />
+              ) : (
+                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-xl font-semibold mb-3">
+                  {initial}
+                </div>
+              )}
+              <h3 className="text-lg font-semibold text-white">{displayName}</h3>
+              {companyName && companyName !== devName && (
+                <p className="text-sm text-zinc-400">{devName}</p>
+              )}
+            </div>
+
+            {/* Dev message */}
+            {devMessage && (
+              <p className="text-sm text-zinc-400 text-center mb-5 leading-relaxed italic">
+                &ldquo;{devMessage}&rdquo;
+              </p>
+            )}
+
+            {/* Email row */}
+            <div className="flex items-center gap-2 p-3 bg-zinc-800/50 border border-white/5 rounded-xl mb-4">
+              <svg className="w-4 h-4 text-zinc-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="2" y="4" width="20" height="16" rx="2" /><path d="M22 7l-10 7L2 7" />
+              </svg>
+              <span className="text-sm text-zinc-300 truncate flex-1 font-mono">{devEmail}</span>
+              <button
+                onClick={handleCopyEmail}
+                className="shrink-0 px-2.5 py-1 text-xs font-medium rounded-md bg-white/10 hover:bg-white/15 text-zinc-300 transition-colors"
+              >
+                {emailCopied ? "Copied!" : "Copy"}
+              </button>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex flex-col gap-2">
+              <a
+                href={`mailto:${devEmail}?subject=Website Redesign&body=Hi ${encodeURIComponent(displayName)}, I saw the redesign preview and I'm interested in learning more.`}
+                className="w-full py-2.5 bg-white hover:bg-neutral-200 text-zinc-900 text-sm font-semibold rounded-xl transition-colors text-center"
+              >
+                Send Email
+              </a>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
