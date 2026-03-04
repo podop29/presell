@@ -27,6 +27,7 @@ interface PreviewClientProps {
   isOwner: boolean;
   companyName?: string;
   logoUrl?: string;
+  hasOriginalSite?: boolean;
 }
 
 export default function PreviewClient({
@@ -40,6 +41,7 @@ export default function PreviewClient({
   isOwner,
   companyName,
   logoUrl,
+  hasOriginalSite = true,
 }: PreviewClientProps) {
   const [activeView, setActiveView] = useState<string>(
     variations[0]?.key ?? "original"
@@ -108,7 +110,7 @@ export default function PreviewClient({
   }, [isOwner, slug]);
 
   const tabs: { key: string; label: string }[] = [
-    { key: "original", label: "Current" },
+    ...(hasOriginalSite ? [{ key: "original", label: "Current" }] : []),
     ...variations.map((v) => ({ key: v.key, label: v.label })),
   ];
 

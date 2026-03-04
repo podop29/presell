@@ -91,6 +91,10 @@ export default async function PreviewPage({
     }
   }
 
+  // Detect if original_url is a real website (not a Google Maps link)
+  const mapsPattern = /google\.com\/maps|maps\.google\.|maps\.app\.goo\.gl|goo\.gl\/maps/i;
+  const hasOriginalSite = !mapsPattern.test(data.original_url);
+
   const variations: { key: string; label: string; src: string }[] = [];
   if (data.variation_a_html)
     variations.push({
@@ -129,6 +133,7 @@ export default async function PreviewPage({
       isOwner={isOwner}
       companyName={companyName}
       logoUrl={logoUrl}
+      hasOriginalSite={hasOriginalSite}
     />
   );
 }
