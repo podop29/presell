@@ -9,7 +9,15 @@ export function getSupabaseAdmin(): SupabaseClient {
     if (!url || !key) {
       throw new Error("Missing Supabase environment variables");
     }
-    _supabaseAdmin = createClient(url, key);
+    _supabaseAdmin = createClient(url, key, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+      global: {
+        fetch: (input, init) => fetch(input, { ...init, cache: "no-store" }),
+      },
+    });
   }
   return _supabaseAdmin;
 }

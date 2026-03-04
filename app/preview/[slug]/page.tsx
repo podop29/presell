@@ -6,14 +6,6 @@ import PreviewClient from "./preview-client";
 
 export const dynamic = "force-dynamic";
 
-/** Race a promise against a timeout — returns null if it takes too long */
-function withTimeout<T>(promise: PromiseLike<T>, ms: number): Promise<T | null> {
-  return Promise.race([
-    Promise.resolve(promise),
-    new Promise<null>((resolve) => setTimeout(() => resolve(null), ms)),
-  ]);
-}
-
 async function fetchOwnerBranding(userId: string) {
   const { data: owner } = await supabase.auth.admin.getUserById(userId);
   return {
@@ -27,16 +19,12 @@ export async function generateMetadata({
 }: {
   params: { slug: string };
 }): Promise<Metadata> {
-  const metaResult = await withTimeout(
-    supabase
-      .from("previews")
-      .select("original_url, dev_name, user_id, business_name")
-      .eq("slug", params.slug)
-      .single(),
-    10000
-  );
+  const { data } = await supabase
+    .from("previews")
+    .select("original_url, dev_name, user_id, business_name")
+    .eq("slug", params.slug)
+    .single();
 
-  const data = metaResult?.data;
   if (!data) return { title: "Preview" };
 
   let domain = data.business_name || data.original_url;
@@ -48,8 +36,8 @@ export async function generateMetadata({
 
   let brandName = data.dev_name;
   if (data.user_id) {
-    const branding = await withTimeout(fetchOwnerBranding(data.user_id), 5000);
-    if (branding?.companyName) {
+    const branding = await fetchOwnerBranding(data.user_id);
+    if (branding.companyName) {
       brandName = branding.companyName;
     }
   }
@@ -64,21 +52,16 @@ export default async function PreviewPage({
 }: {
   params: { slug: string };
 }) {
-  const pageResult = await withTimeout(
-    supabase
-      .from("previews")
-      .select("*")
-      .eq("slug", params.slug)
-      .single(),
-    10000
-  );
+  const { data, error } = await supabase
+    .from("previews")
+    .select("*")
+    .eq("slug", params.slug)
+    .single();
 
-  if (!pageResult?.data) {
+  if (error || !data) {
     notFound();
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const data = pageResult.data as any;
   const isExpired = new Date(data.expires_at) < new Date();
 
   if (isExpired) {
@@ -99,10 +82,8 @@ export default async function PreviewPage({
 
   // Run auth check and branding fetch in parallel
   const [user, branding] = await Promise.all([
-    withTimeout(getUser(), 5000),
-    data.user_id
-      ? withTimeout(fetchOwnerBranding(data.user_id), 5000)
-      : Promise.resolve(null),
+    getUser(),
+    data.user_id ? fetchOwnerBranding(data.user_id) : null,
   ]);
 
   const isOwner = !!user && user.id === data.user_id;

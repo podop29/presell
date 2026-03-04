@@ -879,7 +879,7 @@ export default function PreviewClient({
 
       {/* ── Bottom CTA bar ── */}
       {showCta && (
-        <footer className="relative z-30 shrink-0 bg-black/60 backdrop-blur-xl border-t border-white/10 px-4 sm:px-6 py-3">
+        <footer className="relative z-30 shrink-0 bg-black/60 backdrop-blur-xl border-t border-white/10 px-4 sm:px-6 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center sm:justify-between gap-3 sm:gap-4">
             {/* Left — logo/avatar + dev info */}
             <div className="flex items-center gap-3 shrink-0 w-full sm:w-auto">
