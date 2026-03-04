@@ -204,11 +204,21 @@ function CreatePageInner() {
   const source: "website" | "google-maps" = mapsUrl ? "google-maps" : "website";
   const hasStarted = useRef(false);
 
-  const [devName, setDevName] = useState("");
-  const [devEmail, setDevEmail] = useState("");
+  const [devName, setDevName] = useState(() => {
+    if (typeof window !== "undefined") return localStorage.getItem("pitchkit_devName") || "";
+    return "";
+  });
+  const [devEmail, setDevEmail] = useState(() => {
+    if (typeof window !== "undefined") return localStorage.getItem("pitchkit_devEmail") || "";
+    return "";
+  });
   const [devMessage, setDevMessage] = useState("");
   const [error, setError] = useState("");
   const [phase, setPhase] = useState<Phase>("analyzing");
+
+  // Persist name & email to localStorage
+  useEffect(() => { if (devName) localStorage.setItem("pitchkit_devName", devName); }, [devName]);
+  useEffect(() => { if (devEmail) localStorage.setItem("pitchkit_devEmail", devEmail); }, [devEmail]);
 
   const [profile, setProfile] = useState<BusinessProfile | null>(null);
   const [styles, setStyles] = useState<StyleSuggestion[]>([]);
@@ -394,103 +404,139 @@ function CreatePageInner() {
 
           {/* Phase: Pick Style + Details */}
           {phase === "pick-style" && (
-            <div className="text-left space-y-5 animate-fade-in">
+            <div className="text-left animate-fade-in">
               {/* Analyzed badge */}
               {profile && (
-                <div className="flex items-start gap-3 p-4 bg-surface rounded-xl border border-[var(--border)]">
-                  <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <Check className="w-4 h-4 text-accent" />
+                <div className="animate-fade-in-up flex items-center gap-3 px-4 py-3 mb-8 rounded-xl bg-accent/5 border border-accent/20">
+                  <div className="w-7 h-7 rounded-full bg-accent/15 flex items-center justify-center shrink-0">
+                    <Check className="w-3.5 h-3.5 text-accent" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-white font-medium text-sm">{profile.businessName}</p>
-                    <p className="text-xs text-neutral-500 mt-0.5 truncate">{profile.whatTheyDo}</p>
+                    <p className="text-white font-medium text-sm leading-tight">{profile.businessName}</p>
+                    <p className="text-[11px] text-neutral-500 truncate">{profile.whatTheyDo}</p>
                   </div>
                 </div>
               )}
 
-              {/* Style picker */}
-              <div>
-                <p className="text-xs font-medium text-neutral-500 mb-2 uppercase tracking-wider">
-                  Choose a design direction
-                </p>
-                <div className="space-y-2">
-                  {styles.map((style, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setSelectedIndex(i)}
-                      className={`w-full text-left p-4 rounded-xl border transition-all duration-200 group ${
-                        selectedIndex === i
-                          ? "bg-accent/5 border-accent/40 shadow-lg shadow-accent/5"
-                          : "bg-surface border-[var(--border)] hover:border-[var(--border-light)]"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className={`w-2 h-2 rounded-full shrink-0 transition-colors ${
-                            selectedIndex === i ? "bg-accent" : "bg-neutral-700"
-                          }`} />
-                          <p className={`font-medium text-sm ${selectedIndex === i ? "text-accent" : "text-white"}`}>
-                            {style.styleName}
-                          </p>
-                        </div>
-                        {extractColors(style.styleBrief).length > 0 && (
-                          <div className="flex -space-x-1 shrink-0">
-                            {extractColors(style.styleBrief).map((color) => (
-                              <span
-                                key={color}
-                                className="w-4 h-4 rounded-full ring-2 ring-[#111]"
-                                style={{ backgroundColor: color }}
-                                title={color}
-                              />
+              {/* ── STEP 1: Style picker ── */}
+              <div className="animate-fade-in-up delay-100 mb-8">
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="w-6 h-6 rounded-full bg-accent/15 flex items-center justify-center text-[11px] font-bold text-accent shrink-0">1</span>
+                  <h3 className="text-sm font-semibold text-white">Choose a design direction</h3>
+                </div>
+
+                <div className="space-y-2.5">
+                  {styles.map((style, i) => {
+                    const colors = extractColors(style.styleBrief);
+                    const isSelected = selectedIndex === i;
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => setSelectedIndex(i)}
+                        className={`w-full text-left rounded-xl border transition-all duration-200 overflow-hidden group ${
+                          isSelected
+                            ? "border-accent/40 shadow-lg shadow-accent/5 bg-[#131313]"
+                            : "border-[var(--border)] bg-surface hover:border-[var(--border-light)] hover:bg-[#131313]"
+                        }`}
+                      >
+                        {/* Color bar at top */}
+                        {colors.length > 0 && (
+                          <div className="h-1 w-full flex">
+                            {colors.map((color) => (
+                              <div key={color} className="flex-1" style={{ backgroundColor: color }} />
                             ))}
                           </div>
                         )}
-                      </div>
-                      <p className="text-xs text-neutral-500 mt-1.5 ml-5 line-clamp-2">
-                        {style.styleBrief}
-                      </p>
-                    </button>
-                  ))}
+                        <div className="p-4">
+                          <div className="flex items-center gap-3">
+                            {/* Radio indicator */}
+                            <div className={`w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center shrink-0 transition-all duration-200 ${
+                              isSelected ? "border-accent bg-accent/10" : "border-neutral-700 group-hover:border-neutral-500"
+                            }`}>
+                              {isSelected && <div className="w-2 h-2 rounded-full bg-accent" />}
+                            </div>
+                            <p className={`font-medium text-sm transition-colors ${isSelected ? "text-white" : "text-neutral-300 group-hover:text-white"}`}>
+                              {style.styleName}
+                            </p>
+                          </div>
+                          <p className={`text-xs mt-2 ml-[30px] leading-relaxed line-clamp-2 transition-colors ${isSelected ? "text-neutral-400" : "text-neutral-600"}`}>
+                            {style.styleBrief}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
-              {/* Contact fields */}
-              <div className="space-y-3 pt-1">
-                <div className="grid grid-cols-2 gap-3">
-                  <input
-                    type="text"
-                    placeholder="Your name"
-                    value={devName}
-                    onChange={(e) => setDevName(e.target.value)}
-                    className="px-3.5 py-2.5 bg-surface border border-[var(--border)] rounded-lg text-sm text-white placeholder:text-neutral-600 focus:outline-none focus:border-accent/40 transition-colors"
-                  />
-                  <input
-                    type="email"
-                    placeholder="Your email"
-                    value={devEmail}
-                    onChange={(e) => setDevEmail(e.target.value)}
-                    className="px-3.5 py-2.5 bg-surface border border-[var(--border)] rounded-lg text-sm text-white placeholder:text-neutral-600 focus:outline-none focus:border-accent/40 transition-colors"
-                  />
+              {/* Divider */}
+              <div className="h-px bg-gradient-to-r from-transparent via-[var(--border-light)] to-transparent mb-8" />
+
+              {/* ── STEP 2: Your details ── */}
+              <div className="animate-fade-in-up delay-200 mb-6">
+                <div className="flex items-center gap-3 mb-1.5">
+                  <span className="w-6 h-6 rounded-full bg-accent/15 flex items-center justify-center text-[11px] font-bold text-accent shrink-0">2</span>
+                  <h3 className="text-sm font-semibold text-white">Your details</h3>
                 </div>
-                <textarea
-                  placeholder="Message to the client (optional)"
-                  value={devMessage}
-                  onChange={(e) => setDevMessage(e.target.value)}
-                  rows={2}
-                  className="w-full px-3.5 py-2.5 bg-surface border border-[var(--border)] rounded-lg text-sm text-white placeholder:text-neutral-600 focus:outline-none focus:border-accent/40 transition-colors resize-none"
-                />
-                <button
-                  onClick={handleGenerate}
-                  className="w-full py-3 bg-accent hover:bg-accent-light text-black font-semibold text-sm rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-accent/20 flex items-center justify-center gap-2"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  <span>Generate Redesign</span>
-                </button>
+                <p className="text-[12px] text-neutral-600 ml-9 mb-5">
+                  Shown on the preview page so your prospect can contact you.
+                </p>
+
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-medium text-neutral-500 mb-1.5 ml-1">Name</label>
+                      <input
+                        type="text"
+                        placeholder="Jane Smith"
+                        value={devName}
+                        onChange={(e) => setDevName(e.target.value)}
+                        className="w-full px-3.5 py-2.5 bg-surface border border-[var(--border)] rounded-lg text-sm text-white placeholder:text-neutral-700 focus:outline-none focus:border-accent/40 focus:bg-[#131313] transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-medium text-neutral-500 mb-1.5 ml-1">Email</label>
+                      <input
+                        type="email"
+                        placeholder="jane@studio.com"
+                        value={devEmail}
+                        onChange={(e) => setDevEmail(e.target.value)}
+                        className="w-full px-3.5 py-2.5 bg-surface border border-[var(--border)] rounded-lg text-sm text-white placeholder:text-neutral-700 focus:outline-none focus:border-accent/40 focus:bg-[#131313] transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-medium text-neutral-500 mb-1.5 ml-1">
+                      Personal note <span className="text-neutral-700">— optional</span>
+                    </label>
+                    <textarea
+                      placeholder="e.g. &quot;Hey, I noticed your site could use a refresh — here's what I'd do.&quot;"
+                      value={devMessage}
+                      onChange={(e) => setDevMessage(e.target.value)}
+                      rows={2}
+                      className="w-full px-3.5 py-2.5 bg-surface border border-[var(--border)] rounded-lg text-sm text-white placeholder:text-neutral-700 focus:outline-none focus:border-accent/40 focus:bg-[#131313] transition-all resize-none"
+                    />
+                    <p className="text-[11px] text-neutral-700 mt-1 ml-1">
+                      This appears on the preview page to make your outreach feel personal.
+                    </p>
+                  </div>
+                </div>
               </div>
+
+              {/* Generate button */}
+              <button
+                onClick={handleGenerate}
+                className="animate-fade-in-up delay-300 w-full py-3.5 bg-accent hover:bg-accent-light text-black font-semibold text-sm rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-accent/25 flex items-center justify-center gap-2 group"
+              >
+                <Sparkles className="w-4 h-4 transition-transform group-hover:rotate-12" />
+                <span>Generate Redesign</span>
+                <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+              </button>
 
               <Link
                 href="/"
-                className="text-xs text-neutral-600 hover:text-neutral-400 transition-colors"
+                className="inline-block mt-5 text-xs text-neutral-600 hover:text-neutral-400 transition-colors"
               >
                 &larr; Start over
               </Link>
