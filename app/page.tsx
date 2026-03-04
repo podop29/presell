@@ -47,17 +47,120 @@ function Check({ className = "w-5 h-5" }: { className?: string }) {
     </svg>
   );
 }
+function Mail({ className = "w-5 h-5" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="4" width="20" height="16" rx="2" /><path d="M22 7l-10 7L2 7" />
+    </svg>
+  );
+}
+function Clock({ className = "w-5 h-5" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+    </svg>
+  );
+}
+function ChevronDown({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="6 9 12 15 18 9" />
+    </svg>
+  );
+}
+function FileText({ className = "w-5 h-5" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" />
+    </svg>
+  );
+}
+function User({ className = "w-5 h-5" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4-4v2" /><circle cx="12" cy="7" r="4" />
+    </svg>
+  );
+}
+function Building({ className = "w-5 h-5" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="4" y="2" width="16" height="20" rx="2" /><line x1="9" y1="6" x2="9" y2="6.01" /><line x1="15" y1="6" x2="15" y2="6.01" /><line x1="9" y1="10" x2="9" y2="10.01" /><line x1="15" y1="10" x2="15" y2="10.01" /><line x1="9" y1="14" x2="9" y2="14.01" /><line x1="15" y1="14" x2="15" y2="14.01" /><line x1="9" y1="18" x2="15" y2="18" />
+    </svg>
+  );
+}
+
+/* ───── FAQ data ───── */
+const faqs = [
+  {
+    q: "What does the prospect actually see?",
+    a: "They get a clean, shareable page with a side-by-side before/after of their current site and the redesign — plus your name, contact info, and a ready-to-send email. No login required on their end.",
+  },
+  {
+    q: "Do I need to know how to code?",
+    a: "Not at all. Presell generates full visual redesigns from a URL — no coding, no Figma, no templates. If you can paste a link, you can use Presell.",
+  },
+  {
+    q: "How long do preview links stay live?",
+    a: "Every preview is hosted for 30 days. That gives you plenty of time to follow up, send reminders, and close the deal.",
+  },
+  {
+    q: "How much does it cost?",
+    a: "You get free credits to start. Each redesign costs one credit. No subscriptions, no monthly fees — just pay for what you use.",
+  },
+  {
+    q: "Can I customize the redesign before sending it?",
+    a: "You choose from 3 AI-generated style directions, each tailored to the prospect's brand. The AI uses their real content, colors, and images — so every preview feels custom, not cookie-cutter.",
+  },
+];
 
 /* ───── Main component ───── */
 export default function Home() {
   const router = useRouter();
   const [url, setUrl] = useState("");
   const [error, setError] = useState("");
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   function handleAnalyze() {
     setError("");
     if (!url) { setError("Please enter a website URL."); return; }
     router.push(`/create?url=${encodeURIComponent(url)}`);
+  }
+
+  /* reusable URL input block */
+  function UrlInput() {
+    return (
+      <>
+        <div className="relative group max-w-xl mx-auto">
+          <div className="absolute -inset-0.5 bg-gradient-to-r from-accent/30 via-accent/10 to-accent/30 rounded-2xl blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <div className="relative flex items-center bg-surface border border-[var(--border)] rounded-xl overflow-hidden">
+            <div className="pl-4 text-neutral-600">
+              <Globe className="w-5 h-5" />
+            </div>
+            <input
+              type="url"
+              placeholder="https://their-website.com"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleAnalyze()}
+              className="flex-1 px-4 py-4 bg-transparent text-white text-base placeholder:text-neutral-600 focus:outline-none font-mono"
+            />
+            <button
+              onClick={handleAnalyze}
+              className="m-1.5 px-5 py-2.5 bg-accent hover:bg-accent-light text-black font-semibold text-sm rounded-lg transition-all duration-200 hover:shadow-lg hover:shadow-accent/20 flex items-center gap-2 shrink-0"
+            >
+              <span>Analyze</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+        {error && (
+          <div className="mt-4 max-w-xl mx-auto p-3 bg-red-500/5 border border-red-500/20 rounded-xl text-red-400 text-xs">
+            {error}
+          </div>
+        )}
+      </>
+    );
   }
 
   return (
@@ -71,6 +174,7 @@ export default function Home() {
           <div className="flex items-center gap-6">
             <a href="#how" className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors hidden sm:block">How it works</a>
             <a href="#features" className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors hidden sm:block">Features</a>
+            <a href="#faq" className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors hidden sm:block">FAQ</a>
             <AuthButton />
           </div>
         </div>
@@ -86,7 +190,7 @@ export default function Home() {
           {/* Badge */}
           <div className="animate-fade-in-up inline-flex items-center gap-2 px-3 py-1 rounded-full border border-accent/20 bg-accent/5 mb-8">
             <Sparkles className="w-3.5 h-3.5 text-accent" />
-            <span className="text-xs font-medium text-accent">AI-powered website redesigns</span>
+            <span className="text-xs font-medium text-accent">The presale tool for web professionals</span>
           </div>
 
           <h1 className="animate-fade-in-up delay-100 text-5xl sm:text-6xl md:text-7xl font-bold tracking-tight leading-[1.05]">
@@ -96,60 +200,21 @@ export default function Home() {
           </h1>
 
           <p className="animate-fade-in-up delay-200 mt-6 text-lg sm:text-xl text-neutral-400 max-w-2xl mx-auto leading-relaxed">
-            Paste any website URL. Get a stunning redesign in minutes. Send it as a preview link to land the deal — before you write a line of code.
+            Paste any website URL. Get an AI-generated redesign in minutes.
+            Send it as a preview link to land the deal.
           </p>
 
-          {/* Stats row */}
-          <div className="animate-fade-in-up delay-300 mt-10 flex items-center justify-center gap-8 sm:gap-12">
-            {[
-              ["2 min", "Average redesign time"],
-              ["3 styles", "AI-tailored per site"],
-              ["1 link", "To close the deal"],
-            ].map(([stat, label]) => (
-              <div key={stat} className="text-center">
-                <div className="text-xl sm:text-2xl font-bold text-white">{stat}</div>
-                <div className="text-xs text-neutral-500 mt-0.5">{label}</div>
-              </div>
-            ))}
-          </div>
-
           {/* ─── URL INPUT ─── */}
-          <div className="animate-fade-in-up delay-400 mt-14 max-w-xl mx-auto">
-            <div className="relative group">
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-accent/30 via-accent/10 to-accent/30 rounded-2xl blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <div className="relative flex items-center bg-surface border border-[var(--border)] rounded-xl overflow-hidden">
-                <div className="pl-4 text-neutral-600">
-                  <Globe className="w-5 h-5" />
-                </div>
-                <input
-                  type="url"
-                  placeholder="https://their-website.com"
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleAnalyze()}
-                  className="flex-1 px-4 py-4 bg-transparent text-white text-base placeholder:text-neutral-600 focus:outline-none font-mono"
-                />
-                <button
-                  onClick={handleAnalyze}
-                  className="m-1.5 px-5 py-2.5 bg-accent hover:bg-accent-light text-black font-semibold text-sm rounded-lg transition-all duration-200 hover:shadow-lg hover:shadow-accent/20 flex items-center gap-2 shrink-0"
-                >
-                  <span>Analyze</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
+          <div className="animate-fade-in-up delay-300 mt-12">
+            <UrlInput />
             <p className="mt-3 text-xs text-neutral-600 text-center">
-              Paste any live website URL and we&apos;ll do the rest
+              No credit card required — start with free credits
             </p>
-
-            {error && (
-              <div className="mt-4 p-3 bg-red-500/5 border border-red-500/20 rounded-xl text-red-400 text-xs">
-                {error}
-              </div>
-            )}
           </div>
         </div>
       </section>
+
+      
 
       {/* ═══════ HOW IT WORKS ═══════ */}
       <section id="how" className="relative py-24 px-6 border-t border-white/5 noise-bg">
@@ -165,19 +230,19 @@ export default function Home() {
                 icon: <Globe className="w-5 h-5" />,
                 step: "01",
                 title: "Paste their URL",
-                desc: "Enter any live website. Our AI scrapes the content, analyzes the business, and identifies what makes them tick.",
+                desc: "Our AI scrapes their real content, photos, and brand colors — then analyzes the business to understand what they do.",
               },
               {
                 icon: <Sparkles className="w-5 h-5" />,
                 step: "02",
-                title: "Pick a style",
-                desc: "Choose from 3 AI-tailored design directions — each one custom-fit to their industry, brand, and audience.",
+                title: "Pick a design direction",
+                desc: "Choose from 3 elevated redesign styles, each tailored to their industry and brand identity. No generic templates.",
               },
               {
                 icon: <Send className="w-5 h-5" />,
                 step: "03",
-                title: "Send the preview",
-                desc: "Get a shareable link with a side-by-side before/after. The client sees the redesign and your contact info.",
+                title: "Send and close",
+                desc: "Get a shareable link with a before/after comparison, your contact info, and an auto-generated cold email ready to send.",
               },
             ].map((item, i) => (
               <div
@@ -198,6 +263,50 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ═══════ PROBLEM ═══════ */}
+      <section className="relative py-24 px-6 border-t border-white/5">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-16">
+            <p className="text-xs font-medium text-accent uppercase tracking-wider mb-3">The problem</p>
+            <h2 className="text-3xl sm:text-4xl font-bold text-white">
+              Cold outreach doesn&apos;t work<br className="hidden sm:block" /> when you have nothing to show
+            </h2>
+          </div>
+
+          <div className="grid sm:grid-cols-3 gap-6">
+            {[
+              {
+                icon: <Mail className="w-5 h-5" />,
+                title: "Cold emails get ignored",
+                desc: "\"I can build you a better website\" sounds like every other pitch in their inbox. No proof, no reply.",
+              },
+              {
+                icon: <FileText className="w-5 h-5" />,
+                title: "Portfolios don't convert",
+                desc: "Your past work looks great — but it's someone else's brand. Prospects can't picture what you'd do for them.",
+              },
+              {
+                icon: <Clock className="w-5 h-5" />,
+                title: "Proposals take hours",
+                desc: "Spending 3 hours on a custom mockup for a prospect who might ghost you? Not a sustainable strategy.",
+              },
+            ].map((item) => (
+              <div key={item.title} className="relative p-6 rounded-2xl border border-[var(--border)] bg-surface">
+                <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center text-red-400 mb-4">
+                  {item.icon}
+                </div>
+                <h3 className="text-white font-semibold mb-2">{item.title}</h3>
+                <p className="text-sm text-neutral-500 leading-relaxed">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          <p className="text-center mt-12 text-neutral-400 text-lg">
+            What if you could <span className="text-white font-medium">show them the result</span> before doing any work?
+          </p>
+        </div>
+      </section>
+
       {/* ═══════ FEATURES ═══════ */}
       <section id="features" className="relative py-24 px-6 border-t border-white/5">
         <div className="max-w-5xl mx-auto">
@@ -206,37 +315,42 @@ export default function Home() {
             <h2 className="text-3xl sm:text-4xl font-bold text-white">Everything you need to close</h2>
           </div>
 
-          <div className="grid sm:grid-cols-2 gap-4">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {[
               {
                 icon: <Zap className="w-4 h-4" />,
                 title: "AI business analysis",
-                desc: "Understands their industry, customers, and brand tone automatically.",
+                desc: "Understands their industry, customers, and brand tone — so the redesign actually fits.",
               },
               {
                 icon: <Sparkles className="w-4 h-4" />,
-                title: "Custom style directions",
-                desc: "3 unique design styles tailored to each business — never generic templates.",
-              },
-              {
-                icon: <Globe className="w-4 h-4" />,
-                title: "Stock image integration",
-                desc: "Pulls relevant professional photos from Pexels to elevate the redesign.",
-              },
-              {
-                icon: <Send className="w-4 h-4" />,
-                title: "Shareable preview link",
-                desc: "One URL with before/after comparison and your contact info built in.",
+                title: "Brand-preserving styles",
+                desc: "3 unique design directions that build on their existing identity, never generic templates.",
               },
               {
                 icon: <Check className="w-4 h-4" />,
-                title: "Real content, not Lorem Ipsum",
-                desc: "Uses the actual business copy, images, and details from their site.",
+                title: "Real content, not lorem ipsum",
+                desc: "Uses their actual copy, images, and details — so the preview feels like a real project.",
               },
               {
-                icon: <Zap className="w-4 h-4" />,
+                icon: <Globe className="w-4 h-4" />,
+                title: "Professional stock photos",
+                desc: "Pulls relevant photos from Pexels to fill gaps and elevate the visual quality.",
+              },
+              {
+                icon: <Send className="w-4 h-4" />,
+                title: "Shareable preview links",
+                desc: "One URL with before/after comparison and your contact info built right in.",
+              },
+              {
+                icon: <Mail className="w-4 h-4" />,
+                title: "Auto-generated cold email",
+                desc: "Get a ready-to-send outreach email with subject line — personalized to the prospect.",
+              },
+              {
+                icon: <Clock className="w-4 h-4" />,
                 title: "30-day hosted previews",
-                desc: "Links stay live for a month — plenty of time to follow up and close.",
+                desc: "Links stay live for a month. Plenty of time to follow up and close.",
               },
             ].map((item) => (
               <div
@@ -256,25 +370,103 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ═══════ CTA ═══════ */}
+      {/* ═══════ WHO IT'S FOR ═══════ */}
+      <section className="relative py-24 px-6 border-t border-white/5 noise-bg">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-16">
+            <p className="text-xs font-medium text-accent uppercase tracking-wider mb-3">Who it&apos;s for</p>
+            <h2 className="text-3xl sm:text-4xl font-bold text-white">Built for people who sell websites</h2>
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-6">
+            {/* Freelancers */}
+            <div className="p-8 rounded-2xl border border-[var(--border)] bg-surface">
+              <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent mb-5">
+                <User className="w-5 h-5" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-4">Freelancers</h3>
+              <ul className="space-y-3">
+                {[
+                  "Prospect local businesses by showing them a redesign of their actual site",
+                  "Skip the free consultation — let the preview do the talking",
+                  "Stand out from every other \"I build websites\" DM in their inbox",
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-3 text-sm text-neutral-400">
+                    <Check className="w-4 h-4 text-accent shrink-0 mt-0.5" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Agencies */}
+            <div className="p-8 rounded-2xl border border-[var(--border)] bg-surface">
+              <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent mb-5">
+                <Building className="w-5 h-5" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-4">Agencies</h3>
+              <ul className="space-y-3">
+                {[
+                  "Scale your outbound pipeline without burning designer hours on unpaid pitches",
+                  "Send personalized previews to dozens of prospects per week",
+                  "Use the auto-generated cold email to arm your sales team with better outreach",
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-3 text-sm text-neutral-400">
+                    <Check className="w-4 h-4 text-accent shrink-0 mt-0.5" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════ FAQ ═══════ */}
+      <section id="faq" className="relative py-24 px-6 border-t border-white/5">
+        <div className="max-w-2xl mx-auto">
+          <div className="text-center mb-16">
+            <p className="text-xs font-medium text-accent uppercase tracking-wider mb-3">FAQ</p>
+            <h2 className="text-3xl sm:text-4xl font-bold text-white">Common questions</h2>
+          </div>
+
+          <div className="space-y-2">
+            {faqs.map((faq, i) => (
+              <div key={i} className="border border-[var(--border)] rounded-xl overflow-hidden">
+                <button
+                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                  className="w-full flex items-center justify-between p-5 text-left hover:bg-white/[0.02] transition-colors"
+                >
+                  <span className="text-sm font-medium text-white pr-4">{faq.q}</span>
+                  <ChevronDown className={`w-4 h-4 text-neutral-500 shrink-0 transition-transform duration-200 ${openFaq === i ? "rotate-180" : ""}`} />
+                </button>
+                {openFaq === i && (
+                  <div className="px-5 pb-5 -mt-1">
+                    <p className="text-sm text-neutral-400 leading-relaxed">{faq.a}</p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════ BOTTOM CTA ═══════ */}
       <section className="relative py-24 px-6 border-t border-white/5 noise-bg overflow-hidden">
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="w-[500px] h-[300px] bg-accent/5 rounded-full blur-[100px]" />
         </div>
         <div className="relative z-10 max-w-2xl mx-auto text-center">
           <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
-            Stop cold pitching.<br />Start preselling.
+            Stop pitching. Start showing.
           </h2>
-          <p className="text-neutral-500 mb-8 max-w-lg mx-auto">
-            Show potential clients what their website could look like — and let the design sell your services for you.
+          <p className="text-neutral-500 mb-10 max-w-lg mx-auto">
+            Your next client is one redesign preview away. Paste their URL and let the work speak for itself.
           </p>
-          <button
-            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-            className="inline-flex items-center gap-2 px-8 py-3.5 bg-accent hover:bg-accent-light text-black font-semibold rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-accent/20"
-          >
-            <span>Get Started</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
+          <UrlInput />
+          <p className="mt-3 text-xs text-neutral-600 text-center">
+            No credit card required — start with free credits
+          </p>
         </div>
       </section>
 
