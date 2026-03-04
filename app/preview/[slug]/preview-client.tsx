@@ -59,6 +59,7 @@ export default function PreviewClient({
   const [unlocking, setUnlocking] = useState(false);
   const [unlockError, setUnlockError] = useState<string | null>(null);
   const pendingBlobUrl = useRef<string | null>(null);
+  const acceptedBlobUrl = useRef<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const editStyleRef = useRef<HTMLStyleElement | null>(null);
 
@@ -80,8 +81,18 @@ export default function PreviewClient({
     }
   }
 
+  function revokeAcceptedBlob() {
+    if (acceptedBlobUrl.current) {
+      URL.revokeObjectURL(acceptedBlobUrl.current);
+      acceptedBlobUrl.current = null;
+    }
+  }
+
   useEffect(() => {
-    return () => revokePendingBlob();
+    return () => {
+      revokePendingBlob();
+      revokeAcceptedBlob();
+    };
   }, []);
 
   useEffect(() => {
@@ -105,9 +116,11 @@ export default function PreviewClient({
       ? originalUrl
       : activeVariation?.src ?? originalUrl;
   const iframeSrc =
-    activeView !== "original" && iframeVersion > 0
-      ? `${baseSrc}?v=${iframeVersion}`
-      : baseSrc;
+    acceptedBlobUrl.current && activeView !== "original"
+      ? acceptedBlobUrl.current
+      : activeView !== "original" && iframeVersion > 0
+        ? `${baseSrc}?v=${iframeVersion}`
+        : baseSrc;
 
   async function handleExport() {
     if (activeView === "original") return;
@@ -137,6 +150,7 @@ export default function PreviewClient({
       setEditMode(false);
       setHasEdits(false);
     }
+    revokeAcceptedBlob();
     setIframeLoading(true);
     setActiveView(key);
     if (key === "original") {
@@ -204,6 +218,11 @@ export default function PreviewClient({
         setReviseError(data.error || "Failed to save revision.");
         return;
       }
+      // Show the accepted HTML immediately via blob URL (avoids cache issues)
+      revokeAcceptedBlob();
+      acceptedBlobUrl.current = URL.createObjectURL(
+        new Blob([pendingRevisionHtml], { type: "text/html" })
+      );
       revokePendingBlob();
       setPendingRevisionHtml(null);
       setIframeLoading(true);
@@ -390,6 +409,11 @@ export default function PreviewClient({
         enableEditMode(); // re-enable so user doesn't lose work
         return;
       }
+      // Show the saved HTML immediately via blob URL (avoids cache issues)
+      revokeAcceptedBlob();
+      acceptedBlobUrl.current = URL.createObjectURL(
+        new Blob([html], { type: "text/html" })
+      );
       setEditMode(false);
       setHasEdits(false);
       setIframeLoading(true);
