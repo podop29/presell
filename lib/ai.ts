@@ -439,14 +439,15 @@ ANTI-PATTERNS — NEVER DO THESE:
 - Using emoji as icons
 
 ICONS — USE LUCIDE ICONS VIA CDN:
-For all icons, use the Lucide icon library.
+For all icons, use the Lucide icon library. Do NOT use emoji, Font Awesome, Heroicons, or inline SVGs for icons.
 
 Setup — include BOTH of these in the HTML:
-1. In <head>: <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+1. In <head>: <script src="https://unpkg.com/lucide@0.473.0/dist/umd/lucide.min.js"></script>
 2. Right before </body>: <script>document.addEventListener('DOMContentLoaded', function() { lucide.createIcons(); });</script>
 
-Usage: <i data-lucide="icon-name" class="w-6 h-6"></i>
+Usage — ALWAYS use this exact format: <i data-lucide="icon-name" class="w-6 h-6"></i>
 Style with Tailwind classes for size and color: class="w-6 h-6 text-blue-500"
+CRITICAL: The data-lucide attribute is REQUIRED for icons to render. Never omit it.
 
 Common icon names: phone, mail, map-pin, star, check, check-circle, arrow-right, menu, x, heart, shield, clock, users, building-2, wrench, utensils, briefcase, globe, zap, award, trending-up, calendar, dollar-sign, thumbs-up, sparkles, home, camera, music, scissors, truck, leaf, sun, moon.
 

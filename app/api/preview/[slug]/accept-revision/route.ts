@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin as supabase } from "@/lib/supabase/admin";
 import { getUser } from "@/lib/auth";
 import { incrementRevisionCount } from "@/lib/credits";
+import { injectLucide } from "@/lib/inject-lucide";
 
 const VARIATION_COLUMNS: Record<string, string> = {
   redesign: "redesign_html",
@@ -75,7 +76,7 @@ export async function POST(
 
     const { error: updateError } = await supabase
       .from("previews")
-      .update({ [column]: html })
+      .update({ [column]: injectLucide(html) })
       .eq("slug", slug);
 
     if (updateError) {
