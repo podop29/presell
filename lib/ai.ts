@@ -771,45 +771,60 @@ export async function generateColdEmail(
   devName: string,
   isNewSite: boolean = false
 ): Promise<ColdEmail> {
-  const context = isNewSite
-    ? "I built a free website for this business that currently has no website (or only a Google Maps listing)."
-    : "I built a free redesign preview showing how this business's existing website could look with a modern upgrade.";
-
-  const hook = isNewSite
-    ? "The hook is that you built them a complete website they can see right now — for free, no strings attached. They currently have no website, so this is a huge value-add."
-    : "The hook is that you already built them a free redesign preview they can see right now — showing a direct upgrade over their current site.";
+  const situationContext = isNewSite
+    ? `This business currently has NO website — only a Google Maps listing. I proactively built them a complete, professional website they can view right now at the preview link. This is a cold outreach — they did not ask for this. The goal is to impress them with the initiative and quality, and convert them into a paying client.`
+    : `This business has an existing website that looks outdated or could be significantly improved. I proactively built them a free redesign preview showing exactly what their site COULD look like with a modern upgrade. They can view the before/after at the preview link. This is a cold outreach — they did not ask for this. The goal is to make the contrast between their current site and the preview so compelling that they want to move forward.`;
 
   const message = await anthropic.messages.create({
-    model: "claude-haiku-4-5-20251001",
+    model: "claude-sonnet-4-20250514",
     max_tokens: 1024,
-    system: `You write short, effective cold emails for web developers reaching out to local businesses. You always respond with valid JSON only — no explanation, no markdown, no code fences.
+    system: `You are an expert cold email copywriter who helps web developers land local business clients. You understand sales psychology — specifically that showing beats telling, and that reducing friction beats hard selling.
 
-Rules:
-- Keep the email SHORT — 3-5 sentences in the body, max. Business owners are busy.
-- Lead with something specific about THEIR business, not about you.
-- ${hook}
-- Sound human and genuine — not salesy, not corporate, not desperate. Like a friendly neighbor who happens to be a web developer.
-- No exclamation marks in the subject line. One at most in the body.
-- End with a simple, low-pressure CTA (reply, quick call, etc.)
+You always respond with valid JSON only — no explanation, no markdown, no code fences.
+
+CONTEXT: The developer has ALREADY built something for this business without being asked. This is the ultimate "show, don't tell" move. The preview link is the centerpiece — everything in the email should drive the recipient to click it.
+
+STRATEGY:
+- This is a first-touch cold email. The recipient has never heard from the sender.
+- The preview link is the closer — the email just needs to get them to click it.
+- Create curiosity and urgency without being pushy. The work is already done — that's the leverage.
+- Make it feel like a thoughtful, personal gesture — not a mass blast.
+- The tone should be confident but not arrogant. You did something impressive for them — own it casually.
+
+STRUCTURE:
+- Subject line: Short (4-8 words), curiosity-driven, specific to their business. No generic subjects. No exclamation marks.
+- Body: 4-6 sentences max. Every sentence must earn its place.
+  - Sentence 1: Reference something specific about their business to prove this isn't a template.
+  - Sentence 2-3: Explain what you did and why (the preview). ${isNewSite ? "Mention they don't currently have a website and you built one for them." : "Mention you noticed their current site could use an upgrade and you mocked up what it could look like."}
+  - Sentence 4: Drop the preview link naturally — not as a CTA button, just inline.
+  - Sentence 5-6: Low-pressure close. Don't ask for a call or meeting on first touch. Instead: "If you like what you see, I'd love to chat about making it yours" or similar.
+- Sign off with just the dev's first name or full name. No title, no company, no phone number.
+
+RULES:
+- Sound like a real person writing a quick email, not a marketer. Read it out loud — would a human actually write this?
 - Do NOT include "[Your Name]" or any placeholder — use the actual dev name provided.
-- The subject line should be specific to their business, not generic like "Your website redesign" or "I redesigned your website".
-- ${isNewSite ? 'Do NOT say "redesign" — this is a brand new website, not a redesign. Say "website", "site", or "page" instead.' : ""}
-- Vary your tone and approach — never use the same opening line or structure twice.`,
+- Do NOT use the words: "revolutionize", "transform", "elevate", "cutting-edge", "leverage", "synergy", "game-changer", "unlock", "supercharge".
+- ${isNewSite ? 'Do NOT say "redesign" — this is a brand new website, not a redesign.' : 'You can say "redesign", "refresh", "upgrade", or "new look".'}
+- No exclamation marks in the subject. Maximum one in the body.
+- The preview link should appear naturally in the body text, not on its own line.
+- Vary your approach — different openings, different angles, different closes each time.`,
     messages: [
       {
         role: "user",
         content: `Write a cold email for this situation:
 
-I'm ${devName}, a web developer. ${context}
+I'm ${devName}, a web developer/designer. ${situationContext}
 
 Business: ${profile.businessName}
 Industry: ${profile.industry}
 What they do: ${profile.whatTheyDo}
+Target customers: ${profile.targetCustomer}
+Key selling points: ${profile.keySellingPoints?.join(", ") || "N/A"}
 Location: ${profile.location}
 
 Preview link: ${previewUrl}
 
-Return a JSON object with "subject" and "body" keys. The body should be plain text (no HTML), with line breaks as \\n.`,
+Return a JSON object with "subject" and "body" keys. The body should be plain text (no HTML), with line breaks as \\n. Sign off with just "${devName}".`,
       },
     ],
   });

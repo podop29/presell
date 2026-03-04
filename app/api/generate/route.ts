@@ -97,7 +97,9 @@ export async function POST(req: NextRequest) {
     // Generate cold email (non-blocking — don't fail the whole request if this errors)
     let coldEmail = { subject: "", body: "" };
     try {
-      coldEmail = await generateColdEmail(profile, previewUrl, devName);
+      const mapsPattern = /google\.com\/maps|maps\.google\.|maps\.app\.goo\.gl|goo\.gl\/maps/i;
+      const isNewSite = mapsPattern.test(url);
+      coldEmail = await generateColdEmail(profile, previewUrl, devName, isNewSite);
     } catch (emailErr) {
       console.error("Cold email generation error:", emailErr);
     }

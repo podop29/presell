@@ -165,6 +165,7 @@ export default function Dashboard() {
   const [deleting, setDeleting] = useState(false);
   const [emailTarget, setEmailTarget] = useState<PreviewRow | null>(null);
   const [emailCopied, setEmailCopied] = useState(false);
+  const [regeneratingEmail, setRegeneratingEmail] = useState(false);
 
   useEffect(() => {
     fetchPreviews();
@@ -209,6 +210,30 @@ export default function Dashboard() {
     navigator.clipboard.writeText(full);
     setEmailCopied(true);
     setTimeout(() => setEmailCopied(false), 2000);
+  }
+
+  async function handleRegenerateEmail(preview: PreviewRow) {
+    setRegeneratingEmail(true);
+    try {
+      const res = await fetch(`/api/preview/${preview.slug}/regenerate-email`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!res.ok) return;
+      const updated = {
+        ...preview,
+        cold_email_subject: data.subject,
+        cold_email_body: data.body,
+      };
+      setPreviews((prev) =>
+        prev.map((p) => (p.slug === preview.slug ? updated : p))
+      );
+      setEmailTarget(updated);
+    } catch {
+      // silently fail
+    } finally {
+      setRegeneratingEmail(false);
+    }
   }
 
   /* ─── Derived data ─── */
@@ -649,16 +674,28 @@ export default function Dashboard() {
             </div>
 
             {/* Actions */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleRegenerateEmail(emailTarget)}
+                disabled={regeneratingEmail}
+                className="flex items-center justify-center gap-1.5 px-3 py-2.5 border border-[var(--border)] hover:border-accent/30 text-neutral-400 hover:text-accent text-xs font-medium rounded-xl transition-colors disabled:opacity-50"
+                title="Generate a new email"
+              >
+                <svg className={`w-3.5 h-3.5 ${regeneratingEmail ? "animate-spin" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 12a9 9 0 11-6.219-8.56" /><polyline points="21 3 21 9 15 9" />
+                </svg>
+                {regeneratingEmail ? "Generating..." : "Regenerate"}
+              </button>
+              <div className="flex-1" />
               <button
                 onClick={() => { setEmailTarget(null); setEmailCopied(false); }}
-                className="flex-1 px-4 py-2.5 border border-[var(--border)] hover:border-[var(--border-light)] text-neutral-300 text-sm font-medium rounded-xl transition-colors"
+                className="px-4 py-2.5 border border-[var(--border)] hover:border-[var(--border-light)] text-neutral-300 text-sm font-medium rounded-xl transition-colors"
               >
                 Close
               </button>
               <button
                 onClick={() => handleCopyEmail(emailTarget)}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-accent hover:bg-accent-light text-black text-sm font-semibold rounded-xl transition-all duration-200"
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-accent hover:bg-accent-light text-black text-sm font-semibold rounded-xl transition-all duration-200"
               >
                 {emailCopied ? (
                   <>
