@@ -35,7 +35,9 @@ COPY . .
 
 RUN npm run build
 
-ENV PORT=3000
-EXPOSE 3000
+ENV PORT=8080
+ENV HOSTNAME=0.0.0.0
 
-CMD npx next start -H 0.0.0.0 -p ${PORT}
+EXPOSE 8080
+
+CMD ["node_modules/.bin/next", "start", "-H", "0.0.0.0", "-p", "8080"]
