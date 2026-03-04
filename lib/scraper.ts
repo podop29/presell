@@ -1,86 +1,82 @@
-import * as cheerio from "cheerio";
+import { chromium } from "playwright";
 import type { ScrapedData } from "@/types";
 
-const USER_AGENTS = [
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-];
-
 export async function scrapeWebsite(url: string): Promise<ScrapedData> {
-  const html = await fetchWithRetry(url);
-  const $ = cheerio.load(html);
-
-  // Remove non-content elements
-  $("script, style, noscript, svg, iframe").remove();
-
-  const title = $("title").text().trim() || "Untitled";
-
-  const description =
-    $('meta[name="description"]').attr("content")?.trim() || "";
-
-  const content = ($("body").text() || "").replace(/\s+/g, " ").trim();
-
-  // Extract image URLs with same filtering as before
-  const seen = new Set<string>();
-  const imageUrls: string[] = [];
-  $("img").each((_, el) => {
-    const src = $(el).attr("src") || $(el).attr("data-src") || "";
-    if (!src.startsWith("http") || seen.has(src)) return;
-    if (/gravatar\.com|pixel\.wp\.com|\/emoji\/|twemoji/i.test(src)) return;
-    const w = parseInt($(el).attr("width") || "0");
-    const h = parseInt($(el).attr("height") || "0");
-    const knownLarge = w >= 200 && h >= 100;
-    const unknownSize = w === 0 && h === 0;
-    if (knownLarge || unknownSize) {
-      seen.add(src);
-      imageUrls.push(src);
-    }
+  const browser = await chromium.launch({
+    headless: true,
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+  });
+  const page = await browser.newPage({
+    userAgent:
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
   });
 
-  // Best-effort screenshot via thum.io (free, no API key needed)
-  let screenshot = "";
   try {
-    const thumbUrl = `https://image.thum.io/get/width/1280/crop/960/noanimate/${url}`;
-    const res = await fetch(thumbUrl, { signal: AbortSignal.timeout(10000) });
-    if (res.ok) {
-      const buf = Buffer.from(await res.arrayBuffer());
-      screenshot = buf.toString("base64");
+    // Use domcontentloaded — networkidle can hang on sites with long-polling/websockets
+    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
+    // Give the page a moment to render dynamic content
+    await page.waitForTimeout(3000);
+
+    // Detect bot-challenge pages (Cloudflare, wp.com, etc.) and wait for them to clear
+    const bodyText = await page.evaluate(() => document.body.innerText || "");
+    const isChallenged =
+      bodyText.length < 200 &&
+      /checking your browser|just a moment|verify you are human|security check/i.test(bodyText);
+    if (isChallenged) {
+      await page.waitForTimeout(7000);
     }
-  } catch {
-    // Screenshot is optional — AI handles missing screenshots
-  }
 
-  return {
-    title,
-    description,
-    content: content.slice(0, 5000),
-    imageUrls: imageUrls.slice(0, 20),
-    screenshot,
-  };
-}
+    const title = await page.title();
 
-async function fetchWithRetry(url: string): Promise<string> {
-  for (let i = 0; i < USER_AGENTS.length; i++) {
-    const res = await fetch(url, {
-      headers: {
-        "User-Agent": USER_AGENTS[i],
-        Accept:
-          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Accept-Encoding": "gzip, deflate, br",
-        "Cache-Control": "no-cache",
-      },
-      redirect: "follow",
-      signal: AbortSignal.timeout(15000),
+    const description = await page
+      .$eval('meta[name="description"]', (el) =>
+        el.getAttribute("content") || ""
+      )
+      .catch(() => "");
+
+    const content = await page.evaluate(() => {
+      const body = document.body;
+      const scripts = body.querySelectorAll("script, style, noscript");
+      scripts.forEach((s) => s.remove());
+      return (body.innerText || "").replace(/\s+/g, " ").trim();
     });
-    if (res.ok) {
-      return await res.text();
-    }
-    // If last attempt also failed, throw
-    if (i === USER_AGENTS.length - 1) {
-      throw new Error(`Failed to fetch ${url}: ${res.status} ${res.statusText}`);
-    }
+
+    const imageUrls = await page.evaluate(() => {
+      const imgs = Array.from(document.querySelectorAll("img"));
+      const seen = new Set<string>();
+      const results: string[] = [];
+      for (const img of imgs) {
+        const src = img.src || img.getAttribute("data-src") || "";
+        if (!src.startsWith("http") || seen.has(src)) continue;
+        // Skip tiny icons, gravatars, and tracking pixels
+        if (/gravatar\.com|pixel\.wp\.com|\/emoji\/|twemoji/i.test(src)) continue;
+        const w = img.naturalWidth || img.width || parseInt(img.getAttribute("width") || "0");
+        const h = img.naturalHeight || img.height || parseInt(img.getAttribute("height") || "0");
+        // Accept images that are large enough OR where dimensions are unknown (lazy-loaded)
+        const knownLarge = w >= 200 && h >= 100;
+        const unknownSize = w === 0 && h === 0;
+        if (knownLarge || unknownSize) {
+          seen.add(src);
+          results.push(src);
+        }
+      }
+      return results.slice(0, 20);
+    });
+
+    const screenshotBuffer = await page.screenshot({
+      fullPage: true,
+      type: "png",
+    });
+    const screenshot = screenshotBuffer.toString("base64");
+
+    return {
+      title: title || "Untitled",
+      description,
+      content: content.slice(0, 5000),
+      imageUrls,
+      screenshot,
+    };
+  } finally {
+    await browser.close();
   }
-  throw new Error(`Failed to fetch ${url}`);
 }
