@@ -11,11 +11,13 @@ export async function generateMetadata({
 }: {
   params: { slug: string };
 }): Promise<Metadata> {
+  console.time("metadata:db-query");
   const { data } = await supabase
     .from("previews")
     .select("original_url, dev_name, user_id, business_name")
     .eq("slug", params.slug)
     .single();
+  console.timeEnd("metadata:db-query");
 
   if (!data) return { title: "Preview" };
 
@@ -29,9 +31,11 @@ export async function generateMetadata({
   // Prefer company name from owner's branding settings
   let brandName = data.dev_name;
   if (data.user_id) {
+    console.time("metadata:getUserById");
     const { data: owner } = await supabase.auth.admin.getUserById(
       data.user_id
     );
+    console.timeEnd("metadata:getUserById");
     if (owner?.user?.user_metadata?.company_name) {
       brandName = owner.user.user_metadata.company_name;
     }
@@ -47,11 +51,13 @@ export default async function PreviewPage({
 }: {
   params: { slug: string };
 }) {
+  console.time("preview:db-query");
   const { data, error } = await supabase
     .from("previews")
     .select("*")
     .eq("slug", params.slug)
     .single();
+  console.timeEnd("preview:db-query");
 
   if (error || !data) {
     notFound();
@@ -75,16 +81,20 @@ export default async function PreviewPage({
     );
   }
 
+  console.time("preview:getUser");
   const user = await getUser();
+  console.timeEnd("preview:getUser");
   const isOwner = !!user && user.id === data.user_id;
 
   // Fetch owner branding
   let companyName = "";
   let logoUrl = "";
   if (data.user_id) {
+    console.time("preview:getUserById");
     const { data: owner } = await supabase.auth.admin.getUserById(
       data.user_id
     );
+    console.timeEnd("preview:getUserById");
     if (owner?.user?.user_metadata) {
       companyName = owner.user.user_metadata.company_name ?? "";
       logoUrl = owner.user.user_metadata.logo_url ?? "";
