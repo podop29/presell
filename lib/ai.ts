@@ -544,3 +544,65 @@ export async function reviseVariation(
 
   return html;
 }
+
+// ── Cold Email Generation ──
+
+export interface ColdEmail {
+  subject: string;
+  body: string;
+}
+
+export async function generateColdEmail(
+  profile: BusinessProfile,
+  previewUrl: string,
+  devName: string
+): Promise<ColdEmail> {
+  const message = await anthropic.messages.create({
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 1024,
+    system: `You write short, effective cold emails for web developers reaching out to local businesses. You always respond with valid JSON only — no explanation, no markdown, no code fences.
+
+Rules:
+- Keep the email SHORT — 3-5 sentences in the body, max. Business owners are busy.
+- Lead with something specific about THEIR business, not about you.
+- The hook is that you already built them a free redesign preview they can see right now.
+- Sound human and genuine — not salesy, not corporate, not desperate. Like a friendly neighbor who happens to be a web developer.
+- No exclamation marks in the subject line. One at most in the body.
+- End with a simple, low-pressure CTA (reply, quick call, etc.)
+- Do NOT include "[Your Name]" or any placeholder — use the actual dev name provided.
+- The subject line should be specific to their business, not generic like "Your website redesign" or "I redesigned your website".`,
+    messages: [
+      {
+        role: "user",
+        content: `Write a cold email for this situation:
+
+I'm ${devName}, a web developer. I just built a free redesign preview for this business:
+
+Business: ${profile.businessName}
+Industry: ${profile.industry}
+What they do: ${profile.whatTheyDo}
+Location: ${profile.location}
+
+Preview link: ${previewUrl}
+
+Return a JSON object with "subject" and "body" keys. The body should be plain text (no HTML), with line breaks as \\n.`,
+      },
+    ],
+  });
+
+  const textBlock = message.content.find((block) => block.type === "text");
+  if (!textBlock || textBlock.type !== "text") {
+    throw new Error("No text response from Claude");
+  }
+
+  let jsonStr = textBlock.text.trim();
+  if (jsonStr.startsWith("```")) {
+    jsonStr = jsonStr.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+  }
+
+  const parsed = JSON.parse(jsonStr);
+  return {
+    subject: parsed.subject || `Quick idea for ${profile.businessName}`,
+    body: parsed.body || "",
+  };
+}

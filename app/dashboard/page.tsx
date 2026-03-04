@@ -12,6 +12,8 @@ interface PreviewRow {
   variation_a_style: string | null;
   created_at: string;
   expires_at: string;
+  cold_email_subject: string | null;
+  cold_email_body: string | null;
 }
 
 type FilterStatus = "all" | "active" | "expired";
@@ -141,6 +143,13 @@ function PlusIcon({ className = "w-4 h-4" }: { className?: string }) {
     </svg>
   );
 }
+function MailIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+    </svg>
+  );
+}
 
 /* ─── Main Component ─── */
 export default function Dashboard() {
@@ -152,6 +161,8 @@ export default function Dashboard() {
   const [copiedSlug, setCopiedSlug] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<PreviewRow | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [emailTarget, setEmailTarget] = useState<PreviewRow | null>(null);
+  const [emailCopied, setEmailCopied] = useState(false);
 
   useEffect(() => {
     fetchPreviews();
@@ -188,6 +199,14 @@ export default function Dashboard() {
     navigator.clipboard.writeText(url);
     setCopiedSlug(slug);
     setTimeout(() => setCopiedSlug(""), 2000);
+  }
+
+  function handleCopyEmail(preview: PreviewRow) {
+    if (!preview.cold_email_subject || !preview.cold_email_body) return;
+    const full = `Subject: ${preview.cold_email_subject}\n\n${preview.cold_email_body}`;
+    navigator.clipboard.writeText(full);
+    setEmailCopied(true);
+    setTimeout(() => setEmailCopied(false), 2000);
   }
 
   /* ─── Derived data ─── */
@@ -442,6 +461,15 @@ export default function Dashboard() {
                       <ExternalLinkIcon className="w-3.5 h-3.5" />
                       Open
                     </a>
+                    {preview.cold_email_body && (
+                      <button
+                        onClick={() => setEmailTarget(preview)}
+                        className="flex items-center justify-center w-9 h-9 rounded-lg border border-[var(--border)] hover:border-accent/30 text-neutral-500 hover:text-accent transition-colors"
+                        title="View cold email"
+                      >
+                        <MailIcon className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                     <button
                       onClick={() => handleCopy(preview.slug)}
                       className="flex items-center justify-center w-9 h-9 rounded-lg border border-[var(--border)] hover:border-[var(--border-light)] text-neutral-500 hover:text-white transition-colors"
@@ -523,6 +551,15 @@ export default function Dashboard() {
                     >
                       <ExternalLinkIcon className="w-3.5 h-3.5" />
                     </a>
+                    {preview.cold_email_body && (
+                      <button
+                        onClick={() => setEmailTarget(preview)}
+                        className="flex items-center justify-center w-8 h-8 rounded-lg border border-[var(--border)] hover:border-accent/30 text-neutral-500 hover:text-accent transition-colors"
+                        title="View cold email"
+                      >
+                        <MailIcon className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                     <button
                       onClick={() => handleCopy(preview.slug)}
                       className="flex items-center justify-center w-8 h-8 rounded-lg border border-[var(--border)] hover:border-[var(--border-light)] text-neutral-500 hover:text-white transition-colors"
@@ -573,6 +610,64 @@ export default function Dashboard() {
                 className="flex-1 px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 text-sm font-medium rounded-xl transition-colors disabled:opacity-50"
               >
                 {deleting ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ Cold Email Modal ═══ */}
+      {emailTarget && emailTarget.cold_email_body && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { setEmailTarget(null); setEmailCopied(false); }} />
+          <div className="relative bg-surface border border-[var(--border)] rounded-2xl p-6 max-w-lg w-full animate-fade-in-up">
+            <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center text-accent mx-auto mb-4">
+              <MailIcon className="w-6 h-6" />
+            </div>
+            <h3 className="text-lg font-semibold text-white text-center mb-1">Cold Email</h3>
+            <p className="text-xs text-neutral-500 text-center mb-5">
+              For {extractDomain(emailTarget.original_url)}
+            </p>
+
+            {/* Subject */}
+            <div className="mb-3">
+              <label className="text-[11px] font-medium text-neutral-500 uppercase tracking-wider mb-1 block">Subject</label>
+              <div className="px-3 py-2 bg-black/30 rounded-lg border border-white/5 text-sm text-white">
+                {emailTarget.cold_email_subject}
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="mb-5">
+              <label className="text-[11px] font-medium text-neutral-500 uppercase tracking-wider mb-1 block">Body</label>
+              <div className="px-3 py-3 bg-black/30 rounded-lg border border-white/5 text-sm text-neutral-300 whitespace-pre-wrap max-h-60 overflow-y-auto leading-relaxed">
+                {emailTarget.cold_email_body}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => { setEmailTarget(null); setEmailCopied(false); }}
+                className="flex-1 px-4 py-2.5 border border-[var(--border)] hover:border-[var(--border-light)] text-neutral-300 text-sm font-medium rounded-xl transition-colors"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => handleCopyEmail(emailTarget)}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-accent hover:bg-accent-light text-black text-sm font-semibold rounded-xl transition-all duration-200"
+              >
+                {emailCopied ? (
+                  <>
+                    <CheckIcon className="w-3.5 h-3.5" />
+                    Copied
+                  </>
+                ) : (
+                  <>
+                    <CopyIcon className="w-3.5 h-3.5" />
+                    Copy Email
+                  </>
+                )}
               </button>
             </div>
           </div>

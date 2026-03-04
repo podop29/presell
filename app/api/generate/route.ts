@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { nanoid } from "nanoid";
 import { supabaseAdmin as supabase } from "@/lib/supabase/admin";
-import { generateVariation } from "@/lib/ai";
+import { generateVariation, generateColdEmail } from "@/lib/ai";
 import { rateLimit, getIP } from "@/lib/rate-limit";
 import { getUser } from "@/lib/auth";
 import { getBalance, deductCredit } from "@/lib/credits";
@@ -91,6 +91,16 @@ export async function POST(req: NextRequest) {
     const slug = nanoid(8);
     const now = new Date();
     const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const previewUrl = `${baseUrl}/preview/${slug}`;
+
+    // Generate cold email (non-blocking — don't fail the whole request if this errors)
+    let coldEmail = { subject: "", body: "" };
+    try {
+      coldEmail = await generateColdEmail(profile, previewUrl, devName);
+    } catch (emailErr) {
+      console.error("Cold email generation error:", emailErr);
+    }
 
     const { error: dbError } = await supabase.from("previews").insert({
       slug,
@@ -103,6 +113,8 @@ export async function POST(req: NextRequest) {
       expires_at: expiresAt.toISOString(),
       variation_a_style: selectedStyle.styleName,
       user_id: user.id,
+      cold_email_subject: coldEmail.subject || null,
+      cold_email_body: coldEmail.body || null,
     });
 
     if (dbError) {
@@ -116,10 +128,9 @@ export async function POST(req: NextRequest) {
     // Deduct credit AFTER successful DB insert
     await deductCredit(user.id, 1, "generation", `Generated preview for ${url}`, slug);
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
     return NextResponse.json({
       slug,
-      previewUrl: `${baseUrl}/preview/${slug}`,
+      previewUrl,
     });
   } catch (err) {
     console.error("Generate error:", err);
