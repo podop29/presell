@@ -6,16 +6,35 @@ import PreviewClient from "./preview-client";
 
 export const dynamic = "force-dynamic";
 
+/** Race a promise against a timeout — returns null if it takes too long */
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | null> {
+  return Promise.race([
+    promise,
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), ms)),
+  ]);
+}
+
+async function fetchOwnerBranding(userId: string) {
+  const { data: owner } = await supabase.auth.admin.getUserById(userId);
+  return {
+    companyName: owner?.user?.user_metadata?.company_name ?? "",
+    logoUrl: owner?.user?.user_metadata?.logo_url ?? "",
+  };
+}
+
 export async function generateMetadata({
   params,
 }: {
   params: { slug: string };
 }): Promise<Metadata> {
-  const { data } = await supabase
-    .from("previews")
-    .select("original_url, dev_name, user_id, business_name")
-    .eq("slug", params.slug)
-    .single();
+  const { data } = await withTimeout(
+    supabase
+      .from("previews")
+      .select("original_url, dev_name, user_id, business_name")
+      .eq("slug", params.slug)
+      .single(),
+    10000
+  );
 
   if (!data) return { title: "Preview" };
 
@@ -26,14 +45,11 @@ export async function generateMetadata({
     } catch {}
   }
 
-  // Prefer company name from owner's branding settings
   let brandName = data.dev_name;
   if (data.user_id) {
-    const { data: owner } = await supabase.auth.admin.getUserById(
-      data.user_id
-    );
-    if (owner?.user?.user_metadata?.company_name) {
-      brandName = owner.user.user_metadata.company_name;
+    const branding = await withTimeout(fetchOwnerBranding(data.user_id), 5000);
+    if (branding?.companyName) {
+      brandName = branding.companyName;
     }
   }
 
@@ -47,16 +63,20 @@ export default async function PreviewPage({
 }: {
   params: { slug: string };
 }) {
-  const { data, error } = await supabase
-    .from("previews")
-    .select("*")
-    .eq("slug", params.slug)
-    .single();
+  const result = await withTimeout(
+    supabase
+      .from("previews")
+      .select("*")
+      .eq("slug", params.slug)
+      .single(),
+    10000
+  );
 
-  if (error || !data) {
+  if (!result || result.error || !result.data) {
     notFound();
   }
 
+  const data = result.data;
   const isExpired = new Date(data.expires_at) < new Date();
 
   if (isExpired) {
@@ -75,21 +95,17 @@ export default async function PreviewPage({
     );
   }
 
-  const user = await getUser();
-  const isOwner = !!user && user.id === data.user_id;
+  // Run auth check and branding fetch in parallel
+  const [user, branding] = await Promise.all([
+    withTimeout(getUser(), 5000),
+    data.user_id
+      ? withTimeout(fetchOwnerBranding(data.user_id), 5000)
+      : Promise.resolve(null),
+  ]);
 
-  // Fetch owner branding
-  let companyName = "";
-  let logoUrl = "";
-  if (data.user_id) {
-    const { data: owner } = await supabase.auth.admin.getUserById(
-      data.user_id
-    );
-    if (owner?.user?.user_metadata) {
-      companyName = owner.user.user_metadata.company_name ?? "";
-      logoUrl = owner.user.user_metadata.logo_url ?? "";
-    }
-  }
+  const isOwner = !!user && user.id === data.user_id;
+  const companyName = branding?.companyName ?? "";
+  const logoUrl = branding?.logoUrl ?? "";
 
   // Detect if original_url is a real website (not a Google Maps link)
   const mapsPattern = /google\.com\/maps|maps\.google\.|maps\.app\.goo\.gl|goo\.gl\/maps/i;
