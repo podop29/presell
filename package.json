@@ -6,16 +6,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "postinstall": "npx playwright install chromium --with-deps"
+    "lint": "next lint"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
     "@supabase/ssr": "^0.9.0",
     "@supabase/supabase-js": "^2.98.0",
+    "cheerio": "^1.2.0",
     "nanoid": "^3.3.11",
     "next": "14.2.35",
-    "playwright": "^1.58.2",
     "react": "^18",
     "react-dom": "^18",
     "stripe": "^20.4.0"
