@@ -60,7 +60,7 @@ export async function scrapeWebsite(url: string): Promise<ScrapedData> {
           results.push(src);
         }
       }
-      return results.slice(0, 20);
+      return results.slice(0, 20).map(u => u.replace(/^http:\/\//, "https://"));
     });
 
     const screenshotBuffer = await page.screenshot({
