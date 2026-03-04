@@ -115,6 +115,7 @@ export async function POST(req: NextRequest) {
       user_id: user.id,
       cold_email_subject: coldEmail.subject || null,
       cold_email_body: coldEmail.body || null,
+      business_name: profile.businessName || null,
     });
 
     if (dbError) {

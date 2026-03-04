@@ -5,6 +5,7 @@ import type {
   StyleSuggestion,
   AnalysisResult,
 } from "@/types";
+import type { GooglePlaceData } from "@/lib/google-places";
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
@@ -220,6 +221,168 @@ Page Content: ${data.content.slice(0, 3000)}`,
       throw err;
     }
     // Parsing/validation errors — fall back to defaults
+    return { profile: DEFAULT_PROFILE, styles: DEFAULT_STYLES, pageStructure: DEFAULT_PAGE_STRUCTURE, imageSearchQueries: [] };
+  }
+}
+
+// Pass 1 (alt) — Business Analysis from Google Places data (no website to scrape)
+export async function analyzeGooglePlaceData(
+  placeData: GooglePlaceData
+): Promise<AnalysisResult> {
+  const reviewText = placeData.reviews
+    .slice(0, 5)
+    .map((r) => `"${r.text}" — ${r.author_name} (${r.rating}/5)`)
+    .join("\n");
+
+  const hoursText = placeData.opening_hours?.weekday_text?.join(", ") || "Not available";
+
+  const categoryText = placeData.types
+    .filter((t) => !t.startsWith("point_of_interest") && t !== "establishment")
+    .map((t) => t.replace(/_/g, " "))
+    .join(", ") || "business";
+
+  const summaryText = placeData.editorial_summary?.overview || "";
+
+  try {
+    const message = await anthropic.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 4096,
+      system: `You are an elite brand strategist and creative director who creates distinctive, context-specific design directions. You avoid generic AI aesthetics and cookie-cutter suggestions. Every style you propose must feel intentionally crafted for the specific business.
+
+You are creating a BRAND NEW website for a business that currently has no website (or a very poor one). You have full creative freedom on colors, fonts, and layout — there is no existing brand to preserve.
+
+You always respond with valid JSON only — no explanation, no markdown, no code fences.`,
+      messages: [
+        {
+          role: "user",
+          content: `Analyze this business (sourced from Google Maps) and return a JSON object with four top-level keys: "profile", "styles", "pageStructure", and "imageSearchQueries".
+
+Business Name: ${placeData.name}
+Address: ${placeData.formatted_address}
+Phone: ${placeData.formatted_phone_number || "Not listed"}
+Category: ${categoryText}
+Website: ${placeData.website || "None"}
+Summary: ${summaryText}
+
+Hours:
+${hoursText}
+
+Customer Reviews:
+${reviewText || "No reviews available"}
+
+"profile" must have exactly these fields:
+{
+  "businessName": "string",
+  "industry": "string",
+  "whatTheyDo": "string (one clear sentence)",
+  "targetCustomer": "string",
+  "keySellingPoints": ["string"] (3-5 points — infer from reviews and category),
+  "brandTone": "string (e.g. 'professional and trustworthy' or 'fun and casual')",
+  "primaryColors": "string (suggest a fitting color palette with specific hex codes for this type of business, e.g. '#2b5797 blue, #ff6600 orange')",
+  "location": "string"
+}
+
+"pageStructure" must be an array of strings describing the ideal sections for a NEW website for this type of business. Think about what sections would be most effective for a ${categoryText} business. Include 6-10 sections, each described specifically:
+- Not just "Hero section" but "Hero with business name, tagline about [their specialty], and a call-to-action button"
+- Include sections that leverage the available data: reviews, hours, location, phone number
+- Example for a restaurant: ["Navigation with restaurant name and phone number", "Hero with restaurant name, cuisine type tagline, and reservation CTA", "Menu highlights with popular dishes", "Photo gallery", "Customer reviews carousel", "Hours and location with embedded map", "Contact section with phone and address", "Footer with social links"]
+
+"imageSearchQueries" must be an array of exactly 3 strings — search queries to find high-quality stock photos for this business's website. Be specific:
+- Query 1: A hero/banner image (e.g. "luxury spa massage therapy interior warm lighting")
+- Query 2: A secondary/lifestyle image specific to the business type
+- Query 3: A background/atmosphere image
+Tailor these to the specific business category: ${categoryText}
+
+"styles" must be an array of exactly 3 objects. Each object has:
+{
+  "styleName": "string — a short, catchy name for this design direction (3-5 words)",
+  "styleBrief": "string — a detailed 150-250 word design brief covering: color palette (specific hex codes), typography (specific Google Font names), overall mood, hero section approach, card/component style, CTA button style, and what real-world brand aesthetic this should channel"
+}
+
+Since this business has NO existing website, you have FULL CREATIVE FREEDOM:
+- Style 1: The most natural, industry-appropriate direction — what a skilled designer would create as the obvious best choice for this category
+- Style 2: A sophisticated/editorial take — refined, elegant, generous whitespace
+- Style 3: A modern/energetic take — bold typography, strong visual hierarchy, confident energy
+
+Rules for all 3 styles:
+- Tailor every style to this specific business and industry — a law firm should never get the same styles as a surf shop
+- FONT SELECTION IS CRITICAL: choose distinctive, characterful Google Fonts — NEVER suggest Inter, Roboto, Arial, Open Sans, or other overused defaults. Pick fonts with personality: Playfair Display, Fraunces, DM Serif Display, Space Grotesk, Outfit, Sora, Manrope, Cabinet Grotesk, Satoshi, General Sans, Clash Display, etc. Each style MUST use a different display font.
+- Reference specific colors (hex codes), specific Google Fonts by name, and specific design techniques
+- The briefs should be opinionated, vivid, and specific
+- ANTI-PATTERNS: Never suggest generic purple-on-white, safe blue corporate palettes, or any design direction that feels like generic AI output`,
+        },
+      ],
+    });
+
+    const textBlock = message.content.find((block) => block.type === "text");
+    if (!textBlock || textBlock.type !== "text") {
+      return { profile: DEFAULT_PROFILE, styles: DEFAULT_STYLES, pageStructure: DEFAULT_PAGE_STRUCTURE, imageSearchQueries: [] };
+    }
+
+    let jsonStr = textBlock.text.trim();
+    if (jsonStr.startsWith("```")) {
+      jsonStr = jsonStr.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+    }
+
+    const parsed = JSON.parse(jsonStr);
+
+    const profile: BusinessProfile = {
+      businessName: parsed.profile?.businessName || placeData.name,
+      industry: parsed.profile?.industry || categoryText,
+      whatTheyDo: parsed.profile?.whatTheyDo || DEFAULT_PROFILE.whatTheyDo,
+      targetCustomer: parsed.profile?.targetCustomer || DEFAULT_PROFILE.targetCustomer,
+      keySellingPoints:
+        Array.isArray(parsed.profile?.keySellingPoints) &&
+        parsed.profile.keySellingPoints.length > 0
+          ? parsed.profile.keySellingPoints
+          : DEFAULT_PROFILE.keySellingPoints,
+      brandTone: parsed.profile?.brandTone || DEFAULT_PROFILE.brandTone,
+      primaryColors: parsed.profile?.primaryColors || DEFAULT_PROFILE.primaryColors,
+      location: parsed.profile?.location || placeData.formatted_address,
+    };
+
+    let styles = DEFAULT_STYLES;
+    if (
+      Array.isArray(parsed.styles) &&
+      parsed.styles.length === 3 &&
+      parsed.styles.every(
+        (s: Record<string, unknown>) =>
+          typeof s.styleName === "string" && typeof s.styleBrief === "string"
+      )
+    ) {
+      styles = parsed.styles.map((s: Record<string, string>) => ({
+        styleName: s.styleName,
+        styleBrief: s.styleBrief,
+      })) as [StyleSuggestion, StyleSuggestion, StyleSuggestion];
+    }
+
+    let pageStructure = DEFAULT_PAGE_STRUCTURE;
+    if (
+      Array.isArray(parsed.pageStructure) &&
+      parsed.pageStructure.length >= 3 &&
+      parsed.pageStructure.every((s: unknown) => typeof s === "string")
+    ) {
+      pageStructure = parsed.pageStructure;
+    }
+
+    let imageSearchQueries: string[] = [];
+    if (
+      Array.isArray(parsed.imageSearchQueries) &&
+      parsed.imageSearchQueries.every((s: unknown) => typeof s === "string")
+    ) {
+      imageSearchQueries = parsed.imageSearchQueries;
+    }
+
+    return { profile, styles, pageStructure, imageSearchQueries };
+  } catch (err) {
+    if (
+      err instanceof Anthropic.APIError ||
+      err instanceof Anthropic.APIConnectionError ||
+      err instanceof Anthropic.AuthenticationError ||
+      err instanceof Anthropic.RateLimitError
+    ) {
+      throw err;
+    }
     return { profile: DEFAULT_PROFILE, styles: DEFAULT_STYLES, pageStructure: DEFAULT_PAGE_STRUCTURE, imageSearchQueries: [] };
   }
 }

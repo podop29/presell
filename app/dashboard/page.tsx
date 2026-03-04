@@ -14,6 +14,7 @@ interface PreviewRow {
   expires_at: string;
   cold_email_subject: string | null;
   cold_email_body: string | null;
+  business_name: string | null;
 }
 
 type FilterStatus = "all" | "active" | "expired";
@@ -29,7 +30,8 @@ function daysRemaining(p: PreviewRow) {
   return Math.max(0, Math.ceil(diff / 86_400_000));
 }
 
-function extractDomain(url: string) {
+function extractDomain(url: string, businessName?: string | null) {
+  if (businessName) return businessName;
   try {
     return new URL(url).hostname.replace(/^www\./, "");
   } catch {
@@ -229,6 +231,7 @@ export default function Dashboard() {
         (p) =>
           p.original_url.toLowerCase().includes(q) ||
           p.slug.toLowerCase().includes(q) ||
+          (p.business_name && p.business_name.toLowerCase().includes(q)) ||
           (p.variation_a_style && p.variation_a_style.toLowerCase().includes(q))
       );
     }
@@ -421,7 +424,7 @@ export default function Dashboard() {
                       rel="noopener noreferrer"
                       className="text-sm font-medium text-white hover:text-accent transition-colors inline-flex items-center gap-1.5"
                     >
-                      {extractDomain(preview.original_url)}
+                      {extractDomain(preview.original_url, preview.business_name)}
                       <ExternalLinkIcon className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </a>
                     <div className="text-xs font-mono text-neutral-600 mt-0.5">{preview.slug}</div>
@@ -511,7 +514,7 @@ export default function Dashboard() {
                         rel="noopener noreferrer"
                         className="text-sm font-medium text-white hover:text-accent transition-colors truncate"
                       >
-                        {extractDomain(preview.original_url)}
+                        {extractDomain(preview.original_url, preview.business_name)}
                       </a>
                       {preview.variation_a_style && (
                         <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-accent/10 text-accent border border-accent/20">
@@ -593,7 +596,7 @@ export default function Dashboard() {
             <h3 className="text-lg font-semibold text-white text-center mb-2">Delete Preview</h3>
             <p className="text-sm text-neutral-400 text-center mb-6">
               Are you sure you want to delete the preview for{" "}
-              <span className="text-white font-medium">{extractDomain(deleteTarget.original_url)}</span>?
+              <span className="text-white font-medium">{extractDomain(deleteTarget.original_url, deleteTarget.business_name)}</span>?
               This action cannot be undone.
             </p>
             <div className="flex items-center gap-3">
@@ -626,7 +629,7 @@ export default function Dashboard() {
             </div>
             <h3 className="text-lg font-semibold text-white text-center mb-1">Cold Email</h3>
             <p className="text-xs text-neutral-500 text-center mb-5">
-              For {extractDomain(emailTarget.original_url)}
+              For {extractDomain(emailTarget.original_url, emailTarget.business_name)}
             </p>
 
             {/* Subject */}

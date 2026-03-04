@@ -12,7 +12,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from("previews")
-    .select("id, slug, original_url, variation_a_style, created_at, expires_at, cold_email_subject, cold_email_body")
+    .select("id, slug, original_url, variation_a_style, created_at, expires_at, cold_email_subject, cold_email_body, business_name")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 

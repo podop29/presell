@@ -13,16 +13,18 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { data } = await supabase
     .from("previews")
-    .select("original_url, dev_name, user_id")
+    .select("original_url, dev_name, user_id, business_name")
     .eq("slug", params.slug)
     .single();
 
   if (!data) return { title: "Preview" };
 
-  let domain = data.original_url;
-  try {
-    domain = new URL(data.original_url).hostname.replace(/^www\./, "");
-  } catch {}
+  let domain = data.business_name || data.original_url;
+  if (!data.business_name) {
+    try {
+      domain = new URL(data.original_url).hostname.replace(/^www\./, "");
+    } catch {}
+  }
 
   // Prefer company name from owner's branding settings
   let brandName = data.dev_name;
@@ -119,6 +121,7 @@ export default async function PreviewPage({
     <PreviewClient
       slug={data.slug}
       originalUrl={data.original_url}
+      businessName={data.business_name}
       devName={data.dev_name}
       devEmail={data.dev_email}
       devMessage={data.dev_message}

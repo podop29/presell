@@ -115,33 +115,75 @@ const faqs = [
 ];
 
 /* ───── Main component ───── */
+function MapPin({ className = "w-5 h-5" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" />
+    </svg>
+  );
+}
+
 export default function Home() {
   const router = useRouter();
+  const [inputMode, setInputMode] = useState<"website" | "maps">("website");
   const [url, setUrl] = useState("");
+  const [mapsUrl, setMapsUrl] = useState("");
   const [error, setError] = useState("");
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   function handleAnalyze() {
     setError("");
-    if (!url) { setError("Please enter a website URL."); return; }
-    router.push(`/create?url=${encodeURIComponent(url)}`);
+    if (inputMode === "website") {
+      if (!url) { setError("Please enter a website URL."); return; }
+      router.push(`/create?url=${encodeURIComponent(url)}`);
+    } else {
+      if (!mapsUrl) { setError("Please enter a Google Maps link."); return; }
+      router.push(`/create?mapsUrl=${encodeURIComponent(mapsUrl)}`);
+    }
   }
 
   /* reusable URL input block */
   function UrlInput() {
+    const isWebsite = inputMode === "website";
     return (
       <>
+        {/* Toggle tabs */}
+        <div className="flex items-center justify-center gap-1 mb-4 max-w-xl mx-auto">
+          <button
+            onClick={() => { setInputMode("website"); setError(""); }}
+            className={`px-4 py-2 text-xs font-medium rounded-lg transition-all duration-200 flex items-center gap-2 ${
+              isWebsite
+                ? "bg-accent/10 text-accent border border-accent/20"
+                : "text-neutral-500 hover:text-neutral-300 border border-transparent"
+            }`}
+          >
+            <Globe className="w-3.5 h-3.5" />
+            From Website
+          </button>
+          <button
+            onClick={() => { setInputMode("maps"); setError(""); }}
+            className={`px-4 py-2 text-xs font-medium rounded-lg transition-all duration-200 flex items-center gap-2 ${
+              !isWebsite
+                ? "bg-accent/10 text-accent border border-accent/20"
+                : "text-neutral-500 hover:text-neutral-300 border border-transparent"
+            }`}
+          >
+            <MapPin className="w-3.5 h-3.5" />
+            From Google Maps
+          </button>
+        </div>
+
         <div className="relative group max-w-xl mx-auto">
           <div className="absolute -inset-0.5 bg-gradient-to-r from-accent/30 via-accent/10 to-accent/30 rounded-2xl blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <div className="relative flex items-center bg-surface border border-[var(--border)] rounded-xl overflow-hidden">
             <div className="pl-4 text-neutral-600">
-              <Globe className="w-5 h-5" />
+              {isWebsite ? <Globe className="w-5 h-5" /> : <MapPin className="w-5 h-5" />}
             </div>
             <input
               type="url"
-              placeholder="https://their-website.com"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
+              placeholder={isWebsite ? "https://their-website.com" : "https://maps.app.goo.gl/... or Google Maps link"}
+              value={isWebsite ? url : mapsUrl}
+              onChange={(e) => isWebsite ? setUrl(e.target.value) : setMapsUrl(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleAnalyze()}
               className="flex-1 px-4 py-4 bg-transparent text-white text-base placeholder:text-neutral-600 focus:outline-none font-mono"
             />
@@ -149,7 +191,7 @@ export default function Home() {
               onClick={handleAnalyze}
               className="m-1.5 px-5 py-2.5 bg-accent hover:bg-accent-light text-black font-semibold text-sm rounded-lg transition-all duration-200 hover:shadow-lg hover:shadow-accent/20 flex items-center gap-2 shrink-0"
             >
-              <span>Analyze</span>
+              <span>{isWebsite ? "Analyze" : "Create"}</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -200,8 +242,8 @@ export default function Home() {
           </h1>
 
           <p className="animate-fade-in-up delay-200 mt-6 text-lg sm:text-xl text-neutral-400 max-w-2xl mx-auto leading-relaxed">
-            Paste any website URL. Get an AI-generated redesign in minutes.
-            Send it as a preview link to land the deal.
+            Paste a website URL or Google Maps link. Get an AI-generated
+            website in minutes. Send it as a preview link to land the deal.
           </p>
 
           {/* ─── URL INPUT ─── */}
@@ -461,7 +503,7 @@ export default function Home() {
             Stop pitching. Start showing.
           </h2>
           <p className="text-neutral-500 mb-10 max-w-lg mx-auto">
-            Your next client is one redesign preview away. Paste their URL and let the work speak for itself.
+            Your next client is one preview away. Paste their URL or Google Maps link and let the work speak for itself.
           </p>
           <UrlInput />
           <p className="mt-3 text-xs text-neutral-600 text-center">

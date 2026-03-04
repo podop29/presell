@@ -34,3 +34,6 @@ create index if not exists idx_previews_slug on previews (slug);
 -- alter table previews add column if not exists variation_b_style text default 'Bold & Modern';
 -- alter table previews add column if not exists variation_c_html text;
 -- alter table previews add column if not exists variation_c_style text default 'Dark & Sleek';
+
+-- Migration: add business_name for Google Maps-sourced previews
+-- alter table previews add column if not exists business_name text;

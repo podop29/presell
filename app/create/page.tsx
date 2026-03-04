@@ -172,10 +172,18 @@ function SteppedProgress({ steps, done, subtitle }: { steps: StepConfig[]; done:
   );
 }
 
-const ANALYZE_STEPS: StepConfig[] = [
+const ANALYZE_STEPS_WEBSITE: StepConfig[] = [
   { label: "Scraping website content" },
   { label: "Analyzing business profile" },
   { label: "Identifying brand & audience" },
+  { label: "Generating design styles" },
+  { label: "Preparing image assets" },
+];
+
+const ANALYZE_STEPS_MAPS: StepConfig[] = [
+  { label: "Fetching business details" },
+  { label: "Analyzing business profile" },
+  { label: "Crafting page structure" },
   { label: "Generating design styles" },
   { label: "Preparing image assets" },
 ];
@@ -192,6 +200,8 @@ const GENERATE_STEPS: StepConfig[] = [
 function CreatePageInner() {
   const searchParams = useSearchParams();
   const url = searchParams.get("url") || "";
+  const mapsUrl = searchParams.get("mapsUrl") || "";
+  const source: "website" | "google-maps" = mapsUrl ? "google-maps" : "website";
   const hasStarted = useRef(false);
 
   const [devName, setDevName] = useState("");
@@ -218,9 +228,17 @@ function CreatePageInner() {
 
   /* Validate URL param */
   const isValidUrl = (() => {
+    if (source === "google-maps") {
+      return !!mapsUrl;
+    }
     if (!url) return false;
     try { new URL(url); return true; } catch { return false; }
   })();
+
+  // For Google Maps, show business name once analysis completes; fall back to URL while loading
+  const displayLabel = source === "google-maps"
+    ? (profile?.businessName || mapsUrl)
+    : url;
 
   // Delayed phase transition after progress completes
   const transitionToPickStyle = useCallback(() => {
@@ -241,7 +259,11 @@ function CreatePageInner() {
         const res = await fetch("/api/analyze", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url }),
+          body: JSON.stringify(
+            source === "google-maps"
+              ? { mapsUrl, source: "google-maps" }
+              : { url, source: "website" }
+          ),
         });
         const data = await res.json();
         if (!res.ok) {
@@ -266,7 +288,7 @@ function CreatePageInner() {
     }
 
     analyze();
-  }, [url, isValidUrl, transitionToPickStyle]);
+  }, [url, mapsUrl, source, isValidUrl, transitionToPickStyle]);
 
   async function handleGenerate() {
     setError("");
@@ -279,7 +301,8 @@ function CreatePageInner() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          url, devName, devEmail, devMessage, profile,
+          url: source === "google-maps" ? mapsUrl : url,
+          devName, devEmail, devMessage, profile,
           selectedStyle: styles[selectedIndex],
           pageStructure, imageUrls, stockImageUrls, pageContent,
         }),
@@ -345,14 +368,16 @@ function CreatePageInner() {
           {/* URL being analyzed */}
           {isValidUrl && (<>
           <div className="mb-8 text-center">
-            <p className="text-xs text-neutral-600 mb-1">Redesigning</p>
-            <p className="text-sm font-mono text-neutral-400 truncate">{url}</p>
+            <p className="text-xs text-neutral-600 mb-1">
+              {source === "google-maps" ? "Creating a website for" : "Redesigning"}
+            </p>
+            <p className={`text-sm truncate ${source === "google-maps" && profile ? "font-medium text-white" : "font-mono text-neutral-400"}`}>{displayLabel}</p>
           </div>
 
           {/* Phase: Analyzing */}
           {phase === "analyzing" && !error && (
             <SteppedProgress
-              steps={ANALYZE_STEPS}
+              steps={source === "google-maps" ? ANALYZE_STEPS_MAPS : ANALYZE_STEPS_WEBSITE}
               done={analysisDone}
               subtitle="This usually takes 1-2 minutes"
             />

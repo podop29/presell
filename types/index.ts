@@ -17,10 +17,13 @@ export interface Preview {
   variation_c_html: string | null;
   variation_c_style: string | null;
   user_id: string | null;
+  business_name: string | null;
 }
 
 export interface AnalyzeRequest {
-  url: string;
+  url?: string;
+  mapsUrl?: string;
+  source: "website" | "google-maps";
 }
 
 export interface AnalyzeResponse {

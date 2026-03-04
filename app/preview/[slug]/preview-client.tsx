@@ -19,6 +19,7 @@ interface RevisionInfo {
 interface PreviewClientProps {
   slug: string;
   originalUrl: string;
+  businessName?: string | null;
   devName: string;
   devEmail: string;
   devMessage: string | null;
@@ -31,6 +32,7 @@ interface PreviewClientProps {
 export default function PreviewClient({
   slug,
   originalUrl,
+  businessName,
   devName,
   devEmail,
   devMessage,
@@ -64,12 +66,13 @@ export default function PreviewClient({
   const editStyleRef = useRef<HTMLStyleElement | null>(null);
 
   const domain = useMemo(() => {
+    if (businessName) return businessName;
     try {
       return new URL(originalUrl).hostname.replace(/^www\./, "");
     } catch {
       return originalUrl;
     }
-  }, [originalUrl]);
+  }, [originalUrl, businessName]);
 
   const displayName = companyName || devName;
   const initial = displayName.charAt(0).toUpperCase();

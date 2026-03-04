@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { scrapeWebsite } from "@/lib/scraper";
-import { analyzeBusinessContent } from "@/lib/ai";
+import { analyzeBusinessContent, analyzeGooglePlaceData } from "@/lib/ai";
 import { searchPexels } from "@/lib/pexels";
 import { rateLimit, getIP } from "@/lib/rate-limit";
 import { getUser } from "@/lib/auth";
 import { getBalance } from "@/lib/credits";
+import {
+  extractPlaceId,
+  fetchPlaceDetails,
+  getPlacePhotoUrls,
+} from "@/lib/google-places";
 
 export const maxDuration = 120;
 
@@ -38,7 +43,89 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { url } = await req.json();
+    const body = await req.json();
+    const source: "website" | "google-maps" = body.source || "website";
+
+    // ─── Google Maps flow ───
+    if (source === "google-maps") {
+      const mapsUrl = body.mapsUrl as string | undefined;
+      if (!mapsUrl) {
+        return NextResponse.json({ error: "No Google Maps URL provided." }, { status: 400 });
+      }
+
+      // Step 1: Extract place_id and fetch details
+      let placeData;
+      try {
+        const placeId = await extractPlaceId(mapsUrl);
+        placeData = await fetchPlaceDetails(placeId);
+      } catch (placeErr) {
+        console.error("Google Places error:", placeErr);
+        return NextResponse.json(
+          {
+            error:
+              placeErr instanceof Error
+                ? placeErr.message
+                : "Could not fetch business details from Google Maps.",
+          },
+          { status: 422 }
+        );
+      }
+
+      // Step 2: Analyze with AI
+      let profile, styles, pageStructure, imageSearchQueries;
+      try {
+        ({ profile, styles, pageStructure, imageSearchQueries } =
+          await analyzeGooglePlaceData(placeData));
+      } catch (aiErr) {
+        console.error("AI analysis error:", aiErr);
+        return NextResponse.json(
+          { error: "AI analysis failed — please check your API key or credits and try again." },
+          { status: 502 }
+        );
+      }
+
+      // Step 3: Get Google Places photos + Pexels stock images
+      const placePhotoUrls = getPlacePhotoUrls(placeData.photos);
+
+      let stockImageUrls: string[] = [];
+      if (imageSearchQueries.length > 0) {
+        try {
+          stockImageUrls = await searchPexels(imageSearchQueries);
+        } catch (err) {
+          console.error("Pexels search error:", err);
+        }
+      }
+
+      // Build pageContent from reviews + hours + summary
+      const reviewContent = placeData.reviews
+        .map((r) => `"${r.text}" — ${r.author_name} (${r.rating}/5)`)
+        .join("\n\n");
+      const hoursContent = placeData.opening_hours?.weekday_text?.join("\n") || "";
+      const summaryContent = placeData.editorial_summary?.overview || "";
+      const pageContent = [
+        placeData.name,
+        placeData.formatted_address,
+        placeData.formatted_phone_number,
+        summaryContent,
+        hoursContent ? `Hours:\n${hoursContent}` : "",
+        reviewContent ? `Reviews:\n${reviewContent}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n\n")
+        .slice(0, 5000);
+
+      return NextResponse.json({
+        profile,
+        styles,
+        pageStructure,
+        imageUrls: placePhotoUrls,
+        stockImageUrls,
+        pageContent,
+      });
+    }
+
+    // ─── Website flow (existing) ───
+    const { url } = body;
 
     // Validate URL
     try {
