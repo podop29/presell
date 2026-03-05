@@ -155,47 +155,46 @@ export default function Home() {
     }
   }
 
-  /* reusable URL input block */
-  function UrlInput() {
-    return (
-      <>
-        <div className="relative group max-w-xl mx-auto">
-          <div className="absolute -inset-0.5 bg-gradient-to-r from-accent/30 via-accent/10 to-accent/30 rounded-2xl blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-          <div className="relative flex items-center bg-surface border border-[var(--border)] rounded-xl overflow-hidden">
-            <div className="pl-4 text-neutral-600 transition-colors duration-200">
-              {isMaps ? <MapPin className="w-5 h-5" /> : <Globe className="w-5 h-5" />}
-            </div>
-            <input
-              type="url"
-              placeholder="Website URL or Google Maps link"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleAnalyze()}
-              className="flex-1 px-4 py-4 bg-transparent text-white text-base placeholder:text-neutral-600 focus:outline-none font-mono"
-            />
-            <button
-              onClick={handleAnalyze}
-              className="m-1.5 px-5 py-2.5 bg-accent hover:bg-accent-light text-black font-semibold text-sm rounded-lg transition-all duration-200 hover:shadow-lg hover:shadow-accent/20 flex items-center gap-2 shrink-0"
-            >
-              <span>{isMaps ? "Create" : "Analyze"}</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
+  /* reusable URL input block — stored as JSX, not a component,
+     so React doesn't remount (and lose focus) on every keystroke */
+  const urlInput = (
+    <>
+      <div className="relative group max-w-xl mx-auto">
+        <div className="absolute -inset-0.5 bg-gradient-to-r from-accent/30 via-accent/10 to-accent/30 rounded-2xl blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+        <div className="relative flex items-center bg-surface border border-[var(--border)] rounded-xl overflow-hidden">
+          <div className="pl-4 text-neutral-600 transition-colors duration-200">
+            {isMaps ? <MapPin className="w-5 h-5" /> : <Globe className="w-5 h-5" />}
           </div>
+          <input
+            type="url"
+            placeholder="Website URL or Google Maps link"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleAnalyze()}
+            className="flex-1 px-4 py-4 bg-transparent text-white text-base placeholder:text-neutral-600 focus:outline-none font-mono"
+          />
+          <button
+            onClick={handleAnalyze}
+            className="m-1.5 px-5 py-2.5 bg-accent hover:bg-accent-light text-black font-semibold text-sm rounded-lg transition-all duration-200 hover:shadow-lg hover:shadow-accent/20 flex items-center gap-2 shrink-0"
+          >
+            <span>{isMaps ? "Create" : "Analyze"}</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
         </div>
-        {isMaps && (
-          <p className="mt-2 max-w-xl mx-auto text-xs text-accent/60 flex items-center justify-center gap-1.5">
-            <MapPin className="w-3 h-3" />
-            Google Maps link detected — we&apos;ll create a new website
-          </p>
-        )}
-        {error && (
-          <div className="mt-4 max-w-xl mx-auto p-3 bg-red-500/5 border border-red-500/20 rounded-xl text-red-400 text-xs">
-            {error}
-          </div>
-        )}
-      </>
-    );
-  }
+      </div>
+      {isMaps && (
+        <p className="mt-2 max-w-xl mx-auto text-xs text-accent/60 flex items-center justify-center gap-1.5">
+          <MapPin className="w-3 h-3" />
+          Google Maps link detected — we&apos;ll create a new website
+        </p>
+      )}
+      {error && (
+        <div className="mt-4 max-w-xl mx-auto p-3 bg-red-500/5 border border-red-500/20 rounded-xl text-red-400 text-xs">
+          {error}
+        </div>
+      )}
+    </>
+  );
 
   return (
     <div className="min-h-screen">
@@ -240,7 +239,7 @@ export default function Home() {
 
           {/* ─── URL INPUT ─── */}
           <div className="animate-fade-in-up delay-300 mt-12">
-            <UrlInput />
+            {urlInput}
             <p className="mt-3 text-xs text-neutral-600 text-center">
               No credit card required — start with free credits
             </p>
@@ -502,7 +501,7 @@ export default function Home() {
           <p className="text-neutral-500 mb-10 max-w-lg mx-auto">
             Your next client is one preview away. Paste their URL or Google Maps link and let the work speak for itself.
           </p>
-          <UrlInput />
+          {urlInput}
           <p className="mt-3 text-xs text-neutral-600 text-center">
             No credit card required — start with free credits
           </p>
