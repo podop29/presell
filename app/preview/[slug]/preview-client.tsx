@@ -62,6 +62,7 @@ export default function PreviewClient({
   const [revisionLimitReached, setRevisionLimitReached] = useState(false);
   const [unlocking, setUnlocking] = useState(false);
   const [unlockError, setUnlockError] = useState<string | null>(null);
+  const [compareMode, setCompareMode] = useState(false);
   const pendingBlobUrl = useRef<string | null>(null);
   const acceptedBlobUrl = useRef<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
@@ -159,6 +160,7 @@ export default function PreviewClient({
     setIframeLoading(true);
     setActiveView(key);
     if (key === "original") {
+      setCompareMode(false);
       setReviseOpen(false);
       setReviseError(null);
     }
@@ -380,6 +382,7 @@ export default function PreviewClient({
       // Turning on — close revise bar first
       setReviseOpen(false);
       setReviseError(null);
+      setCompareMode(false);
       setEditMode(true);
       setHasEdits(false);
       // enableEditMode runs after iframe is confirmed loaded via useEffect
@@ -458,14 +461,14 @@ export default function PreviewClient({
           {domain}
         </span>
 
-        {/* Center — segmented control */}
-        <div className="flex-1 flex justify-center min-w-0 sm:absolute sm:left-1/2 sm:-translate-x-1/2">
+        {/* Center — segmented control + compare toggle */}
+        <div className="flex-1 flex items-center justify-center gap-1.5 min-w-0 sm:absolute sm:left-1/2 sm:-translate-x-1/2">
           <nav className="flex items-center bg-white/[0.06] rounded-full p-0.5 border border-white/[0.08] max-w-full overflow-x-auto">
             {tabs.map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => switchView(tab.key)}
-                disabled={!!pendingRevisionHtml}
+                disabled={!!pendingRevisionHtml || (compareMode && tab.key === "original")}
                 className={`px-2.5 sm:px-3.5 py-1 text-[11px] sm:text-xs font-medium rounded-full transition-all whitespace-nowrap ${
                   activeView === tab.key
                     ? "bg-white text-zinc-900 shadow-sm"
@@ -476,9 +479,40 @@ export default function PreviewClient({
               </button>
             ))}
           </nav>
+          {hasOriginalSite && (
+            <button
+              onClick={() => setCompareMode((c) => !c)}
+              disabled={activeView === "original" || !!pendingRevisionHtml || editMode || revising}
+              title={
+                activeView === "original"
+                  ? "Switch to a redesign to compare"
+                  : compareMode
+                    ? "Exit compare view"
+                    : "Compare with original"
+              }
+              className={`flex items-center justify-center w-7 h-7 rounded-full transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-zinc-400 ${
+                compareMode
+                  ? "bg-white/15 text-white"
+                  : "text-zinc-400 hover:text-white hover:bg-white/10"
+              }`}
+            >
+              <svg
+                className="w-3.5 h-3.5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <rect x="2" y="3" width="8" height="18" rx="1" />
+                <rect x="14" y="3" width="8" height="18" rx="1" />
+              </svg>
+            </button>
+          )}
         </div>
 
-        {/* Right — revise + edit + export (owner only) */}
+        {/* Right — revise + edit + export */}
         {isOwner ? (
           <div className="flex items-center gap-1 shrink-0">
             <button
@@ -488,6 +522,7 @@ export default function PreviewClient({
                   setEditMode(false);
                   setHasEdits(false);
                 }
+                setCompareMode(false);
                 setReviseOpen((o) => !o);
                 setReviseError(null);
               }}
@@ -803,7 +838,35 @@ export default function PreviewClient({
       )}
 
       {/* ── Iframe(s) ── */}
-      {pendingRevisionHtml ? (
+      {compareMode && activeView !== "original" ? (
+        <div className="flex-1 flex flex-col sm:flex-row relative">
+          {/* Original */}
+          <div className="h-1/2 sm:h-auto sm:w-1/2 relative border-b sm:border-b-0 sm:border-r border-white/10">
+            <span className="absolute top-3 left-3 z-20 px-2 py-0.5 bg-black/70 backdrop-blur text-[11px] font-medium text-zinc-400 rounded">
+              Current
+            </span>
+            <iframe
+              key={`compare-original`}
+              src={originalUrl}
+              sandbox="allow-scripts allow-same-origin"
+              className="w-full h-full absolute inset-0 border-0"
+              title="Current"
+            />
+          </div>
+          {/* Variation */}
+          <div className="h-1/2 sm:h-auto sm:w-1/2 relative">
+            <span className="absolute top-3 left-3 z-20 px-2 py-0.5 bg-black/70 backdrop-blur text-[11px] font-medium text-emerald-400 rounded">
+              {activeVariation?.label ?? "Redesign"}
+            </span>
+            <iframe
+              key={`compare-variation-${activeView}-${iframeVersion}`}
+              src={iframeSrc}
+              className="w-full h-full absolute inset-0 border-0"
+              title={activeVariation?.label ?? "Redesign"}
+            />
+          </div>
+        </div>
+      ) : pendingRevisionHtml ? (
         <div className="flex-1 flex flex-col sm:flex-row relative">
           {/* Before */}
           <div className="h-1/2 sm:h-auto sm:w-1/2 relative border-b sm:border-b-0 sm:border-r border-white/10">
