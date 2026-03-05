@@ -293,6 +293,7 @@ export default function PreviewClient({
   const MIN_IMAGE_SIZE = 40;
 
   const EDIT_STYLE_ID = "pitchkit-edit-style";
+  const LINK_POPOVER_ID = "pitchkit-link-popover";
 
   function handleImageClick(e: MouseEvent) {
     e.preventDefault();
@@ -404,6 +405,70 @@ export default function PreviewClient({
         [data-pitchkit-overlay-passthrough] {
           pointer-events: none !important;
         }
+        #pitchkit-link-popover {
+          position: absolute;
+          z-index: 99999;
+          background: #1a1a2e;
+          border: 1px solid rgba(255,255,255,0.15);
+          border-radius: 8px;
+          padding: 8px;
+          box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          min-width: 220px;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        #pitchkit-link-popover .pitchkit-popover-row {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+        #pitchkit-link-popover button {
+          padding: 5px 10px;
+          font-size: 12px;
+          font-weight: 500;
+          border: none;
+          border-radius: 5px;
+          cursor: pointer;
+          white-space: nowrap;
+        }
+        #pitchkit-link-popover .pitchkit-btn-text {
+          background: rgba(255,255,255,0.1);
+          color: #e2e8f0;
+        }
+        #pitchkit-link-popover .pitchkit-btn-text:hover {
+          background: rgba(255,255,255,0.18);
+        }
+        #pitchkit-link-popover .pitchkit-btn-save {
+          background: #10b981;
+          color: white;
+        }
+        #pitchkit-link-popover .pitchkit-btn-save:hover {
+          background: #059669;
+        }
+        #pitchkit-link-popover input {
+          flex: 1;
+          padding: 5px 8px;
+          font-size: 12px;
+          background: rgba(255,255,255,0.08);
+          border: 1px solid rgba(255,255,255,0.12);
+          border-radius: 5px;
+          color: #e2e8f0;
+          outline: none;
+          font-family: monospace;
+          min-width: 0;
+        }
+        #pitchkit-link-popover input:focus {
+          border-color: rgba(99,102,241,0.6);
+        }
+        #pitchkit-link-popover .pitchkit-popover-label {
+          font-size: 10px;
+          color: #94a3b8;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          font-weight: 600;
+        }
       `;
       doc.head.appendChild(style);
     }
@@ -508,6 +573,10 @@ export default function PreviewClient({
       el.removeAttribute("data-pitchkit-overlay-passthrough");
     });
 
+    // Remove link popover
+    const popover = doc.getElementById(LINK_POPOVER_ID);
+    if (popover) popover.remove();
+
     // Remove hidden file input
     if (fileInputRef.current && doc.contains(fileInputRef.current)) {
       fileInputRef.current.remove();
@@ -516,10 +585,102 @@ export default function PreviewClient({
     replacingImageRef.current = null;
   }, []);
 
+  function dismissLinkPopover() {
+    const doc = iframeRef.current?.contentDocument;
+    if (!doc) return;
+    const existing = doc.getElementById(LINK_POPOVER_ID);
+    if (existing) existing.remove();
+  }
+
+  function showLinkPopover(anchor: HTMLAnchorElement) {
+    const doc = iframeRef.current?.contentDocument;
+    if (!doc) return;
+    dismissLinkPopover();
+
+    const popover = doc.createElement("div");
+    popover.id = LINK_POPOVER_ID;
+
+    const rect = anchor.getBoundingClientRect();
+    const scrollY = doc.documentElement.scrollTop || doc.body.scrollTop;
+    const scrollX = doc.documentElement.scrollLeft || doc.body.scrollLeft;
+    popover.style.top = `${rect.bottom + scrollY + 6}px`;
+    popover.style.left = `${rect.left + scrollX}px`;
+
+    // URL row
+    const urlLabel = doc.createElement("span");
+    urlLabel.className = "pitchkit-popover-label";
+    urlLabel.textContent = "Link URL";
+    popover.appendChild(urlLabel);
+
+    const urlRow = doc.createElement("div");
+    urlRow.className = "pitchkit-popover-row";
+
+    const urlInput = doc.createElement("input");
+    urlInput.type = "text";
+    urlInput.value = anchor.getAttribute("href") || "#";
+    urlInput.placeholder = "https://...";
+
+    const saveBtn = doc.createElement("button");
+    saveBtn.className = "pitchkit-btn-save";
+    saveBtn.textContent = "Save";
+    saveBtn.addEventListener("click", () => {
+      anchor.setAttribute("href", urlInput.value);
+      setHasEdits(true);
+      dismissLinkPopover();
+    });
+
+    urlInput.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter") {
+        ev.preventDefault();
+        saveBtn.click();
+      }
+      if (ev.key === "Escape") {
+        ev.preventDefault();
+        dismissLinkPopover();
+      }
+    });
+
+    urlRow.appendChild(urlInput);
+    urlRow.appendChild(saveBtn);
+    popover.appendChild(urlRow);
+
+    // Edit text button
+    const editTextBtn = doc.createElement("button");
+    editTextBtn.className = "pitchkit-btn-text";
+    editTextBtn.textContent = "Edit Text";
+    editTextBtn.addEventListener("click", () => {
+      dismissLinkPopover();
+      anchor.contentEditable = "true";
+      anchor.focus();
+    });
+    popover.appendChild(editTextBtn);
+
+    doc.body.appendChild(popover);
+
+    // Auto-focus the URL input
+    urlInput.focus();
+    urlInput.select();
+
+    // Close on click outside
+    function onDocClick(ev: Event) {
+      if (popover.contains(ev.target as Node) || ev.target === anchor) return;
+      dismissLinkPopover();
+      doc!.removeEventListener("click", onDocClick, true);
+    }
+    setTimeout(() => doc!.addEventListener("click", onDocClick, true), 0);
+  }
+
   function handleEditClick(e: MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
     const el = e.currentTarget as HTMLElement;
+
+    // Links get a popover with URL edit + text edit options
+    if (el.tagName === "A") {
+      showLinkPopover(el as HTMLAnchorElement);
+      return;
+    }
+
     el.contentEditable = "true";
     el.focus();
   }
@@ -582,6 +743,8 @@ export default function PreviewClient({
       });
       const hiddenInput = doc.querySelector('input[type="file"][style*="display: none"]');
       if (hiddenInput) hiddenInput.remove();
+      const linkPopover = doc.getElementById(LINK_POPOVER_ID);
+      if (linkPopover) linkPopover.remove();
       const html = `<!DOCTYPE html>\n${doc.documentElement.outerHTML}`;
       const res = await fetch(`/api/preview/${slug}/accept-revision`, {
         method: "POST",
