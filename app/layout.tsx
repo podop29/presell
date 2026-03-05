@@ -18,6 +18,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || "https://pitchkit.co"),
   title: "PitchKit — Turn any bad website into your next client",
   description:
     "Generate AI-powered website redesigns and share them as a hosted preview link to pitch potential clients.",
