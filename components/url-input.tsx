@@ -35,16 +35,27 @@ function isGoogleMapsUrl(input: string): boolean {
   );
 }
 
+function isPitchKitUrl(input: string): boolean {
+  const lower = input.toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, "");
+  return lower === "pitchkit.dev" || lower === "pitchkit.co";
+}
+
 export default function UrlInput() {
   const router = useRouter();
   const [url, setUrl] = useState("");
   const [error, setError] = useState("");
+  const [toast, setToast] = useState("");
 
   const isMaps = isGoogleMapsUrl(url);
 
   function handleAnalyze() {
     setError("");
+    setToast("");
     if (!url) { setError("Please enter a URL."); return; }
+    if (isPitchKitUrl(url)) {
+      setToast("Nice try — we already know we're good-looking.");
+      return;
+    }
     if (isMaps) {
       router.push(`/create?mapsUrl=${encodeURIComponent(url)}`);
     } else {
@@ -86,6 +97,12 @@ export default function UrlInput() {
       {error && (
         <div className="mt-4 max-w-xl mx-auto p-3 bg-red-500/5 border border-red-500/20 rounded-xl text-red-400 text-xs">
           {error}
+        </div>
+      )}
+      {toast && (
+        <div className="mt-4 max-w-xl mx-auto p-3 bg-accent/5 border border-accent/20 rounded-xl text-accent text-xs flex items-center gap-2">
+          <span>😏</span>
+          {toast}
         </div>
       )}
     </>
