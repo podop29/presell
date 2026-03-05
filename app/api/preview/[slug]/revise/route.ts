@@ -85,7 +85,7 @@ export async function POST(
     const { data, error } = await supabase
       .from("previews")
       .select(
-        "redesign_html, variation_a_html, variation_b_html, variation_c_html, user_id, expires_at"
+        "redesign_html, variation_a_html, variation_b_html, variation_c_html, user_id, expires_at, profile_json, page_content"
       )
       .eq("slug", slug)
       .single();
@@ -135,7 +135,9 @@ export async function POST(
     // Call AI to revise
     let revisedHtml: string;
     try {
-      revisedHtml = await reviseVariation(existingHtml, prompt.trim());
+      const profile = data.profile_json ? JSON.parse(data.profile_json as string) : null;
+      const pageContent = (data.page_content as string) || null;
+      revisedHtml = await reviseVariation(existingHtml, prompt.trim(), profile, pageContent);
     } catch (aiErr) {
       console.error("AI revision error:", aiErr);
       const message =

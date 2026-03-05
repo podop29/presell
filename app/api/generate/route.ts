@@ -119,6 +119,8 @@ export async function POST(req: NextRequest) {
       cold_email_subject: coldEmail.subject || null,
       cold_email_body: coldEmail.body || null,
       business_name: profile.businessName || null,
+      profile_json: JSON.stringify(profile),
+      page_content: pageContent || null,
     });
 
     if (dbError) {

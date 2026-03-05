@@ -628,6 +628,8 @@ export async function generateVariation(
 
 const REVISION_SYSTEM_PROMPT = `You are a minimally-invasive website editor. You receive HTML and a revision request. Use the apply_revisions tool to return search-and-replace operations strictly necessary to fulfill the request — nothing more.
 
+You may also receive BUSINESS CONTEXT and ORIGINAL PAGE CONTENT with real business data (hours, services, reviews, address, phone, etc.). When the user asks to add or update content, use this real data — never invent fake details when real ones are available.
+
 Rules:
 1. "search" must be an EXACT substring copied from the existing HTML — character-for-character, including whitespace and quotes.
 2. "replace" is the string to substitute in its place.
@@ -688,8 +690,19 @@ interface RevisionResponse {
 
 export async function reviseVariation(
   existingHtml: string,
-  userPrompt: string
+  userPrompt: string,
+  profile?: BusinessProfile | null,
+  pageContent?: string | null
 ): Promise<string> {
+  // Build business context block so the AI can reference real data
+  let contextBlock = "";
+  if (profile) {
+    contextBlock += `\n\nBUSINESS CONTEXT (use this for accurate content):\n- Business Name: ${profile.businessName}\n- Industry: ${profile.industry}\n- What They Do: ${profile.whatTheyDo}\n- Target Customer: ${profile.targetCustomer}\n- Key Selling Points: ${profile.keySellingPoints.join(", ")}\n- Brand Tone: ${profile.brandTone}\n- Location: ${profile.location}`;
+  }
+  if (pageContent) {
+    contextBlock += `\n\nORIGINAL PAGE CONTENT (real business data — use for accurate details like hours, services, menu items, reviews, phone, address):\n${pageContent.slice(0, 3000)}`;
+  }
+
   const message = await anthropic.messages.create({
     model: "claude-sonnet-4-20250514",
     max_tokens: 8192,
@@ -699,7 +712,7 @@ export async function reviseVariation(
     messages: [
       {
         role: "user",
-        content: `Here is the current HTML document:\n\n${existingHtml}\n\n---\n\nRevision request: ${userPrompt}`,
+        content: `Here is the current HTML document:\n\n${existingHtml}\n\n---${contextBlock}\n\n---\n\nRevision request: ${userPrompt}`,
       },
     ],
   });
