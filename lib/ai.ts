@@ -464,6 +464,14 @@ CRITICAL: The data-lucide attribute is REQUIRED for icons to render. Never omit 
 
 Common icon names: phone, mail, map-pin, star, check, check-circle, arrow-right, menu, x, heart, shield, clock, users, building-2, wrench, utensils, briefcase, globe, zap, award, trending-up, calendar, dollar-sign, thumbs-up, sparkles, home, camera, music, scissors, truck, leaf, sun, moon.
 
+INTERACTIVE MAP — INCLUDE WHEN LOCATION IS KNOWN:
+If the business has a physical address/location (not "unknown"), include a Google Maps embed in the contact or location section.
+Use this exact iframe pattern:
+<iframe src="https://maps.google.com/maps?q=ENCODED_ADDRESS&t=&z=15&ie=UTF8&iwloc=&output=embed" class="w-full h-64 md:h-80 rounded-xl" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Business Location"></iframe>
+Replace ENCODED_ADDRESS with the URL-encoded exact street address from the provided location field. Use ONLY the street address — NEVER use the business name in the map query, as it may resolve to a different business with the same name at a different location.
+Style the map container with rounded corners, shadow, and spacing to match the section.
+Only include a map when a real, specific address is available — never for "unknown" locations.
+
 CRITICAL RULE — NO EMPTY ELEMENTS:
 Every HTML element MUST contain real, visible content. Never output empty cards, paragraphs, headings, or testimonials. If you create 3 cards, all 3 must have full content. Before finishing, mentally scan every element and verify it has text content inside it.
 

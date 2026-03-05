@@ -80,8 +80,18 @@ export async function extractPlaceId(mapsUrl: string): Promise<string> {
     );
   }
 
-  // Use Text Search to find the place_id
-  const searchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&key=${API_KEY}`;
+  // Extract coordinates from the resolved URL to use as location bias
+  // Google Maps URLs contain coordinates like /@35.123,-92.456,17z or @35.123,-92.456
+  let locationParam = "";
+  const coordMatch = resolvedUrl.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+  if (coordMatch) {
+    const lat = coordMatch[1];
+    const lng = coordMatch[2];
+    locationParam = `&location=${lat},${lng}&radius=1000`;
+  }
+
+  // Use Text Search to find the place_id (with location bias when available)
+  const searchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}${locationParam}&key=${API_KEY}`;
   const searchRes = await fetch(searchUrl);
   const searchData = await searchRes.json();
 
