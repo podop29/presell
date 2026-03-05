@@ -67,6 +67,8 @@ export default function PreviewClient({
   const acceptedBlobUrl = useRef<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const editStyleRef = useRef<HTMLStyleElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const replacingImageRef = useRef<HTMLElement | null>(null);
 
   const domain = useMemo(() => {
     if (businessName) return businessName;
@@ -287,7 +289,81 @@ export default function PreviewClient({
   const EDITABLE_SELECTOR =
     "h1, h2, h3, h4, h5, h6, p, span, a, li, td, th, label, button, blockquote";
 
+  const IMAGE_SELECTOR = "img";
+  const MIN_IMAGE_SIZE = 40;
+
   const EDIT_STYLE_ID = "pitchkit-edit-style";
+
+  function handleImageClick(e: MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    const el = e.currentTarget as HTMLElement;
+    replacingImageRef.current = el;
+
+    const doc = iframeRef.current?.contentDocument;
+    if (!doc) return;
+
+    // Create or reuse hidden file input inside the iframe
+    if (!fileInputRef.current || !doc.contains(fileInputRef.current)) {
+      const input = doc.createElement("input");
+      input.type = "file";
+      input.accept = "image/png,image/jpeg,image/webp,image/gif";
+      input.style.display = "none";
+      input.addEventListener("change", handleImageSelected as EventListener);
+      doc.body.appendChild(input);
+      fileInputRef.current = input;
+    }
+
+    fileInputRef.current.value = "";
+    fileInputRef.current.click();
+  }
+
+  async function handleImageSelected(e: Event) {
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
+    const el = replacingImageRef.current;
+    if (!file || !el) return;
+
+    const isImg = el.tagName === "IMG";
+    const originalSrc = isImg
+      ? (el as HTMLImageElement).src
+      : el.style.backgroundImage;
+
+    el.style.opacity = "0.4";
+    el.style.transition = "opacity 0.2s ease";
+
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+
+      const res = await fetch(`/api/preview/${slug}/upload-image`, {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        if (isImg) (el as HTMLImageElement).src = originalSrc;
+        else el.style.backgroundImage = originalSrc;
+        el.style.opacity = "";
+        alert(data.error || "Failed to upload image.");
+        return;
+      }
+
+      if (isImg) {
+        (el as HTMLImageElement).src = data.url;
+      } else {
+        el.style.backgroundImage = `url("${data.url}")`;
+      }
+      el.style.opacity = "";
+      setHasEdits(true);
+    } catch {
+      if (isImg) (el as HTMLImageElement).src = originalSrc;
+      else el.style.backgroundImage = originalSrc;
+      el.style.opacity = "";
+      alert("Network error. Please try again.");
+    }
+  }
 
   const enableEditMode = useCallback(() => {
     const doc = iframeRef.current?.contentDocument;
@@ -312,6 +388,22 @@ export default function PreviewClient({
           outline: 2px solid rgb(99 102 241) !important;
           outline-offset: 2px;
         }
+        [data-pitchkit-replaceable] {
+          cursor: pointer !important;
+          transition: outline 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+          outline: 2px dashed transparent;
+          outline-offset: 2px;
+          position: relative;
+          z-index: 10 !important;
+        }
+        [data-pitchkit-replaceable]:hover {
+          outline-color: rgb(129 140 248) !important;
+          box-shadow: inset 0 0 0 4px rgb(99 102 241), inset 0 0 60px 0 rgba(99, 102, 241, 0.25) !important;
+          opacity: 0.8;
+        }
+        [data-pitchkit-overlay-passthrough] {
+          pointer-events: none !important;
+        }
       `;
       doc.head.appendChild(style);
     }
@@ -325,6 +417,43 @@ export default function PreviewClient({
       el.addEventListener("click", handleEditClick as EventListener);
       el.addEventListener("blur", handleEditBlur as EventListener);
       el.addEventListener("keydown", handleEditKeydown as EventListener);
+    });
+
+    // Set up replaceable <img> elements
+    const images = doc.querySelectorAll(IMAGE_SELECTOR);
+    images.forEach((img) => {
+      const el = img as HTMLImageElement;
+      if (el.naturalWidth < MIN_IMAGE_SIZE || el.naturalHeight < MIN_IMAGE_SIZE) return;
+      el.setAttribute("data-pitchkit-replaceable", "true");
+      el.addEventListener("click", handleImageClick as EventListener);
+
+      // Mark sibling overlay divs as passthrough so clicks reach the image
+      const parent = el.parentElement;
+      if (parent) {
+        Array.from(parent.children).forEach((sibling) => {
+          if (sibling === el) return;
+          if (sibling.tagName !== "DIV") return;
+          const style = getComputedStyle(sibling);
+          if (style.position === "absolute" || style.position === "fixed") {
+            sibling.setAttribute("data-pitchkit-overlay-passthrough", "true");
+          }
+        });
+      }
+    });
+
+    // Set up replaceable background-image elements
+    const allElements = doc.body.querySelectorAll("*");
+    allElements.forEach((node) => {
+      const el = node as HTMLElement;
+      if (el.tagName === "IMG") return; // already handled
+      if (el.getAttribute("data-pitchkit-replaceable")) return;
+      const bg = getComputedStyle(el).backgroundImage;
+      if (!bg || bg === "none" || !bg.startsWith("url(")) return;
+      // Skip tiny elements (icons, spacers)
+      const rect = el.getBoundingClientRect();
+      if (rect.width < MIN_IMAGE_SIZE || rect.height < MIN_IMAGE_SIZE) return;
+      el.setAttribute("data-pitchkit-replaceable", "true");
+      el.addEventListener("click", handleImageClick as EventListener);
     });
   }, []);
 
@@ -346,6 +475,27 @@ export default function PreviewClient({
       el.removeEventListener("blur", handleEditBlur as EventListener);
       el.removeEventListener("keydown", handleEditKeydown as EventListener);
     });
+
+    // Clean up replaceable images
+    const images = doc.querySelectorAll("[data-pitchkit-replaceable]");
+    images.forEach((img) => {
+      img.removeAttribute("data-pitchkit-replaceable");
+      (img as HTMLElement).style.opacity = "";
+      img.removeEventListener("click", handleImageClick as EventListener);
+    });
+
+    // Restore overlay pointer events
+    const overlays = doc.querySelectorAll("[data-pitchkit-overlay-passthrough]");
+    overlays.forEach((el) => {
+      el.removeAttribute("data-pitchkit-overlay-passthrough");
+    });
+
+    // Remove hidden file input
+    if (fileInputRef.current && doc.contains(fileInputRef.current)) {
+      fileInputRef.current.remove();
+    }
+    fileInputRef.current = null;
+    replacingImageRef.current = null;
   }, []);
 
   function handleEditClick(e: MouseEvent) {
@@ -405,6 +555,15 @@ export default function PreviewClient({
       doc.querySelectorAll('[contenteditable="false"]').forEach((el) => {
         el.removeAttribute("contenteditable");
       });
+      // Safety net: remove image replacement artifacts before extracting HTML
+      doc.querySelectorAll("[data-pitchkit-replaceable]").forEach((el) => {
+        el.removeAttribute("data-pitchkit-replaceable");
+      });
+      doc.querySelectorAll("[data-pitchkit-overlay-passthrough]").forEach((el) => {
+        el.removeAttribute("data-pitchkit-overlay-passthrough");
+      });
+      const hiddenInput = doc.querySelector('input[type="file"][style*="display: none"]');
+      if (hiddenInput) hiddenInput.remove();
       const html = `<!DOCTYPE html>\n${doc.documentElement.outerHTML}`;
       const res = await fetch(`/api/preview/${slug}/accept-revision`, {
         method: "POST",
@@ -786,7 +945,7 @@ export default function PreviewClient({
               {hasEdits ? (
                 <span className="text-amber-400">Unsaved changes</span>
               ) : (
-                "Click any text in the preview to edit it"
+                "Click any text or image in the preview to edit"
               )}
             </p>
             <div className="flex items-center gap-2">
