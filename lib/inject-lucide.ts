@@ -13,13 +13,17 @@ const LUCIDE_CDN = `<script src="https://unpkg.com/lucide@0.473.0/dist/umd/lucid
 const LUCIDE_INIT = `
 <script data-lucide-init>
 (function(){
-  var attempts=0;
+  var attempts=0,tid=0;
+  function run(){tid=0;lucide.createIcons();}
+  function queue(){if(!tid)tid=setTimeout(run,200);}
   function init(){
     if(typeof lucide!=='undefined'){
       lucide.createIcons();
-      // Re-run on any new elements added to the DOM (dynamic content)
-      new MutationObserver(function(){ lucide.createIcons(); })
-        .observe(document.body,{childList:true,subtree:true});
+      new MutationObserver(function(mutations){
+        for(var i=0;i<mutations.length;i++){
+          if(mutations[i].type==='childList'&&mutations[i].addedNodes.length>0){queue();return;}
+        }
+      }).observe(document.body,{childList:true,subtree:true});
       return;
     }
     if(++attempts<30)setTimeout(init,300);
