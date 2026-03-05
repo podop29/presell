@@ -133,6 +133,8 @@ export default async function PreviewPage({
       companyName={companyName}
       logoUrl={logoUrl}
       hasOriginalSite={hasOriginalSite}
+      coldEmailSubject={data.cold_email_subject ?? null}
+      coldEmailBody={data.cold_email_body ?? null}
     />
   );
 }

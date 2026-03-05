@@ -28,6 +28,8 @@ interface PreviewClientProps {
   companyName?: string;
   logoUrl?: string;
   hasOriginalSite?: boolean;
+  coldEmailSubject?: string | null;
+  coldEmailBody?: string | null;
 }
 
 export default function PreviewClient({
@@ -42,13 +44,15 @@ export default function PreviewClient({
   companyName,
   logoUrl,
   hasOriginalSite = true,
+  coldEmailSubject,
+  coldEmailBody,
 }: PreviewClientProps) {
   const [activeView, setActiveView] = useState<string>(
     variations[0]?.key ?? "original"
   );
   const [iframeLoading, setIframeLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
-  const [reviseOpen, setReviseOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [revisePrompt, setRevisePrompt] = useState("");
   const [revising, setRevising] = useState(false);
   const [reviseError, setReviseError] = useState<string | null>(null);
@@ -63,6 +67,11 @@ export default function PreviewClient({
   const [unlocking, setUnlocking] = useState(false);
   const [unlockError, setUnlockError] = useState<string | null>(null);
   const [compareMode, setCompareMode] = useState(false);
+  const [emailOpen, setEmailOpen] = useState(false);
+  const [emailSubject, setEmailSubject] = useState(coldEmailSubject ?? null);
+  const [emailBody, setEmailBody] = useState(coldEmailBody ?? null);
+  const [emailCopied2, setEmailCopied2] = useState(false);
+  const [regeneratingEmail, setRegeneratingEmail] = useState(false);
   const pendingBlobUrl = useRef<string | null>(null);
   const acceptedBlobUrl = useRef<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
@@ -163,7 +172,7 @@ export default function PreviewClient({
     setActiveView(key);
     if (key === "original") {
       setCompareMode(false);
-      setReviseOpen(false);
+      setEditOpen(false);
       setReviseError(null);
     }
   }
@@ -236,7 +245,7 @@ export default function PreviewClient({
       setPendingRevisionHtml(null);
       setIframeLoading(true);
       setIframeVersion((v) => v + 1);
-      setReviseOpen(false);
+      setEditOpen(false);
       // Re-fetch revision info after accepting
       fetch(`/api/preview/${slug}/revision-info`)
         .then((r) => r.json())
@@ -699,7 +708,7 @@ export default function PreviewClient({
   }
 
   function toggleEditMode() {
-    if (editMode) {
+    if (editOpen) {
       // Turning off — if edits exist, cancel (reload iframe)
       if (hasEdits) {
         cancelEdits();
@@ -707,14 +716,15 @@ export default function PreviewClient({
         disableEditMode();
         setEditMode(false);
       }
-    } else {
-      // Turning on — close revise bar first
-      setReviseOpen(false);
+      setEditOpen(false);
       setReviseError(null);
+    } else {
+      // Turning on — enable both direct editing and AI revision
       setCompareMode(false);
+      setEditOpen(true);
       setEditMode(true);
       setHasEdits(false);
-      // enableEditMode runs after iframe is confirmed loaded via useEffect
+      setReviseError(null);
       enableEditMode();
     }
   }
@@ -777,9 +787,37 @@ export default function PreviewClient({
   function cancelEdits() {
     disableEditMode();
     setEditMode(false);
+    setEditOpen(false);
     setHasEdits(false);
+    setReviseError(null);
     setIframeLoading(true);
     setIframeVersion((v) => v + 1);
+  }
+
+  function handleCopyColdEmail() {
+    if (!emailSubject || !emailBody) return;
+    const full = `Subject: ${emailSubject}\n\n${emailBody}`;
+    navigator.clipboard.writeText(full);
+    setEmailCopied2(true);
+    setTimeout(() => setEmailCopied2(false), 2000);
+  }
+
+  async function handleRegenerateEmail() {
+    setRegeneratingEmail(true);
+    try {
+      const res = await fetch(`/api/preview/${slug}/regenerate-email`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setEmailSubject(data.subject);
+        setEmailBody(data.body);
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setRegeneratingEmail(false);
+    }
   }
 
   const showCta = devName && devEmail;
@@ -796,10 +834,23 @@ export default function PreviewClient({
     <div className="h-screen flex flex-col bg-zinc-950 overflow-hidden">
       {/* ── Top bar ── */}
       <header className="relative z-30 shrink-0 h-12 flex items-center gap-2 px-4 bg-black/60 backdrop-blur-xl border-b border-white/10">
-        {/* Left — domain (hidden on mobile to give tabs room) */}
-        <span className="hidden sm:block text-xs text-zinc-400 font-medium tracking-wide shrink-0">
-          {domain}
-        </span>
+        {/* Left — back button (owner) + domain */}
+        <div className="hidden sm:flex items-center gap-1.5 shrink-0">
+          {isOwner && (
+            <Link
+              href="/dashboard"
+              className="flex items-center justify-center w-7 h-7 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
+              title="Back to dashboard"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+            </Link>
+          )}
+          <span className="text-xs text-zinc-400 font-medium tracking-wide">
+            {domain}
+          </span>
+        </div>
 
         {/* Center — segmented control + compare toggle */}
         <div className="flex-1 flex items-center justify-center gap-1.5 min-w-0 sm:absolute sm:left-1/2 sm:-translate-x-1/2">
@@ -822,7 +873,7 @@ export default function PreviewClient({
           {hasOriginalSite && (
             <button
               onClick={() => setCompareMode((c) => !c)}
-              disabled={activeView === "original" || !!pendingRevisionHtml || editMode || revising}
+              disabled={activeView === "original" || !!pendingRevisionHtml || editOpen || revising}
               title={
                 activeView === "original"
                   ? "Switch to a redesign to compare"
@@ -852,58 +903,21 @@ export default function PreviewClient({
           )}
         </div>
 
-        {/* Right — revise + edit + export */}
+        {/* Right — edit + export */}
         {isOwner ? (
           <div className="flex items-center gap-1 shrink-0">
-            <button
-              onClick={() => {
-                if (editMode) {
-                  disableEditMode();
-                  setEditMode(false);
-                  setHasEdits(false);
-                }
-                setCompareMode(false);
-                setReviseOpen((o) => !o);
-                setReviseError(null);
-              }}
-              disabled={activeView === "original"}
-              title={
-                activeView === "original"
-                  ? "Switch to a redesign to revise"
-                  : "Revise this design"
-              }
-              className={`flex items-center justify-center w-8 h-8 rounded-lg transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-zinc-400 ${
-                reviseOpen
-                  ? "bg-white/15 text-white"
-                  : "text-zinc-400 hover:text-white hover:bg-white/10"
-              }`}
-            >
-              <svg
-                className="w-4 h-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
-                <path d="M20 3v4" />
-                <path d="M22 5h-4" />
-              </svg>
-            </button>
             <button
               onClick={toggleEditMode}
               disabled={activeView === "original" || !!pendingRevisionHtml}
               title={
                 activeView === "original"
-                  ? "Switch to a redesign to edit text"
-                  : editMode
-                    ? "Exit text editing"
-                    : "Edit text directly"
+                  ? "Switch to a redesign to edit"
+                  : editOpen
+                    ? "Exit editing"
+                    : "Edit this design"
               }
               className={`flex items-center justify-center w-8 h-8 rounded-lg transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-zinc-400 ${
-                editMode
+                editOpen
                   ? "bg-white/15 text-white"
                   : "text-zinc-400 hover:text-white hover:bg-white/10"
               }`}
@@ -921,6 +935,18 @@ export default function PreviewClient({
                 <path d="m15 5 4 4" />
               </svg>
             </button>
+            {emailBody && (
+              <button
+                onClick={() => setEmailOpen(true)}
+                title="View cold email"
+                className="flex items-center justify-center w-8 h-8 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="4" width="20" height="16" rx="2" />
+                  <path d="M22 7l-10 7L2 7" />
+                </svg>
+              </button>
+            )}
             <button
               onClick={handleExport}
               disabled={exporting || activeView === "original"}
@@ -973,10 +999,11 @@ export default function PreviewClient({
         )}
       </header>
 
-      {/* ── Revision bar (owner only) ── */}
-      {isOwner && reviseOpen && activeView !== "original" && (
+      {/* ── Unified edit toolbar (owner only) ── */}
+      {isOwner && editOpen && activeView !== "original" && (
         <div className="relative z-20 shrink-0 bg-black/60 backdrop-blur-xl border-b border-white/10 px-4 py-2.5">
           {pendingRevisionHtml ? (
+            /* ── Pending revision: accept / discard ── */
             <div className="max-w-3xl mx-auto flex items-center justify-between gap-3">
               <p className="text-sm text-zinc-300">
                 Review the changes below
@@ -1020,6 +1047,7 @@ export default function PreviewClient({
               </div>
             </div>
           ) : revisionLimitReached ? (
+            /* ── Revision limit reached: unlock UI ── */
             <div className="max-w-3xl mx-auto">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div>
@@ -1031,6 +1059,13 @@ export default function PreviewClient({
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
+                  <button
+                    onClick={cancelEdits}
+                    disabled={saving}
+                    className="px-4 py-1.5 text-sm font-medium text-zinc-400 hover:text-white rounded-lg border border-white/10 hover:border-white/20 transition-colors disabled:opacity-40"
+                  >
+                    Cancel
+                  </button>
                   {unlockError === "insufficient_credits" ? (
                     <Link
                       href="/credits"
@@ -1060,115 +1095,105 @@ export default function PreviewClient({
               )}
             </div>
           ) : (
+            /* ── Normal editing: direct edit hint + AI prompt + save/cancel ── */
             <div className="max-w-3xl mx-auto">
-              <form
-                onSubmit={handleRevise}
-                className="flex items-center gap-2"
-              >
-                <input
-                  type="text"
-                  value={revisePrompt}
-                  onChange={(e) => setRevisePrompt(e.target.value)}
-                  placeholder="Describe what to change..."
-                  maxLength={2000}
-                  disabled={revising}
-                  className="flex-1 bg-white/[0.06] border border-white/[0.08] rounded-lg px-3 py-1.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-white/20 transition-colors disabled:opacity-50"
-                />
-                <button
-                  type="submit"
-                  disabled={revising || !revisePrompt.trim()}
-                  className="shrink-0 px-4 py-1.5 bg-white hover:bg-neutral-200 text-zinc-900 text-sm font-medium rounded-lg transition-colors disabled:opacity-40 disabled:hover:bg-white flex items-center gap-2"
+              <p className="text-sm text-zinc-300 mb-2">
+                {hasEdits ? (
+                  <span className="text-amber-400">Unsaved changes</span>
+                ) : (
+                  "Click text or images to edit directly"
+                )}
+              </p>
+              <div className="flex items-center gap-2">
+                <form
+                  onSubmit={handleRevise}
+                  className="flex-1 flex items-center gap-2"
                 >
-                  {revising && (
-                    <svg
-                      className="w-3.5 h-3.5 animate-spin"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                      />
-                    </svg>
-                  )}
-                  Revise
-                </button>
-              </form>
-              {revisionInfo && (
-                <p className="mt-1.5 text-[11px] text-zinc-600">
-                  {revisionInfo.revisionCount}/{revisionInfo.revisionLimit} revisions used
-                </p>
-              )}
-            </div>
-          )}
-          {reviseError && (
-            <p className="max-w-3xl mx-auto mt-1.5 text-xs text-red-400">
-              {reviseError}
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* ── Edit toolbar (owner only) ── */}
-      {isOwner && editMode && !pendingRevisionHtml && (
-        <div className="relative z-20 shrink-0 bg-black/60 backdrop-blur-xl border-b border-white/10 px-4 py-2.5">
-          <div className="max-w-3xl mx-auto flex items-center justify-between gap-3">
-            <p className="text-sm text-zinc-300">
-              {hasEdits ? (
-                <span className="text-amber-400">Unsaved changes</span>
-              ) : (
-                "Click any text or image in the preview to edit"
-              )}
-            </p>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={cancelEdits}
-                disabled={saving}
-                className="px-4 py-1.5 text-sm font-medium text-zinc-400 hover:text-white rounded-lg border border-white/10 hover:border-white/20 transition-colors disabled:opacity-40"
-              >
-                Cancel
-              </button>
-              {hasEdits && (
+                  <input
+                    type="text"
+                    value={revisePrompt}
+                    onChange={(e) => setRevisePrompt(e.target.value)}
+                    placeholder="Describe what to change..."
+                    maxLength={2000}
+                    disabled={revising}
+                    className="flex-1 bg-white/[0.06] border border-white/[0.08] rounded-lg px-3 py-1.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-white/20 transition-colors disabled:opacity-50"
+                  />
+                  <button
+                    type="submit"
+                    disabled={revising || !revisePrompt.trim()}
+                    className="shrink-0 px-4 py-1.5 bg-white hover:bg-neutral-200 text-zinc-900 text-sm font-medium rounded-lg transition-colors disabled:opacity-40 disabled:hover:bg-white flex items-center gap-2"
+                  >
+                    {revising && (
+                      <svg
+                        className="w-3.5 h-3.5 animate-spin"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                        />
+                      </svg>
+                    )}
+                    Revise
+                  </button>
+                </form>
+                {hasEdits && (
+                  <button
+                    onClick={saveEdits}
+                    disabled={saving}
+                    className="shrink-0 px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-40 flex items-center gap-2"
+                  >
+                    {saving && (
+                      <svg
+                        className="w-3.5 h-3.5 animate-spin"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                        />
+                      </svg>
+                    )}
+                    Save
+                  </button>
+                )}
                 <button
-                  onClick={saveEdits}
+                  onClick={cancelEdits}
                   disabled={saving}
-                  className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-40 flex items-center gap-2"
+                  className="shrink-0 px-4 py-1.5 text-sm font-medium text-zinc-400 hover:text-white rounded-lg border border-white/10 hover:border-white/20 transition-colors disabled:opacity-40"
                 >
-                  {saving && (
-                    <svg
-                      className="w-3.5 h-3.5 animate-spin"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                      />
-                    </svg>
-                  )}
-                  Save
+                  Cancel
                 </button>
-              )}
+              </div>
+              <div className="flex items-center justify-between mt-1.5">
+                {revisionInfo && (
+                  <p className="text-[11px] text-zinc-600">
+                    {revisionInfo.revisionCount}/{revisionInfo.revisionLimit} revisions used
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
+          )}
           {reviseError && (
             <p className="max-w-3xl mx-auto mt-1.5 text-xs text-red-400">
               {reviseError}
@@ -1329,6 +1354,95 @@ export default function PreviewClient({
             </button>
           </div>
         </footer>
+      )}
+
+      {/* ── Cold Email Modal (owner only) ── */}
+      {emailOpen && emailBody && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          onClick={() => { setEmailOpen(false); setEmailCopied2(false); }}
+        >
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div
+            className="relative w-full max-w-lg bg-zinc-900 border border-white/10 rounded-2xl p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => { setEmailOpen(false); setEmailCopied2(false); }}
+              className="absolute top-4 right-4 text-zinc-500 hover:text-white transition-colors"
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+
+            <div className="w-12 h-12 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 mx-auto mb-4">
+              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="2" y="4" width="20" height="16" rx="2" />
+                <path d="M22 7l-10 7L2 7" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-white text-center mb-1">Cold Email</h3>
+            <p className="text-xs text-zinc-500 text-center mb-5">
+              For {domain}
+            </p>
+
+            <div className="mb-3">
+              <label className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider mb-1 block">Subject</label>
+              <div className="px-3 py-2 bg-black/30 rounded-lg border border-white/5 text-sm text-white">
+                {emailSubject}
+              </div>
+            </div>
+
+            <div className="mb-5">
+              <label className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider mb-1 block">Body</label>
+              <div className="px-3 py-3 bg-black/30 rounded-lg border border-white/5 text-sm text-zinc-300 whitespace-pre-wrap max-h-60 overflow-y-auto leading-relaxed">
+                {emailBody}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleRegenerateEmail}
+                disabled={regeneratingEmail}
+                className="flex items-center justify-center gap-1.5 px-3 py-2.5 border border-white/10 hover:border-indigo-500/30 text-zinc-400 hover:text-indigo-400 text-xs font-medium rounded-xl transition-colors disabled:opacity-50"
+                title="Generate a new email"
+              >
+                <svg className={`w-3.5 h-3.5 ${regeneratingEmail ? "animate-spin" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 12a9 9 0 11-6.219-8.56" /><polyline points="21 3 21 9 15 9" />
+                </svg>
+                {regeneratingEmail ? "Generating..." : "Regenerate"}
+              </button>
+              <div className="flex-1" />
+              <button
+                onClick={() => { setEmailOpen(false); setEmailCopied2(false); }}
+                className="px-4 py-2.5 border border-white/10 hover:border-white/20 text-zinc-300 text-sm font-medium rounded-xl transition-colors"
+              >
+                Close
+              </button>
+              <button
+                onClick={handleCopyColdEmail}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white hover:bg-neutral-200 text-zinc-900 text-sm font-semibold rounded-xl transition-all duration-200"
+              >
+                {emailCopied2 ? (
+                  <>
+                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    Copied
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+                    </svg>
+                    Copy Email
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ── Contact Modal ── */}
