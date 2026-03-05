@@ -3,6 +3,8 @@ import { supabaseAdmin as supabase } from "@/lib/supabase/admin";
 import { getUser } from "@/lib/auth";
 import { incrementRevisionCount } from "@/lib/credits";
 
+const MAX_HTML_SIZE = 5 * 1024 * 1024; // 5 MB
+
 const VARIATION_COLUMNS: Record<string, string> = {
   redesign: "redesign_html",
   a: "variation_a_html",
@@ -41,6 +43,13 @@ export async function POST(
     if (!html || typeof html !== "string") {
       return NextResponse.json(
         { error: "HTML content is required." },
+        { status: 400 }
+      );
+    }
+
+    if (new Blob([html]).size > MAX_HTML_SIZE) {
+      return NextResponse.json(
+        { error: "HTML content is too large (max 5 MB)." },
         { status: 400 }
       );
     }

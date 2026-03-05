@@ -1,38 +1,56 @@
-const hits = new Map<string, { count: number; resetAt: number }>();
-
-// Clean up expired entries every 5 minutes
-setInterval(() => {
-  const now = Date.now();
-  hits.forEach((value, key) => {
-    if (now > value.resetAt) hits.delete(key);
-  });
-}, 5 * 60 * 1000);
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 /**
- * Simple in-memory rate limiter.
- * Returns { success: true } if under limit, or { success: false, retryAfter } if over.
+ * Supabase-backed rate limiter. Persists across serverless invocations.
+ *
+ * Requires a `rate_limits` table:
+ *
+ *   create table rate_limits (
+ *     key text primary key,
+ *     count int not null default 1,
+ *     reset_at timestamptz not null
+ *   );
+ *
+ *   create index idx_rate_limits_reset on rate_limits (reset_at);
  */
-export function rateLimit(
+export async function rateLimit(
   key: string,
   { maxRequests, windowMs }: { maxRequests: number; windowMs: number }
-): { success: boolean; retryAfter?: number } {
-  const now = Date.now();
-  const entry = hits.get(key);
+): Promise<{ success: boolean; retryAfter?: number }> {
+  const now = new Date();
+  const resetAt = new Date(now.getTime() + windowMs);
 
-  if (!entry || now > entry.resetAt) {
-    hits.set(key, { count: 1, resetAt: now + windowMs });
+  // Try to increment existing non-expired entry
+  const { data: existing } = await supabaseAdmin
+    .from("rate_limits")
+    .select("count, reset_at")
+    .eq("key", key)
+    .gt("reset_at", now.toISOString())
+    .single();
+
+  if (existing) {
+    if (existing.count >= maxRequests) {
+      const retryAfter = Math.ceil(
+        (new Date(existing.reset_at).getTime() - now.getTime()) / 1000
+      );
+      return { success: false, retryAfter };
+    }
+
+    await supabaseAdmin
+      .from("rate_limits")
+      .update({ count: existing.count + 1 })
+      .eq("key", key);
+
     return { success: true };
   }
 
-  if (entry.count < maxRequests) {
-    entry.count++;
-    return { success: true };
-  }
+  // No active window — upsert a fresh entry
+  await supabaseAdmin.from("rate_limits").upsert(
+    { key, count: 1, reset_at: resetAt.toISOString() },
+    { onConflict: "key" }
+  );
 
-  return {
-    success: false,
-    retryAfter: Math.ceil((entry.resetAt - now) / 1000),
-  };
+  return { success: true };
 }
 
 /** Extract IP from request headers (works behind proxies) */

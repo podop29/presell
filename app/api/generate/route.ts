@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
 
     // Rate limit: 3 generations per 10 minutes per IP
     const ip = getIP(req.headers);
-    const limit = rateLimit(`generate:${ip}`, { maxRequests: 3, windowMs: 10 * 60 * 1000 });
+    const limit = await rateLimit(`generate:${ip}`, { maxRequests: 3, windowMs: 10 * 60 * 1000 });
     if (!limit.success) {
       return NextResponse.json(
         { error: `Too many requests. Please try again in ${limit.retryAfter} seconds.` },
@@ -123,7 +123,7 @@ export async function POST(req: NextRequest) {
     if (dbError) {
       console.error("Supabase insert error:", dbError.message, dbError.details, dbError.hint);
       return NextResponse.json(
-        { error: `Failed to save preview: ${dbError.message}` },
+        { error: "Failed to save preview." },
         { status: 500 }
       );
     }

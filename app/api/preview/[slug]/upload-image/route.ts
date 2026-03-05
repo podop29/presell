@@ -2,7 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getUser } from "@/lib/auth";
 
-const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"];
+const MIME_TO_EXT: Record<string, string> = {
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/webp": "webp",
+  "image/gif": "gif",
+};
+const ALLOWED_TYPES = Object.keys(MIME_TO_EXT);
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 
 export async function POST(
@@ -69,7 +75,7 @@ export async function POST(
       );
     }
 
-    const ext = image.name.split(".").pop() ?? "png";
+    const ext = MIME_TO_EXT[image.type] ?? "png";
     const timestamp = Date.now();
     const random = Math.random().toString(36).slice(2, 8);
     const path = `${slug}/${timestamp}-${random}.${ext}`;
