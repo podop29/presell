@@ -419,6 +419,24 @@ export default function PreviewClient({
       el.addEventListener("keydown", handleEditKeydown as EventListener);
     });
 
+    // Find divs that contain direct text content (not just child elements)
+    doc.querySelectorAll("div").forEach((div) => {
+      if (div.getAttribute("data-pitchkit-editable")) return;
+      if (div.closest("[data-pitchkit-editable]")) return;
+      const hasDirectText = Array.from(div.childNodes).some(
+        (n) => (n.nodeType === Node.TEXT_NODE && n.textContent?.trim()) ||
+               (n.nodeType === Node.ELEMENT_NODE && (n as HTMLElement).tagName === "BR")
+      );
+      if (!hasDirectText) return;
+      // Skip divs that are mostly containers (have many block-level children)
+      const blockChildren = div.querySelectorAll("div, p, h1, h2, h3, h4, h5, h6, ul, ol, section, article");
+      if (blockChildren.length > 2) return;
+      div.setAttribute("data-pitchkit-editable", "true");
+      div.addEventListener("click", handleEditClick as EventListener);
+      div.addEventListener("blur", handleEditBlur as EventListener);
+      div.addEventListener("keydown", handleEditKeydown as EventListener);
+    });
+
     // Set up replaceable <img> elements
     const images = doc.querySelectorAll(IMAGE_SELECTOR);
     images.forEach((img) => {
