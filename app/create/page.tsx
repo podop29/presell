@@ -15,6 +15,13 @@ function extractColors(text: string): string[] {
 }
 
 /* ───── tiny icon components ───── */
+function ChevronRight({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="9 18 15 12 9 6" />
+    </svg>
+  );
+}
 function ArrowRight({ className = "w-4 h-4" }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -227,6 +234,8 @@ function CreatePageInner() {
   const [stockImageUrls, setStockImageUrls] = useState<string[]>([]);
   const [pageContent, setPageContent] = useState<string>("");
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
+  const [customInstructions, setCustomInstructions] = useState("");
+  const [showCustomInstructions, setShowCustomInstructions] = useState(false);
 
   const [previewUrl, setPreviewUrl] = useState("");
   const [copied, setCopied] = useState(false);
@@ -315,6 +324,7 @@ function CreatePageInner() {
           devName, devEmail, devMessage, profile,
           selectedStyle: styles[selectedIndex],
           pageStructure, imageUrls, stockImageUrls, pageContent,
+          customInstructions: customInstructions.trim() || undefined,
         }),
       });
       const data = await res.json();
@@ -467,6 +477,34 @@ function CreatePageInner() {
                     );
                   })}
                 </div>
+              </div>
+
+              {/* Optional custom instructions */}
+              <div className="animate-fade-in-up delay-150 mb-6">
+                <button
+                  type="button"
+                  onClick={() => setShowCustomInstructions(prev => !prev)}
+                  className="flex items-center gap-2 text-[12px] text-neutral-500 hover:text-neutral-300 transition-colors"
+                >
+                  <ChevronRight className={`w-3.5 h-3.5 transition-transform ${showCustomInstructions ? "rotate-90" : ""}`} />
+                  <span>Add custom instructions</span>
+                  <span className="text-neutral-700">— optional</span>
+                </button>
+                {showCustomInstructions && (
+                  <div className="mt-3 ml-5">
+                    <textarea
+                      placeholder='e.g. "Use a dark theme", "Include a photo gallery section", "Make the hero section bold and minimal"'
+                      value={customInstructions}
+                      onChange={(e) => setCustomInstructions(e.target.value)}
+                      rows={3}
+                      className="w-full px-3.5 py-2.5 bg-surface border border-[var(--border)] rounded-lg text-sm text-white placeholder:text-neutral-700 focus:outline-none focus:border-accent/40 focus:bg-[#131313] transition-all resize-none"
+                      autoFocus
+                    />
+                    <p className="text-[11px] text-neutral-700 mt-1 ml-1">
+                      Extra context or preferences for the AI when generating the site.
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Divider */}

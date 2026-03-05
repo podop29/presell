@@ -46,6 +46,7 @@ export interface GenerateRequest {
   imageUrls: string[];
   stockImageUrls: string[];
   pageContent: string;
+  customInstructions?: string;
 }
 
 export interface GenerateResponse {

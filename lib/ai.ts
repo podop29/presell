@@ -483,7 +483,8 @@ function buildVariationPrompt(
   stockImageUrls: string[],
   style: StyleSuggestion,
   pageStructure: string[],
-  pageContent: string
+  pageContent: string,
+  customInstructions?: string
 ): string {
   const originalImages =
     imageUrls.length > 0
@@ -581,6 +582,7 @@ Critical Design Rules:
 - The design must feel like it was hand-crafted by a senior designer for this specific business, not generated from a template
 - HERO SECTIONS WITH BACKGROUND IMAGES: Always add a dark overlay div (absolute inset-0 bg-black/50 or bg-gradient-to-t from-black/70 to-black/30) between the image and the text content. The text container must be relative with z-10. This is MANDATORY — never skip the overlay.
 - FINAL CONTRAST CHECK: After generating the full HTML, scan every section top to bottom. For each section, verify the text color has high contrast against the section background. If any text would be hard to read, fix it before outputting.
+${customInstructions ? `\nADDITIONAL INSTRUCTIONS FROM THE USER — follow these closely:\n${customInstructions}\n` : ""}
 - Return ONLY the complete HTML document starting with <!DOCTYPE html> — absolutely nothing else`;
 }
 
@@ -599,7 +601,8 @@ export async function generateVariation(
   stockImageUrls: string[],
   style: StyleSuggestion,
   pageStructure: string[],
-  pageContent: string
+  pageContent: string,
+  customInstructions?: string
 ): Promise<string> {
   const message = await anthropic.messages.create({
     model: "claude-sonnet-4-20250514",
@@ -608,7 +611,7 @@ export async function generateVariation(
     messages: [
       {
         role: "user",
-        content: buildVariationPrompt(profile, imageUrls, stockImageUrls, style, pageStructure, pageContent),
+        content: buildVariationPrompt(profile, imageUrls, stockImageUrls, style, pageStructure, pageContent, customInstructions),
       },
     ],
   });
