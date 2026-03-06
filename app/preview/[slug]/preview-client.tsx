@@ -67,6 +67,11 @@ export default function PreviewClient({
   const [unlocking, setUnlocking] = useState(false);
   const [unlockError, setUnlockError] = useState<string | null>(null);
   const [compareMode, setCompareMode] = useState(false);
+  const [note, setNote] = useState(devMessage);
+  const [removingNote, setRemovingNote] = useState(false);
+  const [editingNote, setEditingNote] = useState(false);
+  const [noteDraft, setNoteDraft] = useState(devMessage || "");
+  const [savingNote, setSavingNote] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
   const [emailSubject, setEmailSubject] = useState(coldEmailSubject ?? null);
   const [emailBody, setEmailBody] = useState(coldEmailBody ?? null);
@@ -820,6 +825,43 @@ export default function PreviewClient({
     }
   }
 
+  async function handleRemoveNote() {
+    setRemovingNote(true);
+    try {
+      const res = await fetch(`/api/preview/${slug}/note`, { method: "DELETE" });
+      if (res.ok) {
+        setNote(null);
+        setNoteDraft("");
+        setEditingNote(false);
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setRemovingNote(false);
+    }
+  }
+
+  async function handleSaveNote() {
+    if (!noteDraft.trim()) return;
+    setSavingNote(true);
+    try {
+      const res = await fetch(`/api/preview/${slug}/note`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: noteDraft.trim() }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setNote(data.message);
+        setEditingNote(false);
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setSavingNote(false);
+    }
+  }
+
   const showCta = devName && devEmail;
   const [contactOpen, setContactOpen] = useState(false);
   const [emailCopied, setEmailCopied] = useState(false);
@@ -1339,11 +1381,43 @@ export default function PreviewClient({
             </div>
 
             {/* Center — dev message (hidden on mobile) */}
-            {devMessage && (
-              <p className="hidden md:block text-sm text-zinc-400 truncate flex-1 text-center px-4">
-                {devMessage}
-              </p>
-            )}
+            <div className="hidden md:flex items-center gap-2 flex-1 justify-center px-4">
+              {note ? (
+                <>
+                  <p className="text-sm text-zinc-400 truncate">{note}</p>
+                  {isOwner && (
+                    <>
+                      <button
+                        onClick={() => { setNoteDraft(note); setEditingNote(true); }}
+                        className="shrink-0 text-zinc-600 hover:text-zinc-300 transition-colors"
+                        title="Edit note"
+                      >
+                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={handleRemoveNote}
+                        disabled={removingNote}
+                        className="shrink-0 text-zinc-600 hover:text-zinc-300 transition-colors"
+                        title="Remove note"
+                      >
+                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                      </button>
+                    </>
+                  )}
+                </>
+              ) : isOwner ? (
+                <button
+                  onClick={() => { setNoteDraft(""); setEditingNote(true); }}
+                  className="text-xs text-zinc-600 hover:text-zinc-300 transition-colors"
+                >
+                  + Add a personal note
+                </button>
+              ) : null}
+            </div>
 
             {/* Right — CTA button (hidden on mobile, shown inline above) */}
             <button
@@ -1487,11 +1561,37 @@ export default function PreviewClient({
             </div>
 
             {/* Dev message */}
-            {devMessage && (
-              <p className="text-sm text-zinc-400 text-center mb-5 leading-relaxed italic">
-                &ldquo;{devMessage}&rdquo;
-              </p>
-            )}
+            {note ? (
+              <div className="mb-5">
+                <p className="text-sm text-zinc-400 text-center leading-relaxed italic">
+                  &ldquo;{note}&rdquo;
+                </p>
+                {isOwner && (
+                  <div className="flex items-center justify-center gap-3 mt-1.5">
+                    <button
+                      onClick={() => { setNoteDraft(note); setEditingNote(true); }}
+                      className="text-xs text-zinc-600 hover:text-zinc-300 transition-colors"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={handleRemoveNote}
+                      disabled={removingNote}
+                      className="text-xs text-zinc-600 hover:text-zinc-300 transition-colors"
+                    >
+                      {removingNote ? "Removing..." : "Remove"}
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : isOwner ? (
+              <button
+                onClick={() => { setNoteDraft(""); setEditingNote(true); }}
+                className="mb-5 mx-auto block text-xs text-zinc-600 hover:text-zinc-300 transition-colors"
+              >
+                + Add a personal note
+              </button>
+            ) : null}
 
             {/* Email row */}
             <div className="flex items-center gap-2 p-3 bg-zinc-800/50 border border-white/5 rounded-xl mb-4">
@@ -1515,6 +1615,61 @@ export default function PreviewClient({
               >
                 Send Email
               </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Edit Note Modal (owner only) ── */}
+      {editingNote && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          onClick={() => setEditingNote(false)}
+        >
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div
+            className="relative w-full max-w-sm bg-zinc-900 border border-white/10 rounded-2xl p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setEditingNote(false)}
+              className="absolute top-4 right-4 text-zinc-500 hover:text-white transition-colors"
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+
+            <h3 className="text-sm font-semibold text-white mb-1">
+              {note ? "Edit personal note" : "Add a personal note"}
+            </h3>
+            <p className="text-xs text-zinc-500 mb-4">
+              This appears on the preview page to make your outreach feel personal.
+            </p>
+
+            <textarea
+              value={noteDraft}
+              onChange={(e) => setNoteDraft(e.target.value)}
+              placeholder={'e.g. "Hey, I noticed your site could use a refresh \u2014 here\'s what I\'d do."'}
+              rows={3}
+              className="w-full px-3.5 py-2.5 bg-zinc-800/50 border border-white/10 rounded-xl text-sm text-white placeholder:text-zinc-700 focus:outline-none focus:border-white/20 transition-all resize-none mb-4"
+              autoFocus
+            />
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => setEditingNote(false)}
+                className="flex-1 py-2 text-sm font-medium text-zinc-400 hover:text-white rounded-lg border border-white/10 hover:border-white/20 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveNote}
+                disabled={savingNote || !noteDraft.trim()}
+                className="flex-1 py-2 text-sm font-semibold bg-white hover:bg-neutral-200 text-zinc-900 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {savingNote ? "Saving..." : "Save"}
+              </button>
             </div>
           </div>
         </div>
