@@ -63,8 +63,13 @@ export async function scrapeWebsite(url: string): Promise<ScrapedData> {
       return results.slice(0, 20).map(u => u.replace(/^http:\/\//, "https://"));
     });
 
+    // Clip screenshot height to avoid exceeding Claude's 8000px image limit
+    const viewportSize = page.viewportSize() || { width: 1280, height: 720 };
+    const fullHeight = await page.evaluate(() => document.documentElement.scrollHeight);
+    const clipHeight = Math.min(fullHeight, 7500);
+
     const screenshotBuffer = await page.screenshot({
-      fullPage: true,
+      clip: { x: 0, y: 0, width: viewportSize.width, height: clipHeight },
       type: "png",
     });
     const screenshot = screenshotBuffer.toString("base64");
