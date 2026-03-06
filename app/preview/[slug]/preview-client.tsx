@@ -1268,7 +1268,6 @@ export default function PreviewClient({
             <iframe
               key={`compare-variation-${activeView}-${iframeVersion}`}
               src={iframeSrc}
-              sandbox={isOwner ? "allow-scripts allow-same-origin" : "allow-scripts"}
               className="w-full h-full absolute inset-0 border-0"
               title={activeVariation?.label ?? "Redesign"}
             />
@@ -1284,7 +1283,6 @@ export default function PreviewClient({
             <iframe
               key={`before-${activeView}-${iframeVersion}`}
               src={iframeSrc}
-              sandbox={isOwner ? "allow-scripts allow-same-origin" : "allow-scripts"}
               className="w-full h-full absolute inset-0 border-0"
               title="Before"
               onLoad={() => setIframeLoading(false)}
@@ -1298,7 +1296,6 @@ export default function PreviewClient({
             <iframe
               key={`after-${activeView}`}
               src={pendingBlobUrl.current ?? ""}
-              sandbox={isOwner ? "allow-scripts allow-same-origin" : "allow-scripts"}
               className="w-full h-full absolute inset-0 border-0"
               title="After"
             />
@@ -1336,9 +1333,9 @@ export default function PreviewClient({
             className="w-full h-full absolute inset-0 border-0"
             title={tabs.find((t) => t.key === activeView)?.label || "Preview"}
             sandbox={
-              isOwner
+              activeView === "original"
                 ? "allow-scripts allow-same-origin"
-                : "allow-scripts"
+                : undefined
             }
             onLoad={() => {
               setIframeLoading(false);
