@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import AuthButton from "@/components/auth-button";
-import type { BusinessProfile, StyleSuggestion } from "@/types";
+import type { BusinessProfile, StyleSuggestion, ClassifiedImage } from "@/types";
 
 type Phase = "analyzing" | "pick-style" | "generating" | "done";
 
@@ -232,6 +232,7 @@ function CreatePageInner() {
   const [pageStructure, setPageStructure] = useState<string[]>([]);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [stockImageUrls, setStockImageUrls] = useState<string[]>([]);
+  const [classifiedImages, setClassifiedImages] = useState<ClassifiedImage[]>([]);
   const [pageContent, setPageContent] = useState<string>("");
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
   const [customInstructions, setCustomInstructions] = useState("");
@@ -297,6 +298,7 @@ function CreatePageInner() {
         setPageStructure(data.pageStructure);
         setImageUrls(data.imageUrls);
         setStockImageUrls(data.stockImageUrls || []);
+        setClassifiedImages(data.classifiedImages || []);
         setPageContent(data.pageContent || "");
         setSelectedIndex(0);
         setAnalysisDone(true);
@@ -324,6 +326,7 @@ function CreatePageInner() {
           devName, devEmail, devMessage, profile,
           selectedStyle: styles[selectedIndex],
           pageStructure, imageUrls, stockImageUrls, pageContent,
+          classifiedImages: classifiedImages.length > 0 ? classifiedImages : undefined,
           customInstructions: customInstructions.trim() || undefined,
         }),
       });

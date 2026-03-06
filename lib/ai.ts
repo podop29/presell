@@ -3,6 +3,7 @@ import type {
   ScrapedData,
   BusinessProfile,
   StyleSuggestion,
+  ClassifiedImage,
   AnalysisResult,
 } from "@/types";
 import type { GooglePlaceData } from "@/lib/google-places";
@@ -50,7 +51,7 @@ const DEFAULT_PAGE_STRUCTURE = [
   "Footer",
 ];
 
-// Pass 1 — Business Analysis + Style Generation + Page Structure
+// Pass 1 — Business Analysis + Style Generation + Page Structure + Image Classification
 export async function analyzeBusinessContent(
   url: string,
   data: ScrapedData
@@ -80,7 +81,7 @@ You always respond with valid JSON only — no explanation, no markdown, no code
               : []),
             {
               type: "text" as const,
-              text: `Analyze this website (and the screenshot above if provided) and return a JSON object with four top-level keys: "profile", "styles", "pageStructure", and "imageSearchQueries".
+              text: `Analyze this website (and the screenshot above if provided) and return a JSON object with five top-level keys: "profile", "styles", "pageStructure", "imageSearchQueries", and "classifiedImages".
 
 "profile" must have exactly these fields:
 {
@@ -106,6 +107,28 @@ Be specific about what content each section contains — don't just say "Hero se
 - Query 2: A secondary/lifestyle image (e.g. "relaxed woman enjoying facial treatment" or "happy family in new car dealership")
 - Query 3: A background/atmosphere image (e.g. "zen spa stones candles peaceful" or "clean modern office workspace")
 Tailor these to the specific business and industry. Use descriptive keywords that will return professional, high-quality photos.
+
+"classifiedImages" must be an array of objects classifying the images found on the original website. For each image URL listed below, determine its role on the page using the screenshot for visual context and the URL for hints. Each object has:
+{
+  "url": "string (the exact image URL from the list below)",
+  "category": "string (one of: logo, hero-worthy, product, team, storefront, gallery, decorative, skip)",
+  "description": "string (brief 3-8 word description, e.g. 'company logo white background', 'chocolate cake close-up', 'storefront exterior sunny day')"
+}
+
+Category definitions:
+- "logo": The business logo or brand mark
+- "hero-worthy": Large, high-quality image suitable as a full-width hero background (wide aspect ratio, professional quality, relevant to business)
+- "product": Product photos, menu items, work samples, portfolio pieces
+- "team": Photos of people — staff, owners, team members
+- "storefront": Exterior or interior shots of the physical business location
+- "gallery": Other decent-quality images worth showing in a gallery or content section
+- "decorative": Small decorative elements, icons, badges, pattern images
+- "skip": Low-quality, broken-looking, tiny icons, social media badges, tracking pixels, or irrelevant images not worth using
+
+IMAGE URLS TO CLASSIFY:
+${data.imageUrls.length > 0 ? data.imageUrls.slice(0, 20).join("\n") : "(no images found)"}
+
+Classify EVERY image URL listed above. Be strict with "skip" — only quality images that add value should be kept. If the screenshot helps you see what an image actually looks like on the page, use that context.
 
 "styles" must be an array of exactly 3 objects. Each object has:
 {
@@ -151,7 +174,7 @@ Page Content: ${data.content.slice(0, 3000)}`,
 
     const textBlock = message.content.find((block) => block.type === "text");
     if (!textBlock || textBlock.type !== "text") {
-      return { profile: DEFAULT_PROFILE, styles: DEFAULT_STYLES, pageStructure: DEFAULT_PAGE_STRUCTURE, imageSearchQueries: [] };
+      return { profile: DEFAULT_PROFILE, styles: DEFAULT_STYLES, pageStructure: DEFAULT_PAGE_STRUCTURE, imageSearchQueries: [], classifiedImages: [] };
     }
 
     let jsonStr = textBlock.text.trim();
@@ -208,7 +231,25 @@ Page Content: ${data.content.slice(0, 3000)}`,
       imageSearchQueries = parsed.imageSearchQueries;
     }
 
-    return { profile, styles, pageStructure, imageSearchQueries };
+    const validCategories = new Set(["logo", "hero-worthy", "product", "team", "storefront", "gallery", "decorative", "skip"]);
+    let classifiedImages: ClassifiedImage[] = [];
+    if (Array.isArray(parsed.classifiedImages)) {
+      classifiedImages = parsed.classifiedImages
+        .filter(
+          (img: Record<string, unknown>) =>
+            typeof img.url === "string" &&
+            typeof img.category === "string" &&
+            validCategories.has(img.category) &&
+            typeof img.description === "string"
+        )
+        .map((img: Record<string, string>) => ({
+          url: img.url,
+          category: img.category as ClassifiedImage["category"],
+          description: img.description,
+        }));
+    }
+
+    return { profile, styles, pageStructure, imageSearchQueries, classifiedImages };
   } catch (err) {
     // Let API-level errors (auth, credits, rate limit) propagate
     // so the route can return a proper error to the client
@@ -221,7 +262,7 @@ Page Content: ${data.content.slice(0, 3000)}`,
       throw err;
     }
     // Parsing/validation errors — fall back to defaults
-    return { profile: DEFAULT_PROFILE, styles: DEFAULT_STYLES, pageStructure: DEFAULT_PAGE_STRUCTURE, imageSearchQueries: [] };
+    return { profile: DEFAULT_PROFILE, styles: DEFAULT_STYLES, pageStructure: DEFAULT_PAGE_STRUCTURE, imageSearchQueries: [], classifiedImages: [] };
   }
 }
 
@@ -316,7 +357,7 @@ Rules for all 3 styles:
 
     const textBlock = message.content.find((block) => block.type === "text");
     if (!textBlock || textBlock.type !== "text") {
-      return { profile: DEFAULT_PROFILE, styles: DEFAULT_STYLES, pageStructure: DEFAULT_PAGE_STRUCTURE, imageSearchQueries: [] };
+      return { profile: DEFAULT_PROFILE, styles: DEFAULT_STYLES, pageStructure: DEFAULT_PAGE_STRUCTURE, imageSearchQueries: [], classifiedImages: [] };
     }
 
     let jsonStr = textBlock.text.trim();
@@ -373,7 +414,7 @@ Rules for all 3 styles:
       imageSearchQueries = parsed.imageSearchQueries;
     }
 
-    return { profile, styles, pageStructure, imageSearchQueries };
+    return { profile, styles, pageStructure, imageSearchQueries, classifiedImages: [] };
   } catch (err) {
     if (
       err instanceof Anthropic.APIError ||
@@ -383,7 +424,7 @@ Rules for all 3 styles:
     ) {
       throw err;
     }
-    return { profile: DEFAULT_PROFILE, styles: DEFAULT_STYLES, pageStructure: DEFAULT_PAGE_STRUCTURE, imageSearchQueries: [] };
+    return { profile: DEFAULT_PROFILE, styles: DEFAULT_STYLES, pageStructure: DEFAULT_PAGE_STRUCTURE, imageSearchQueries: [], classifiedImages: [] };
   }
 }
 
@@ -484,10 +525,18 @@ function buildVariationPrompt(
   style: StyleSuggestion,
   pageStructure: string[],
   pageContent: string,
-  customInstructions?: string
+  customInstructions?: string,
+  classifiedImages?: ClassifiedImage[]
 ): string {
-  const originalImages =
-    imageUrls.length > 0
+  // Use classified images if available, otherwise fall back to flat URL list
+  const hasClassified = classifiedImages && classifiedImages.length > 0;
+
+  const originalImages = hasClassified
+    ? classifiedImages
+        .filter((img) => img.category !== "skip")
+        .map((img) => `- [${img.category}] ${img.url} — ${img.description}`)
+        .join("\n")
+    : imageUrls.length > 0
       ? imageUrls.slice(0, 10).join("\n")
       : "(no images found on original site)";
 
@@ -521,14 +570,24 @@ ${originalImages}
 STOCK IMAGES (high-quality professional photos relevant to this business — use these to elevate the design):
 ${stockImages}
 
-Image Usage Strategy — USE ORIGINAL IMAGES WHERE THEY FIT:
+${hasClassified ? `Image Usage Strategy — CLASSIFIED IMAGES (use the category tags to place images correctly):
+- [logo] images: Use ONLY in the navbar and footer — never as content images.
+- [hero-worthy] images: These are pre-screened as large, high-quality originals — use them for the hero section or major section backgrounds. If none exist, use a STOCK image for the hero.
+- [product] images: Use in service/product showcases, menu sections, portfolio grids, and feature highlights. These are the business's real work — the owner will recognize them.
+- [team] images: Use in about sections, team grids, or founder spotlights.
+- [storefront] images: Use in about/location sections, or as secondary section backgrounds.
+- [gallery] images: Use in gallery grids, content sections, or testimonial backgrounds.
+- [decorative] images: Use sparingly as small visual accents, or skip if not needed.
+- STOCK images are high-quality professional photos — use them to fill gaps where no classified original fits, especially for hero backgrounds and large section imagery.
+- Every image must use object-cover, rounded corners where appropriate, and proper aspect ratios.
+- If a section needs an image but neither set has a good fit, use a CSS gradient or textured background instead.` : `Image Usage Strategy — USE ORIGINAL IMAGES WHERE THEY FIT:
 - ORIGINAL images are the business's REAL photos — their shop, team, products, storefront, food, work, etc. The business owner will recognize their own photos and feel an immediate connection.
 - Use original images where they are a good fit and appear to be decent quality — about sections, service/product showcases, galleries, team photos, storefront shots.
 - HERO SECTION: Use a STOCK image for the hero unless an original image is clearly high-quality and well-suited as a hero background (e.g. a professional storefront photo or wide product shot). Most original images are too small, low-res, or wrong aspect ratio for a full-width hero — when in doubt, use stock.
 - Use STOCK images for: hero backgrounds, section backgrounds, decorative lifestyle shots — anywhere you need a large, guaranteed high-quality visual.
 - Mix both sets naturally throughout the page — use original images for authenticity in smaller placements, stock images for visual impact in large placements.
 - Every image must use object-cover, rounded corners where appropriate, and proper aspect ratios.
-- If a section needs an image but neither set has a good fit, use a CSS gradient or textured background instead.
+- If a section needs an image but neither set has a good fit, use a CSS gradient or textured background instead.`}
 
 ORIGINAL PAGE CONTENT (scraped from the real website — use this as your primary content source):
 ${pageContent || "(no page content available)"}
@@ -602,7 +661,8 @@ export async function generateVariation(
   style: StyleSuggestion,
   pageStructure: string[],
   pageContent: string,
-  customInstructions?: string
+  customInstructions?: string,
+  classifiedImages?: ClassifiedImage[]
 ): Promise<string> {
   const message = await anthropic.messages.create({
     model: "claude-sonnet-4-20250514",
@@ -611,7 +671,7 @@ export async function generateVariation(
     messages: [
       {
         role: "user",
-        content: buildVariationPrompt(profile, imageUrls, stockImageUrls, style, pageStructure, pageContent, customInstructions),
+        content: buildVariationPrompt(profile, imageUrls, stockImageUrls, style, pageStructure, pageContent, customInstructions, classifiedImages),
       },
     ],
   });

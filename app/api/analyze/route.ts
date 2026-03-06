@@ -72,9 +72,9 @@ export async function POST(req: NextRequest) {
       }
 
       // Step 2: Analyze with AI
-      let profile, styles, pageStructure, imageSearchQueries;
+      let profile, styles, pageStructure, imageSearchQueries, classifiedImages;
       try {
-        ({ profile, styles, pageStructure, imageSearchQueries } =
+        ({ profile, styles, pageStructure, imageSearchQueries, classifiedImages } =
           await analyzeGooglePlaceData(placeData));
       } catch (aiErr) {
         console.error("AI analysis error:", aiErr);
@@ -121,6 +121,7 @@ export async function POST(req: NextRequest) {
         imageUrls: placePhotoUrls,
         stockImageUrls,
         pageContent,
+        classifiedImages: classifiedImages || [],
       });
     }
 
@@ -150,9 +151,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Step 2: Analyze business content + generate style directions
-    let profile, styles, pageStructure, imageSearchQueries;
+    let profile, styles, pageStructure, imageSearchQueries, classifiedImages;
     try {
-      ({ profile, styles, pageStructure, imageSearchQueries } =
+      ({ profile, styles, pageStructure, imageSearchQueries, classifiedImages } =
         await analyzeBusinessContent(url, scrapedData));
     } catch (aiErr) {
       console.error("AI analysis error:", aiErr);
@@ -179,6 +180,7 @@ export async function POST(req: NextRequest) {
       imageUrls: scrapedData.imageUrls,
       stockImageUrls,
       pageContent: scrapedData.content.slice(0, 5000),
+      classifiedImages: classifiedImages || [],
     });
   } catch (err) {
     console.error("Analyze error:", err);

@@ -33,6 +33,7 @@ export interface AnalyzeResponse {
   imageUrls: string[];
   stockImageUrls: string[];
   pageContent: string;
+  classifiedImages: ClassifiedImage[];
 }
 
 export interface GenerateRequest {
@@ -47,6 +48,7 @@ export interface GenerateRequest {
   stockImageUrls: string[];
   pageContent: string;
   customInstructions?: string;
+  classifiedImages?: ClassifiedImage[];
 }
 
 export interface GenerateResponse {
@@ -78,9 +80,16 @@ export interface StyleSuggestion {
   styleBrief: string;
 }
 
+export interface ClassifiedImage {
+  url: string;
+  category: "logo" | "hero-worthy" | "product" | "team" | "storefront" | "gallery" | "decorative" | "skip";
+  description: string;
+}
+
 export interface AnalysisResult {
   profile: BusinessProfile;
   styles: [StyleSuggestion, StyleSuggestion, StyleSuggestion];
   pageStructure: string[];
   imageSearchQueries: string[];
+  classifiedImages: ClassifiedImage[];
 }

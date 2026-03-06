@@ -52,6 +52,7 @@ export async function POST(req: NextRequest) {
       stockImageUrls,
       pageContent,
       customInstructions,
+      classifiedImages,
     } = body;
 
     // Validate
@@ -78,7 +79,7 @@ export async function POST(req: NextRequest) {
     // Generate the selected variation
     let html;
     try {
-      html = await generateVariation(profile, imageUrls || [], stockImageUrls || [], selectedStyle, pageStructure, pageContent || "", customInstructions);
+      html = await generateVariation(profile, imageUrls || [], stockImageUrls || [], selectedStyle, pageStructure, pageContent || "", customInstructions, classifiedImages);
     } catch (aiErr) {
       console.error("AI generation error:", aiErr);
       const message =
