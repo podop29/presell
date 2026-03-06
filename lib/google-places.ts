@@ -180,8 +180,8 @@ export function getPlacePhotoUrls(
   photos: { photo_reference: string }[],
   max: number = 8
 ): string[] {
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
   return photos.slice(0, max).map(
-    (p) =>
-      `https://maps.googleapis.com/maps/api/place/photo?maxwidth=1200&photo_reference=${p.photo_reference}&key=${API_KEY}`
+    (p) => `${baseUrl}/api/places-photo?ref=${encodeURIComponent(p.photo_reference)}`
   );
 }
