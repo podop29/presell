@@ -156,7 +156,7 @@ export async function POST(req: NextRequest) {
       ({ profile, styles, pageStructure, imageSearchQueries, classifiedImages } =
         await analyzeBusinessContent(url, scrapedData));
     } catch (aiErr) {
-      console.error("AI analysis error:", aiErr);
+      console.error(`AI analysis error for ${url}:`, aiErr);
       return NextResponse.json(
         { error: "AI analysis failed — please check your API key or credits and try again." },
         { status: 502 }
