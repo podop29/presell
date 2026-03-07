@@ -26,12 +26,19 @@ export interface AnalyzeRequest {
   source: "website" | "google-maps";
 }
 
+export interface StockImages {
+  hero: string[];
+  secondary: string[];
+  atmosphere: string[];
+}
+
 export interface AnalyzeResponse {
   profile: BusinessProfile;
   styles: [StyleSuggestion, StyleSuggestion, StyleSuggestion];
   pageStructure: string[];
   imageUrls: string[];
   stockImageUrls: string[];
+  stockImages?: StockImages;
   pageContent: string;
   classifiedImages: ClassifiedImage[];
 }
@@ -46,6 +53,7 @@ export interface GenerateRequest {
   pageStructure: string[];
   imageUrls: string[];
   stockImageUrls: string[];
+  stockImages?: StockImages;
   pageContent: string;
   customInstructions?: string;
   classifiedImages?: ClassifiedImage[];

@@ -5,6 +5,7 @@ import type {
   StyleSuggestion,
   ClassifiedImage,
   AnalysisResult,
+  StockImages,
 } from "@/types";
 import type { GooglePlaceData } from "@/lib/google-places";
 
@@ -103,9 +104,9 @@ You always respond with valid JSON only — no explanation, no markdown, no code
 Be specific about what content each section contains — don't just say "Hero section", say "Hero with bakery name, 'Fresh baked daily' tagline, and order online button". Include 6-10 sections.
 
 "imageSearchQueries" must be an array of exactly 3 strings — search queries to find high-quality stock photos that would look great on this business's redesigned website. Be specific and descriptive:
-- Query 1: A hero/banner image query (e.g. "luxury spa massage therapy interior warm lighting" or "modern auto repair shop professional mechanic")
-- Query 2: A secondary/lifestyle image (e.g. "relaxed woman enjoying facial treatment" or "happy family in new car dealership")
-- Query 3: A background/atmosphere image (e.g. "zen spa stones candles peaceful" or "clean modern office workspace")
+- Query 1 (HERO IMAGE — most important): A dramatic, wide-angle photo that works as a full-width hero background. Think cinematic and atmospheric. Be SPECIFIC to the business type but focus on the ENVIRONMENT or ACTIVITY, not generic concepts. Examples: "professional barber cutting hair in modern barbershop" not "barbershop", "chef plating food in restaurant kitchen warm lighting" not "restaurant food", "aerial view modern dental office clean bright". Include lighting/mood keywords like "warm lighting", "bright natural light", "dramatic", "professional photography".
+- Query 2: A secondary/lifestyle image showing the business's work or customers (e.g. "relaxed woman enjoying facial treatment spa" or "happy family receiving car keys dealership")
+- Query 3: A background/atmosphere image for secondary sections (e.g. "zen spa stones candles peaceful" or "clean modern office workspace minimal")
 Tailor these to the specific business and industry. Use descriptive keywords that will return professional, high-quality photos.
 
 "classifiedImages" must be an array of objects classifying the images found on the original website. For each image URL listed below, determine its role on the page using the screenshot for visual context and the URL for hints. Each object has:
@@ -329,7 +330,7 @@ ${reviewText || "No reviews available"}
 - Example for a restaurant: ["Navigation with restaurant name and phone number", "Hero with restaurant name, cuisine type tagline, and reservation CTA", "Menu highlights with popular dishes", "Photo gallery", "Customer reviews carousel", "Hours and location with embedded map", "Contact section with phone and address", "Footer with social links"]
 
 "imageSearchQueries" must be an array of exactly 3 strings — search queries to find high-quality stock photos for this business's website. Be specific:
-- Query 1: A hero/banner image (e.g. "luxury spa massage therapy interior warm lighting")
+- Query 1 (HERO IMAGE — most important): A dramatic, wide-angle photo for a full-width hero background. Be SPECIFIC to the business type, focus on the ENVIRONMENT or ACTIVITY, and include lighting/mood keywords. Examples: "professional barber cutting hair in modern barbershop warm lighting", "chef plating food in restaurant kitchen dramatic", "aerial view modern dental office clean bright".
 - Query 2: A secondary/lifestyle image specific to the business type
 - Query 3: A background/atmosphere image
 Tailor these to the specific business category: ${categoryText}
@@ -526,7 +527,8 @@ function buildVariationPrompt(
   pageStructure: string[],
   pageContent: string,
   customInstructions?: string,
-  classifiedImages?: ClassifiedImage[]
+  classifiedImages?: ClassifiedImage[],
+  groupedStockImages?: StockImages
 ): string {
   // Use classified images if available, otherwise fall back to flat URL list
   const hasClassified = classifiedImages && classifiedImages.length > 0;
@@ -540,10 +542,24 @@ function buildVariationPrompt(
       ? imageUrls.slice(0, 10).join("\n")
       : "(no images found on original site)";
 
-  const stockImages =
-    stockImageUrls.length > 0
+  // Build stock images section — grouped by purpose when available
+  let stockImagesText: string;
+  if (groupedStockImages && (groupedStockImages.hero.length > 0 || groupedStockImages.secondary.length > 0 || groupedStockImages.atmosphere.length > 0)) {
+    const heroList = groupedStockImages.hero.length > 0
+      ? `HERO CANDIDATES (wide, high-quality — pick the best one for the hero section):\n${groupedStockImages.hero.map((u) => `  ${u}`).join("\n")}`
+      : "";
+    const secondaryList = groupedStockImages.secondary.length > 0
+      ? `SECONDARY (lifestyle/detail shots — use in content sections, about, features):\n${groupedStockImages.secondary.map((u) => `  ${u}`).join("\n")}`
+      : "";
+    const atmosphereList = groupedStockImages.atmosphere.length > 0
+      ? `ATMOSPHERE (background/mood images — use for section backgrounds or decorative):\n${groupedStockImages.atmosphere.map((u) => `  ${u}`).join("\n")}`
+      : "";
+    stockImagesText = [heroList, secondaryList, atmosphereList].filter(Boolean).join("\n\n");
+  } else {
+    stockImagesText = stockImageUrls.length > 0
       ? stockImageUrls.join("\n")
       : "(no stock images available)";
+  }
 
   const structureList = pageStructure
     .map((section, i) => `${i + 1}. ${section}`)
@@ -568,7 +584,7 @@ ORIGINAL IMAGES (from the business's current website — use these for authentic
 ${originalImages}
 
 STOCK IMAGES (high-quality professional photos relevant to this business — use these to elevate the design):
-${stockImages}
+${stockImagesText}
 
 ${hasClassified ? `Image Usage Strategy — CLASSIFIED IMAGES (use the category tags to place images correctly):
 - [logo] images: Use ONLY in the navbar and footer — never as content images.
@@ -578,13 +594,15 @@ ${hasClassified ? `Image Usage Strategy — CLASSIFIED IMAGES (use the category 
 - [storefront] images: Use in about/location sections, or as secondary section backgrounds.
 - [gallery] images: Use in gallery grids, content sections, or testimonial backgrounds.
 - [decorative] images: Use sparingly as small visual accents, or skip if not needed.
-- STOCK images are high-quality professional photos — use them to fill gaps where no classified original fits, especially for hero backgrounds and large section imagery.
+- STOCK images are grouped by purpose: HERO CANDIDATES are pre-selected wide images ideal for full-width hero backgrounds, SECONDARY are lifestyle/detail shots for content sections, ATMOSPHERE are mood images for section backgrounds. Use the right group for the right placement.
+- For the HERO section, pick from the HERO CANDIDATES stock images — these are specifically chosen to be wide, dramatic, and high-quality. Only use a classified [hero-worthy] original instead if one exists and is clearly professional quality.
 - Every image must use object-cover, rounded corners where appropriate, and proper aspect ratios.
 - If a section needs an image but neither set has a good fit, use a CSS gradient or textured background instead.` : `Image Usage Strategy — USE ORIGINAL IMAGES WHERE THEY FIT:
 - ORIGINAL images are the business's REAL photos — their shop, team, products, storefront, food, work, etc. The business owner will recognize their own photos and feel an immediate connection.
 - Use original images where they are a good fit and appear to be decent quality — about sections, service/product showcases, galleries, team photos, storefront shots.
-- HERO SECTION: Use a STOCK image for the hero unless an original image is clearly high-quality and well-suited as a hero background (e.g. a professional storefront photo or wide product shot). Most original images are too small, low-res, or wrong aspect ratio for a full-width hero — when in doubt, use stock.
-- Use STOCK images for: hero backgrounds, section backgrounds, decorative lifestyle shots — anywhere you need a large, guaranteed high-quality visual.
+- HERO SECTION: The stock images above are grouped by purpose. Use a HERO CANDIDATE stock image for the hero — these are specifically chosen to be wide, dramatic, and relevant. Only use an original image for the hero if it is clearly high-quality, wide aspect ratio, and professional (e.g. a professional storefront photo). When in doubt, use a hero candidate stock image.
+- Use SECONDARY stock images for content sections, features, about sections — anywhere you need a supporting visual.
+- Use ATMOSPHERE stock images for section backgrounds, decorative overlays, or mood-setting imagery.
 - Mix both sets naturally throughout the page — use original images for authenticity in smaller placements, stock images for visual impact in large placements.
 - Every image must use object-cover, rounded corners where appropriate, and proper aspect ratios.
 - If a section needs an image but neither set has a good fit, use a CSS gradient or textured background instead.`}
@@ -662,7 +680,8 @@ export async function generateVariation(
   pageStructure: string[],
   pageContent: string,
   customInstructions?: string,
-  classifiedImages?: ClassifiedImage[]
+  classifiedImages?: ClassifiedImage[],
+  groupedStockImages?: StockImages
 ): Promise<string> {
   const message = await anthropic.messages.create({
     model: "claude-sonnet-4-20250514",
@@ -671,7 +690,7 @@ export async function generateVariation(
     messages: [
       {
         role: "user",
-        content: buildVariationPrompt(profile, imageUrls, stockImageUrls, style, pageStructure, pageContent, customInstructions, classifiedImages),
+        content: buildVariationPrompt(profile, imageUrls, stockImageUrls, style, pageStructure, pageContent, customInstructions, classifiedImages, groupedStockImages),
       },
     ],
   });

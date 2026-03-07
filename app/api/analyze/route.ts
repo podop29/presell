@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { scrapeWebsite } from "@/lib/scraper";
 import { analyzeBusinessContent, analyzeGooglePlaceData } from "@/lib/ai";
-import { searchPexels } from "@/lib/pexels";
+import { searchPexelsGrouped } from "@/lib/pexels";
 import { rateLimit, getIP } from "@/lib/rate-limit";
 import { getUser } from "@/lib/auth";
 import { getBalance } from "@/lib/credits";
@@ -87,10 +87,10 @@ export async function POST(req: NextRequest) {
       // Step 3: Get Google Places photos + Pexels stock images
       const placePhotoUrls = getPlacePhotoUrls(placeData.photos);
 
-      let stockImageUrls: string[] = [];
+      let stockImages = { hero: [] as string[], secondary: [] as string[], atmosphere: [] as string[] };
       if (imageSearchQueries.length > 0) {
         try {
-          stockImageUrls = await searchPexels(imageSearchQueries);
+          stockImages = await searchPexelsGrouped(imageSearchQueries);
         } catch (err) {
           console.error("Pexels search error:", err);
         }
@@ -119,7 +119,8 @@ export async function POST(req: NextRequest) {
         styles,
         pageStructure,
         imageUrls: placePhotoUrls,
-        stockImageUrls,
+        stockImageUrls: [...stockImages.hero, ...stockImages.secondary, ...stockImages.atmosphere],
+        stockImages,
         pageContent,
         classifiedImages: classifiedImages || [],
       });
@@ -164,10 +165,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Step 3: Fetch stock images from Pexels using AI-suggested queries
-    let stockImageUrls: string[] = [];
+    let stockImages = { hero: [] as string[], secondary: [] as string[], atmosphere: [] as string[] };
     if (imageSearchQueries.length > 0) {
       try {
-        stockImageUrls = await searchPexels(imageSearchQueries);
+        stockImages = await searchPexelsGrouped(imageSearchQueries);
       } catch (err) {
         console.error("Pexels search error:", err);
       }
@@ -178,7 +179,8 @@ export async function POST(req: NextRequest) {
       styles,
       pageStructure,
       imageUrls: scrapedData.imageUrls,
-      stockImageUrls,
+      stockImageUrls: [...stockImages.hero, ...stockImages.secondary, ...stockImages.atmosphere],
+      stockImages,
       pageContent: scrapedData.content.slice(0, 5000),
       classifiedImages: classifiedImages || [],
     });
