@@ -10,6 +10,7 @@ import {
   fetchPlaceDetails,
   getPlacePhotoUrls,
 } from "@/lib/google-places";
+import { notifyError } from "@/lib/discord";
 
 export const maxDuration = 120;
 
@@ -60,6 +61,7 @@ export async function POST(req: NextRequest) {
         placeData = await fetchPlaceDetails(placeId);
       } catch (placeErr) {
         console.error("Google Places error:", placeErr);
+        notifyError("Google Places error", placeErr, { url: mapsUrl });
         return NextResponse.json(
           {
             error:
@@ -78,6 +80,7 @@ export async function POST(req: NextRequest) {
           await analyzeGooglePlaceData(placeData));
       } catch (aiErr) {
         console.error("AI analysis error:", aiErr);
+        notifyError("AI analysis error (Google Maps)", aiErr);
         return NextResponse.json(
           { error: "AI analysis failed — please check your API key or credits and try again." },
           { status: 502 }
@@ -93,6 +96,7 @@ export async function POST(req: NextRequest) {
           stockImages = await searchPexelsGrouped(imageSearchQueries);
         } catch (err) {
           console.error("Pexels search error:", err);
+          notifyError("Pexels search error", err);
         }
       }
 
@@ -158,6 +162,7 @@ export async function POST(req: NextRequest) {
         await analyzeBusinessContent(url, scrapedData));
     } catch (aiErr) {
       console.error(`AI analysis error for ${url}:`, aiErr);
+      notifyError("AI analysis error", aiErr, { url });
       return NextResponse.json(
         { error: "AI analysis failed — please check your API key or credits and try again." },
         { status: 502 }
@@ -171,6 +176,7 @@ export async function POST(req: NextRequest) {
         stockImages = await searchPexelsGrouped(imageSearchQueries);
       } catch (err) {
         console.error("Pexels search error:", err);
+        notifyError("Pexels search error", err);
       }
     }
 
@@ -186,6 +192,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     console.error("Analyze error:", err);
+    notifyError("Analyze error", err);
     return NextResponse.json(
       { error: "An unexpected error occurred." },
       { status: 500 }

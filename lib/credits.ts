@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { notifySuccess } from "@/lib/discord";
 
 export const SIGNUP_BONUS = 3;
 export const FREE_REVISIONS = 3;
@@ -46,6 +47,13 @@ export async function getBalance(userId: string): Promise<number> {
     amount: SIGNUP_BONUS,
     type: "signup_bonus",
     description: "Welcome bonus credits",
+  });
+
+  // Notify Discord of new account
+  const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(userId);
+  notifySuccess("New account created", {
+    email: authUser?.user?.email || "unknown",
+    userId,
   });
 
   return inserted?.balance ?? SIGNUP_BONUS;

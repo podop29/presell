@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getUser } from "@/lib/auth";
 import { unlockRevisions } from "@/lib/credits";
+import { notifyError } from "@/lib/discord";
 
 export async function POST(
   _req: NextRequest,
@@ -56,6 +57,7 @@ export async function POST(
     });
   } catch (err) {
     console.error("Unlock revisions error:", err);
+    notifyError("Unlock revisions error", err);
     return NextResponse.json(
       { error: "An unexpected error occurred." },
       { status: 500 }

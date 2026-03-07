@@ -5,6 +5,7 @@ import { rateLimit, getIP } from "@/lib/rate-limit";
 import { getUser } from "@/lib/auth";
 import { injectLucide } from "@/lib/inject-lucide";
 import { getRevisionInfo } from "@/lib/credits";
+import { notifyError } from "@/lib/discord";
 
 export const maxDuration = 300;
 
@@ -140,6 +141,7 @@ export async function POST(
       revisedHtml = await reviseVariation(existingHtml, prompt.trim(), profile, pageContent);
     } catch (aiErr) {
       console.error("AI revision error:", aiErr);
+      notifyError("AI revision error", aiErr, { slug: params.slug });
       const message =
         aiErr instanceof Error && aiErr.message.includes("matched")
           ? "The revision couldn't be applied — try rephrasing your request."
@@ -156,6 +158,7 @@ export async function POST(
     });
   } catch (err) {
     console.error("Revise error:", err);
+    notifyError("Revise error", err);
     return NextResponse.json(
       { error: "An unexpected error occurred." },
       { status: 500 }

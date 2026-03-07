@@ -3,6 +3,7 @@ import { getUser } from "@/lib/auth";
 import { getBalance } from "@/lib/credits";
 import { getStripe, CREDIT_PACKS } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { notifyError } from "@/lib/discord";
 
 export async function POST(req: NextRequest) {
   try {
@@ -73,6 +74,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ url: session.url });
   } catch (err) {
     console.error("Purchase error:", err);
+    notifyError("Purchase error", err);
     return NextResponse.json(
       { error: "An unexpected error occurred." },
       { status: 500 }

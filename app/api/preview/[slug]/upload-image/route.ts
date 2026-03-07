@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getUser } from "@/lib/auth";
+import { notifyError } from "@/lib/discord";
 
 const MIME_TO_EXT: Record<string, string> = {
   "image/png": "png",
@@ -90,6 +91,7 @@ export async function POST(
 
     if (uploadError) {
       console.error("Image upload error:", uploadError.message);
+      notifyError("Image upload error", new Error(uploadError.message), { slug });
       return NextResponse.json(
         { error: "Failed to upload image." },
         { status: 500 }
@@ -103,6 +105,7 @@ export async function POST(
     return NextResponse.json({ url: publicUrl });
   } catch (err) {
     console.error("Upload image error:", err);
+    notifyError("Upload image error", err);
     return NextResponse.json(
       { error: "An unexpected error occurred." },
       { status: 500 }

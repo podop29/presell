@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getRevisionInfo } from "@/lib/credits";
+import { notifyError } from "@/lib/discord";
 
 export async function GET(
   _req: NextRequest,
@@ -10,6 +11,7 @@ export async function GET(
     return NextResponse.json(info);
   } catch (err) {
     console.error("Revision info error:", err);
+    notifyError("Revision info error", err);
     return NextResponse.json(
       { error: "An unexpected error occurred." },
       { status: 500 }

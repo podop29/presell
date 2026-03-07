@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getUser } from "@/lib/auth";
 import { getBalance } from "@/lib/credits";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { notifyError } from "@/lib/discord";
 
 export async function GET() {
   try {
@@ -22,6 +23,7 @@ export async function GET() {
     return NextResponse.json({ balance, transactions: transactions ?? [] });
   } catch (err) {
     console.error("Credits error:", err);
+    notifyError("Credits fetch error", err);
     return NextResponse.json(
       { error: "An unexpected error occurred." },
       { status: 500 }

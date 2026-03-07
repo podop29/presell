@@ -3,6 +3,7 @@ import { supabaseAdmin as supabase } from "@/lib/supabase/admin";
 import { generateColdEmail } from "@/lib/ai";
 import { getUser } from "@/lib/auth";
 import type { BusinessProfile } from "@/types";
+import { notifyError } from "@/lib/discord";
 
 export async function POST(
   _req: NextRequest,
@@ -85,6 +86,7 @@ export async function POST(
     });
   } catch (err) {
     console.error("Regenerate email error:", err);
+    notifyError("Regenerate email error", err);
     return NextResponse.json(
       { error: "Failed to generate email." },
       { status: 500 }

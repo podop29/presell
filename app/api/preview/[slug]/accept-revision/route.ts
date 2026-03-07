@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin as supabase } from "@/lib/supabase/admin";
 import { getUser } from "@/lib/auth";
 import { incrementRevisionCount } from "@/lib/credits";
+import { notifyError } from "@/lib/discord";
 
 const MAX_HTML_SIZE = 5 * 1024 * 1024; // 5 MB
 
@@ -89,6 +90,7 @@ export async function POST(
 
     if (updateError) {
       console.error("Supabase update error:", updateError.message);
+      notifyError("Accept revision DB error", new Error(updateError.message), { slug: params.slug });
       return NextResponse.json(
         { error: "Failed to save revision." },
         { status: 500 }
@@ -103,6 +105,7 @@ export async function POST(
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("Accept revision error:", err);
+    notifyError("Accept revision error", err);
     return NextResponse.json(
       { error: "An unexpected error occurred." },
       { status: 500 }

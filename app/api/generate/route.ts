@@ -6,6 +6,7 @@ import { rateLimit, getIP } from "@/lib/rate-limit";
 import { getUser } from "@/lib/auth";
 import { getBalance, deductCredit } from "@/lib/credits";
 import type { GenerateRequest } from "@/types";
+import { notifyError, notifySuccess } from "@/lib/discord";
 
 export const maxDuration = 300;
 
@@ -83,6 +84,7 @@ export async function POST(req: NextRequest) {
       html = await generateVariation(profile, imageUrls || [], stockImageUrls || [], selectedStyle, pageStructure, pageContent || "", customInstructions, classifiedImages, stockImages);
     } catch (aiErr) {
       console.error("AI generation error:", aiErr);
+      notifyError("AI generation error", aiErr, { url });
       const message =
         aiErr instanceof Error && (aiErr.message.includes("401") || aiErr.message.includes("auth"))
           ? "AI generation failed — please check your API key or credits and try again."
@@ -127,6 +129,7 @@ export async function POST(req: NextRequest) {
 
     if (dbError) {
       console.error("Supabase insert error:", dbError.message, dbError.details, dbError.hint);
+      notifyError("DB insert error", new Error(dbError.message), { details: dbError.details || "", hint: dbError.hint || "" });
       return NextResponse.json(
         { error: "Failed to save preview." },
         { status: 500 }
@@ -136,12 +139,15 @@ export async function POST(req: NextRequest) {
     // Deduct credit AFTER successful DB insert
     await deductCredit(user.id, 1, "generation", `Generated preview for ${url}`, slug);
 
+    notifySuccess("Preview generated", { url, slug, email: devEmail });
+
     return NextResponse.json({
       slug,
       previewUrl,
     });
   } catch (err) {
     console.error("Generate error:", err);
+    notifyError("Generate error", err);
     return NextResponse.json(
       { error: "An unexpected error occurred." },
       { status: 500 }
