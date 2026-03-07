@@ -616,6 +616,10 @@ function CreatePageInner() {
                 <ArrowRight className="w-4 h-4" />
               </a>
 
+              <p className="text-[12px] text-neutral-500 mt-3 text-center leading-relaxed">
+                Not perfect? You can edit text, swap images, and ask AI to revise — just click the pencil icon on the preview page.
+              </p>
+
               <Link
                 href="/"
                 className="text-xs text-neutral-600 hover:text-neutral-400 transition-colors inline-block"

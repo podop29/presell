@@ -77,6 +77,7 @@ export default function PreviewClient({
   const [emailBody, setEmailBody] = useState(coldEmailBody ?? null);
   const [emailCopied2, setEmailCopied2] = useState(false);
   const [regeneratingEmail, setRegeneratingEmail] = useState(false);
+  const [showEditHint, setShowEditHint] = useState(false);
   const pendingBlobUrl = useRef<string | null>(null);
   const acceptedBlobUrl = useRef<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
@@ -123,6 +124,10 @@ export default function PreviewClient({
         .then((r) => r.json())
         .then((data) => setRevisionInfo(data))
         .catch(() => {});
+
+      if (!localStorage.getItem("pitchkit_edit_hint_dismissed")) {
+        setShowEditHint(true);
+      }
     }
   }, [isOwner, slug]);
 
@@ -727,6 +732,10 @@ export default function PreviewClient({
       // Turning on — enable both direct editing and AI revision
       setCompareMode(false);
       setEditOpen(true);
+      if (showEditHint) {
+        setShowEditHint(false);
+        localStorage.setItem("pitchkit_edit_hint_dismissed", "1");
+      }
       setEditMode(true);
       setHasEdits(false);
       setReviseError(null);
@@ -1040,6 +1049,35 @@ export default function PreviewClient({
           <div className="hidden sm:block w-8" />
         )}
       </header>
+
+      {/* ── First-time edit hint (owner only) ── */}
+      {showEditHint && isOwner && !editOpen && activeView !== "original" && (
+        <div className="relative z-20 shrink-0 bg-indigo-500/10 border-b border-indigo-500/20 px-4 py-2.5">
+          <div className="max-w-3xl mx-auto flex items-center justify-between gap-3">
+            <p className="text-sm text-indigo-200">
+              <span className="font-medium text-indigo-100">Tip:</span> Click the
+              <span className="inline-flex items-center justify-center w-6 h-6 mx-1 rounded bg-white/10 align-middle">
+                <svg className="w-3.5 h-3.5 text-indigo-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                  <path d="m15 5 4 4" />
+                </svg>
+              </span>
+              button to edit text, swap images, or ask AI to revise the design.
+            </p>
+            <button
+              onClick={() => {
+                setShowEditHint(false);
+                localStorage.setItem("pitchkit_edit_hint_dismissed", "1");
+              }}
+              className="shrink-0 text-indigo-300 hover:text-white transition-colors"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Unified edit toolbar (owner only) ── */}
       {isOwner && editOpen && activeView !== "original" && (
