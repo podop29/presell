@@ -1052,24 +1052,27 @@ export default function PreviewClient({
 
       {/* ── First-time edit hint (owner only) ── */}
       {showEditHint && isOwner && !editOpen && activeView !== "original" && (
-        <div className="relative z-20 shrink-0 bg-indigo-500/10 border-b border-indigo-500/20 px-4 py-2.5">
-          <div className="max-w-3xl mx-auto flex items-center justify-between gap-3">
-            <p className="text-sm text-indigo-200">
-              <span className="font-medium text-indigo-100">Tip:</span> Click the
-              <span className="inline-flex items-center justify-center w-6 h-6 mx-1 rounded bg-white/10 align-middle">
-                <svg className="w-3.5 h-3.5 text-indigo-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                  <path d="m15 5 4 4" />
-                </svg>
+        <div className="relative z-20 shrink-0 bg-indigo-500/10 border-b border-indigo-500/20 px-3 sm:px-4 py-2">
+          <div className="max-w-3xl mx-auto flex items-center justify-between gap-2">
+            <p className="text-xs sm:text-sm text-indigo-200">
+              <span className="font-medium text-indigo-100">Tip:</span>
+              <span className="hidden sm:inline"> Click the
+                <span className="inline-flex items-center justify-center w-6 h-6 mx-1 rounded bg-white/10 align-middle">
+                  <svg className="w-3.5 h-3.5 text-indigo-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                    <path d="m15 5 4 4" />
+                  </svg>
+                </span>
+                button to edit text, swap images, or ask AI to revise.
               </span>
-              button to edit text, swap images, or ask AI to revise the design.
+              <span className="sm:hidden"> Tap the pencil icon to edit text, images, or revise with AI.</span>
             </p>
             <button
               onClick={() => {
                 setShowEditHint(false);
                 localStorage.setItem("pitchkit_edit_hint_dismissed", "1");
               }}
-              className="shrink-0 text-indigo-300 hover:text-white transition-colors"
+              className="shrink-0 text-indigo-300 hover:text-white transition-colors p-1"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
@@ -1177,98 +1180,98 @@ export default function PreviewClient({
           ) : (
             /* ── Normal editing: direct edit hint + AI prompt + save/cancel ── */
             <div className="max-w-3xl mx-auto">
-              <p className="text-sm text-zinc-300 mb-2">
+              <p className="text-xs sm:text-sm text-zinc-300 mb-2">
                 {hasEdits ? (
                   <span className="text-amber-400">Unsaved changes</span>
                 ) : (
                   "Click text or images to edit directly"
                 )}
               </p>
-              <div className="flex items-center gap-2">
-                <form
-                  onSubmit={handleRevise}
-                  className="flex-1 flex items-center gap-2"
-                >
-                  <input
-                    type="text"
-                    value={revisePrompt}
-                    onChange={(e) => setRevisePrompt(e.target.value)}
-                    placeholder="Describe what to change..."
-                    maxLength={2000}
-                    disabled={revising}
-                    className="flex-1 bg-white/[0.06] border border-white/[0.08] rounded-lg px-3 py-1.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-white/20 transition-colors disabled:opacity-50"
-                  />
-                  <button
-                    type="submit"
-                    disabled={revising || !revisePrompt.trim()}
-                    className="shrink-0 px-4 py-1.5 bg-white hover:bg-neutral-200 text-zinc-900 text-sm font-medium rounded-lg transition-colors disabled:opacity-40 disabled:hover:bg-white flex items-center gap-2"
-                  >
-                    {revising && (
-                      <svg
-                        className="w-3.5 h-3.5 animate-spin"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        />
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                        />
-                      </svg>
-                    )}
-                    Revise
-                  </button>
-                </form>
-                {hasEdits && (
-                  <button
-                    onClick={saveEdits}
-                    disabled={saving}
-                    className="shrink-0 px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-40 flex items-center gap-2"
-                  >
-                    {saving && (
-                      <svg
-                        className="w-3.5 h-3.5 animate-spin"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        />
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                        />
-                      </svg>
-                    )}
-                    Save
-                  </button>
-                )}
+              <form
+                onSubmit={handleRevise}
+                className="flex items-center gap-2"
+              >
+                <input
+                  type="text"
+                  value={revisePrompt}
+                  onChange={(e) => setRevisePrompt(e.target.value)}
+                  placeholder="Describe what to change..."
+                  maxLength={2000}
+                  disabled={revising}
+                  className="flex-1 min-w-0 bg-white/[0.06] border border-white/[0.08] rounded-lg px-3 py-1.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-white/20 transition-colors disabled:opacity-50"
+                />
                 <button
-                  onClick={cancelEdits}
-                  disabled={saving}
-                  className="shrink-0 px-4 py-1.5 text-sm font-medium text-zinc-400 hover:text-white rounded-lg border border-white/10 hover:border-white/20 transition-colors disabled:opacity-40"
+                  type="submit"
+                  disabled={revising || !revisePrompt.trim()}
+                  className="shrink-0 px-3 sm:px-4 py-1.5 bg-white hover:bg-neutral-200 text-zinc-900 text-sm font-medium rounded-lg transition-colors disabled:opacity-40 disabled:hover:bg-white flex items-center gap-1.5"
                 >
-                  Cancel
+                  {revising && (
+                    <svg
+                      className="w-3.5 h-3.5 animate-spin"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                      />
+                    </svg>
+                  )}
+                  Revise
                 </button>
-              </div>
-              <div className="flex items-center justify-between mt-1.5">
+              </form>
+              <div className="flex items-center justify-between mt-2 gap-2">
+                <div className="flex items-center gap-2">
+                  {hasEdits && (
+                    <button
+                      onClick={saveEdits}
+                      disabled={saving}
+                      className="shrink-0 px-3 sm:px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-medium rounded-lg transition-colors disabled:opacity-40 flex items-center gap-1.5"
+                    >
+                      {saving && (
+                        <svg
+                          className="w-3.5 h-3.5 animate-spin"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          />
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                          />
+                        </svg>
+                      )}
+                      Save
+                    </button>
+                  )}
+                  <button
+                    onClick={cancelEdits}
+                    disabled={saving}
+                    className="shrink-0 px-3 sm:px-4 py-1.5 text-xs sm:text-sm font-medium text-zinc-400 hover:text-white rounded-lg border border-white/10 hover:border-white/20 transition-colors disabled:opacity-40"
+                  >
+                    Cancel
+                  </button>
+                </div>
                 {revisionInfo && (
                   <p className="text-[11px] text-zinc-600">
-                    {revisionInfo.revisionCount}/{revisionInfo.revisionLimit} revisions used
+                    {revisionInfo.revisionCount}/{revisionInfo.revisionLimit} used
                   </p>
                 )}
               </div>

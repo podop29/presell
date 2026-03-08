@@ -474,7 +474,7 @@ function CreatePageInner() {
                               {style.styleName}
                             </p>
                           </div>
-                          <p className={`text-xs mt-2 ml-[30px] leading-relaxed line-clamp-2 transition-colors ${isSelected ? "text-neutral-400" : "text-neutral-600"}`}>
+                          <p className={`text-xs mt-2 ml-[30px] leading-relaxed transition-colors ${isSelected ? "text-neutral-400" : "text-neutral-600 line-clamp-2"}`}>
                             {style.styleBrief}
                           </p>
                         </div>

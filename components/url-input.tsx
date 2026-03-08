@@ -68,23 +68,23 @@ export default function UrlInput() {
       <div className="relative group max-w-xl mx-auto">
         <div className="absolute -inset-0.5 bg-gradient-to-r from-accent/30 via-accent/10 to-accent/30 rounded-2xl blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
         <div className="relative flex items-center bg-surface border border-[var(--border)] rounded-xl overflow-hidden">
-          <div className="pl-4 text-neutral-600 transition-colors duration-200">
+          <div className="pl-3 sm:pl-4 text-neutral-600 transition-colors duration-200 shrink-0">
             {isMaps ? <MapPin className="w-5 h-5" /> : <Globe className="w-5 h-5" />}
           </div>
           <input
             type="url"
-            placeholder="Website URL or Google Maps link"
+            placeholder={isMaps ? "Google Maps link" : "Website URL or Google Maps link"}
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleAnalyze()}
-            className="flex-1 px-4 py-4 bg-transparent text-white text-base placeholder:text-neutral-600 focus:outline-none font-mono"
+            className="flex-1 min-w-0 px-3 sm:px-4 py-4 bg-transparent text-white text-sm sm:text-base placeholder:text-neutral-600 focus:outline-none font-mono"
           />
           <button
             onClick={handleAnalyze}
-            className="m-1.5 px-5 py-2.5 bg-accent hover:bg-accent-light text-black font-semibold text-sm rounded-lg transition-all duration-200 hover:shadow-lg hover:shadow-accent/20 flex items-center gap-2 shrink-0"
+            className="m-1.5 px-3 sm:px-5 py-2.5 bg-accent hover:bg-accent-light text-black font-semibold text-sm rounded-lg transition-all duration-200 hover:shadow-lg hover:shadow-accent/20 flex items-center gap-1.5 sm:gap-2 shrink-0"
           >
             <span>{isMaps ? "Create" : "Analyze"}</span>
-            <ArrowRight className="w-3.5 h-3.5" />
+            <ArrowRight className="w-3.5 h-3.5 hidden sm:block" />
           </button>
         </div>
       </div>

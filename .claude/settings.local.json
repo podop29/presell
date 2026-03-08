@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(head:)",
-      "Bash(head:*)"
+      "Bash(head:*)",
+      "Bash(npx tsc --noEmit 2>&1 | head -20)"
     ]
   }
 }

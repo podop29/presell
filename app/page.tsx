@@ -194,25 +194,25 @@ export default function Home() {
 
       <main>
         {/* ═══════ HERO ═══════ */}
-        <section className="relative pt-32 pb-20 px-6 noise-bg overflow-hidden">
+        <section className="relative pt-24 sm:pt-32 pb-16 sm:pb-20 px-4 sm:px-6 noise-bg overflow-hidden">
           {/* Ambient glow */}
           <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-accent/8 rounded-full blur-[120px] pointer-events-none" />
           <div className="absolute top-40 left-1/4 w-[300px] h-[300px] bg-amber-500/5 rounded-full blur-[100px] pointer-events-none animate-float" />
 
           <div className="relative z-10 max-w-4xl mx-auto text-center">
             {/* Badge */}
-            <div className="animate-fade-in-up inline-flex items-center gap-2 px-3 py-1 rounded-full border border-accent/20 bg-accent/5 mb-8">
-              <Sparkles className="w-3.5 h-3.5 text-accent" />
-              <span className="text-xs font-medium text-accent">AI website redesign tool for freelancer cold outreach</span>
+            <div className="animate-fade-in-up inline-flex items-center gap-2 px-3 py-1 rounded-full border border-accent/20 bg-accent/5 mb-6 sm:mb-8">
+              <Sparkles className="w-3.5 h-3.5 text-accent shrink-0" />
+              <span className="text-[11px] sm:text-xs font-medium text-accent">AI website redesign tool for freelancer cold outreach</span>
             </div>
 
-            <h1 className="animate-fade-in-up delay-100 text-5xl sm:text-6xl md:text-7xl font-bold tracking-tight leading-[1.05]">
+            <h1 className="animate-fade-in-up delay-100 text-4xl sm:text-6xl md:text-7xl font-bold tracking-tight leading-[1.05]">
               <span className="text-white">Show the website.</span>
               <br />
               <span className="text-gradient">Close the client.</span>
             </h1>
 
-            <p className="animate-fade-in-up delay-200 mt-6 text-lg sm:text-xl text-neutral-400 max-w-2xl mx-auto leading-relaxed">
+            <p className="animate-fade-in-up delay-200 mt-5 sm:mt-6 text-base sm:text-xl text-neutral-400 max-w-2xl mx-auto leading-relaxed">
               Paste any website URL to generate an AI website redesign — or drop a Google Maps
               link to build a brand new site. Send it as a shareable preview to land your next web design client.
             </p>
@@ -228,11 +228,11 @@ export default function Home() {
         </section>
 
         {/* ═══════ HOW IT WORKS ═══════ */}
-        <section id="how" className="relative py-24 px-6 border-t border-white/5 noise-bg">
+        <section id="how" className="relative py-16 sm:py-24 px-4 sm:px-6 border-t border-white/5 noise-bg">
           <div className="relative z-10 max-w-5xl mx-auto">
             <div className="text-center mb-16">
               <p className="text-xs font-medium text-accent uppercase tracking-wider mb-3">How it works</p>
-              <h2 className="text-3xl sm:text-4xl font-bold text-white">Three steps to your next client</h2>
+              <h2 className="text-2xl sm:text-4xl font-bold text-white">Three steps to your next client</h2>
             </div>
 
             <div className="grid sm:grid-cols-3 gap-6">
@@ -275,11 +275,11 @@ export default function Home() {
         </section>
 
         {/* ═══════ PROBLEM ═══════ */}
-        <section className="relative py-24 px-6 border-t border-white/5">
+        <section className="relative py-16 sm:py-24 px-4 sm:px-6 border-t border-white/5">
           <div className="max-w-5xl mx-auto">
             <div className="text-center mb-16">
               <p className="text-xs font-medium text-accent uppercase tracking-wider mb-3">The problem</p>
-              <h2 className="text-3xl sm:text-4xl font-bold text-white">
+              <h2 className="text-2xl sm:text-4xl font-bold text-white">
                 Cold outreach for web design doesn&apos;t work<br className="hidden sm:block" /> when you have nothing to show
               </h2>
             </div>
@@ -319,11 +319,11 @@ export default function Home() {
         </section>
 
         {/* ═══════ FEATURES ═══════ */}
-        <section id="features" className="relative py-24 px-6 border-t border-white/5">
+        <section id="features" className="relative py-16 sm:py-24 px-4 sm:px-6 border-t border-white/5">
           <div className="max-w-5xl mx-auto">
             <div className="text-center mb-16">
               <p className="text-xs font-medium text-accent uppercase tracking-wider mb-3">Features</p>
-              <h2 className="text-3xl sm:text-4xl font-bold text-white">Everything you need to close</h2>
+              <h2 className="text-2xl sm:text-4xl font-bold text-white">Everything you need to close</h2>
             </div>
 
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -387,11 +387,11 @@ export default function Home() {
         </section>
 
         {/* ═══════ WHO IT'S FOR ═══════ */}
-        <section className="relative py-24 px-6 border-t border-white/5 noise-bg">
+        <section className="relative py-16 sm:py-24 px-4 sm:px-6 border-t border-white/5 noise-bg">
           <div className="max-w-5xl mx-auto">
             <div className="text-center mb-16">
               <p className="text-xs font-medium text-accent uppercase tracking-wider mb-3">Who it&apos;s for</p>
-              <h2 className="text-3xl sm:text-4xl font-bold text-white">Built for freelancers and agencies who sell websites</h2>
+              <h2 className="text-2xl sm:text-4xl font-bold text-white">Built for freelancers and agencies who sell websites</h2>
             </div>
 
             <div className="grid sm:grid-cols-2 gap-6">
@@ -439,11 +439,11 @@ export default function Home() {
         </section>
 
         {/* ═══════ FAQ ═══════ */}
-        <section id="faq" className="relative py-24 px-6 border-t border-white/5">
+        <section id="faq" className="relative py-16 sm:py-24 px-4 sm:px-6 border-t border-white/5">
           <div className="max-w-2xl mx-auto">
             <div className="text-center mb-16">
               <p className="text-xs font-medium text-accent uppercase tracking-wider mb-3">FAQ</p>
-              <h2 className="text-3xl sm:text-4xl font-bold text-white">Frequently asked questions</h2>
+              <h2 className="text-2xl sm:text-4xl font-bold text-white">Frequently asked questions</h2>
             </div>
 
             <FaqAccordion faqs={faqs} />
@@ -451,12 +451,12 @@ export default function Home() {
         </section>
 
         {/* ═══════ BOTTOM CTA ═══════ */}
-        <section className="relative py-24 px-6 border-t border-white/5 noise-bg overflow-hidden">
+        <section className="relative py-16 sm:py-24 px-4 sm:px-6 border-t border-white/5 noise-bg overflow-hidden">
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="w-[500px] h-[300px] bg-accent/5 rounded-full blur-[100px]" />
           </div>
           <div className="relative z-10 max-w-2xl mx-auto text-center">
-            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+            <h2 className="text-2xl sm:text-4xl font-bold text-white mb-4">
               Stop pitching. Start showing.
             </h2>
             <p className="text-neutral-500 mb-10 max-w-lg mx-auto">
