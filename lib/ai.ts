@@ -660,6 +660,7 @@ Critical Design Rules:
 - HERO SECTIONS WITH BACKGROUND IMAGES: Always add a dark overlay div (absolute inset-0 bg-black/50 or bg-gradient-to-t from-black/70 to-black/30) between the image and the text content. The text container must be relative with z-10. This is MANDATORY — never skip the overlay.
 - FINAL CONTRAST CHECK: After generating the full HTML, scan every section top to bottom. For each section, verify the text color has high contrast against the section background. If any text would be hard to read, fix it before outputting.
 ${customInstructions ? `\nADDITIONAL INSTRUCTIONS FROM THE USER — follow these closely:\n${customInstructions}\n` : ""}
+- Keep the total HTML under 800 lines. Favor clean, efficient code — combine utility classes, avoid unnecessary wrapper divs, and keep sections impactful but concise. Quality over quantity.
 - Return ONLY the complete HTML document starting with <!DOCTYPE html> — absolutely nothing else`;
 }
 
@@ -683,24 +684,47 @@ export async function generateVariation(
   classifiedImages?: ClassifiedImage[],
   groupedStockImages?: StockImages
 ): Promise<string> {
-  const message = await anthropic.messages.create({
+  const userContent = buildVariationPrompt(profile, imageUrls, stockImageUrls, style, pageStructure, pageContent, customInstructions, classifiedImages, groupedStockImages);
+
+  let message = await anthropic.messages.create({
     model: "claude-sonnet-4-20250514",
-    max_tokens: 12000,
+    max_tokens: 16000,
     system: VARIATION_SYSTEM_PROMPT,
     messages: [
       {
         role: "user",
-        content: buildVariationPrompt(profile, imageUrls, stockImageUrls, style, pageStructure, pageContent, customInstructions, classifiedImages, groupedStockImages),
+        content: userContent,
       },
     ],
   });
 
-  const textBlock = message.content.find((block) => block.type === "text");
+  let textBlock = message.content.find((block) => block.type === "text");
   if (!textBlock || textBlock.type !== "text") {
     throw new Error("No text response from Claude");
   }
 
-  return extractHtml(textBlock.text);
+  let html = textBlock.text;
+
+  // If output was truncated, continue generating to get the rest
+  if (message.stop_reason === "max_tokens") {
+    const continuation = await anthropic.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 8000,
+      system: "You were generating an HTML document that was cut off. Continue EXACTLY where you left off — output only the remaining HTML to complete the document. Do not repeat any content. Do not add explanation.",
+      messages: [
+        { role: "user", content: userContent },
+        { role: "assistant", content: html },
+        { role: "user", content: "Continue exactly where you left off. Output only the remaining HTML." },
+      ],
+    });
+
+    const contBlock = continuation.content.find((block) => block.type === "text");
+    if (contBlock && contBlock.type === "text") {
+      html += contBlock.text;
+    }
+  }
+
+  return extractHtml(html);
 }
 
 // ── Revision (surgical edit of existing HTML via search-and-replace) ──
