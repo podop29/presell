@@ -686,7 +686,7 @@ export async function generateVariation(
 ): Promise<string> {
   const userContent = buildVariationPrompt(profile, imageUrls, stockImageUrls, style, pageStructure, pageContent, customInstructions, classifiedImages, groupedStockImages);
 
-  let message = await anthropic.messages.create({
+  const message = await anthropic.messages.create({
     model: "claude-sonnet-4-20250514",
     max_tokens: 16000,
     system: VARIATION_SYSTEM_PROMPT,
@@ -698,7 +698,7 @@ export async function generateVariation(
     ],
   });
 
-  let textBlock = message.content.find((block) => block.type === "text");
+  const textBlock = message.content.find((block) => block.type === "text");
   if (!textBlock || textBlock.type !== "text") {
     throw new Error("No text response from Claude");
   }
