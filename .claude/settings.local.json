@@ -3,7 +3,9 @@
     "allow": [
       "Bash(head:)",
       "Bash(head:*)",
-      "Bash(npx tsc --noEmit 2>&1 | head -20)"
+      "Bash(npx tsc --noEmit 2>&1 | head -20)",
+      "Bash(grep -r \"NEXT_PUBLIC_\" /home/stevan/presell --include=\"*.ts\" --include=\"*.tsx\" --include=\"*.js\" 2>/dev/null | head -20)",
+      "Bash(npx tsc --noEmit 2>&1 | head -10)"
     ]
   }
 }

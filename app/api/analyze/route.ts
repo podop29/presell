@@ -11,6 +11,7 @@ import {
   getPlacePhotoUrls,
 } from "@/lib/google-places";
 import { notifyError } from "@/lib/discord";
+import { validateExternalUrl } from "@/lib/validate-url";
 
 export const maxDuration = 120;
 
@@ -52,6 +53,11 @@ export async function POST(req: NextRequest) {
       const mapsUrl = body.mapsUrl as string | undefined;
       if (!mapsUrl) {
         return NextResponse.json({ error: "No Google Maps URL provided." }, { status: 400 });
+      }
+
+      const mapsCheck = validateExternalUrl(mapsUrl);
+      if (!mapsCheck.valid) {
+        return NextResponse.json({ error: mapsCheck.reason }, { status: 400 });
       }
 
       // Step 1: Extract place_id and fetch details
@@ -133,11 +139,10 @@ export async function POST(req: NextRequest) {
     // ─── Website flow (existing) ───
     const { url } = body;
 
-    // Validate URL
-    try {
-      new URL(url);
-    } catch {
-      return NextResponse.json({ error: "Invalid URL provided." }, { status: 400 });
+    // Validate URL — block private/internal addresses
+    const urlCheck = validateExternalUrl(url);
+    if (!urlCheck.valid) {
+      return NextResponse.json({ error: urlCheck.reason }, { status: 400 });
     }
 
     // Step 1: Scrape the website
