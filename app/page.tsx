@@ -51,73 +51,10 @@ function Sparkles({ className = "w-5 h-5" }: { className?: string }) {
     </svg>
   );
 }
-function Globe({ className = "w-5 h-5" }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z" />
-    </svg>
-  );
-}
-function Zap({ className = "w-5 h-5" }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-    </svg>
-  );
-}
-function Send({ className = "w-5 h-5" }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
-    </svg>
-  );
-}
 function Check({ className = "w-5 h-5" }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
       <polyline points="20 6 9 17 4 12" />
-    </svg>
-  );
-}
-function Mail({ className = "w-5 h-5" }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="2" y="4" width="20" height="16" rx="2" /><path d="M22 7l-10 7L2 7" />
-    </svg>
-  );
-}
-function Clock({ className = "w-5 h-5" }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
-    </svg>
-  );
-}
-function FileText({ className = "w-5 h-5" }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" />
-    </svg>
-  );
-}
-function User({ className = "w-5 h-5" }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4-4v2" /><circle cx="12" cy="7" r="4" />
-    </svg>
-  );
-}
-function Building({ className = "w-5 h-5" }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="4" y="2" width="16" height="20" rx="2" /><line x1="9" y1="6" x2="9" y2="6.01" /><line x1="15" y1="6" x2="15" y2="6.01" /><line x1="9" y1="10" x2="9" y2="10.01" /><line x1="15" y1="10" x2="15" y2="10.01" /><line x1="9" y1="14" x2="9" y2="14.01" /><line x1="15" y1="14" x2="15" y2="14.01" /><line x1="9" y1="18" x2="15" y2="18" />
-    </svg>
-  );
-}
-function MapPin({ className = "w-5 h-5" }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" />
     </svg>
   );
 }
@@ -229,45 +166,39 @@ export default function Home() {
 
         {/* ═══════ HOW IT WORKS ═══════ */}
         <section id="how" className="relative py-16 sm:py-24 px-4 sm:px-6 border-t border-white/5 noise-bg">
-          <div className="relative z-10 max-w-5xl mx-auto">
-            <div className="text-center mb-16">
+          <div className="relative z-10 max-w-4xl mx-auto">
+            <div className="text-center mb-14">
               <p className="text-xs font-medium text-accent uppercase tracking-wider mb-3">How it works</p>
               <h2 className="text-2xl sm:text-4xl font-bold text-white">Three steps to your next client</h2>
             </div>
 
-            <div className="grid sm:grid-cols-3 gap-6">
+            <div className="space-y-10 sm:space-y-0 sm:flex sm:items-start sm:gap-0">
               {[
                 {
-                  icon: <Globe className="w-5 h-5" />,
-                  step: "01",
+                  num: "1",
                   title: "Paste a link",
-                  desc: "Drop a website URL to redesign an existing site, or a Google Maps link to build a new one. Our AI analyzes the business, content, and photos automatically.",
+                  desc: "Drop a website URL to redesign an existing site, or a Google Maps link to build a new one.",
                 },
                 {
-                  icon: <Sparkles className="w-5 h-5" />,
-                  step: "02",
-                  title: "Pick a design direction",
-                  desc: "Choose from 3 AI-generated styles, each tailored to the business. Refine with AI revisions or edit text directly until it's perfect.",
+                  num: "2",
+                  title: "Pick a direction",
+                  desc: "Choose from 3 styles tailored to the business. Refine with AI revisions or edit text directly.",
                 },
                 {
-                  icon: <Send className="w-5 h-5" />,
-                  step: "03",
+                  num: "3",
                   title: "Send and close",
-                  desc: "Get a shareable preview link with your contact info and an auto-generated cold email — ready to send and start the conversation.",
+                  desc: "Get a shareable preview link and an auto-generated cold email — ready to send.",
                 },
               ].map((item, i) => (
-                <div
-                  key={item.step}
-                  className={`group relative p-6 rounded-2xl border border-[var(--border)] bg-surface hover:border-[var(--border-light)] transition-all duration-300 hover:-translate-y-1 animate-fade-in-up delay-${(i + 1) * 100}`}
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent group-hover:bg-accent/15 transition-colors">
-                      {item.icon}
-                    </div>
-                    <span className="text-xs font-mono text-neutral-700">{item.step}</span>
-                  </div>
+                <div key={item.num} className="flex-1 relative text-center px-4">
+                  {i < 2 && (
+                    <div className="hidden sm:block absolute top-5 left-[calc(50%+28px)] w-[calc(100%-56px)] h-px bg-[var(--border)]" />
+                  )}
+                  <span className="inline-flex items-center justify-center w-10 h-10 rounded-full border border-accent/30 text-accent text-sm font-semibold mb-4">
+                    {item.num}
+                  </span>
                   <h3 className="text-white font-semibold mb-2">{item.title}</h3>
-                  <p className="text-sm text-neutral-500 leading-relaxed">{item.desc}</p>
+                  <p className="text-sm text-neutral-500 leading-relaxed max-w-[240px] mx-auto">{item.desc}</p>
                 </div>
               ))}
             </div>
@@ -287,25 +218,19 @@ export default function Home() {
             <div className="grid sm:grid-cols-3 gap-6">
               {[
                 {
-                  icon: <Mail className="w-5 h-5" />,
                   title: "Cold emails get ignored",
                   desc: "\"I can build you a website\" sounds like every other pitch in their inbox. Without proof, there's no reply.",
                 },
                 {
-                  icon: <FileText className="w-5 h-5" />,
                   title: "Portfolios don't convert",
                   desc: "Your past work looks great — but it's someone else's brand. Prospects can't picture what you'd build for them.",
                 },
                 {
-                  icon: <Clock className="w-5 h-5" />,
                   title: "Proposals take hours",
                   desc: "Spending 3 hours on a custom mockup for a prospect who might ghost you? Not a sustainable strategy.",
                 },
               ].map((item) => (
                 <div key={item.title} className="relative p-6 rounded-2xl border border-[var(--border)] bg-surface">
-                  <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center text-red-400 mb-4">
-                    {item.icon}
-                  </div>
                   <h3 className="text-white font-semibold mb-2">{item.title}</h3>
                   <p className="text-sm text-neutral-500 leading-relaxed">{item.desc}</p>
                 </div>
@@ -320,65 +245,30 @@ export default function Home() {
 
         {/* ═══════ FEATURES ═══════ */}
         <section id="features" className="relative py-16 sm:py-24 px-4 sm:px-6 border-t border-white/5">
-          <div className="max-w-5xl mx-auto">
-            <div className="text-center mb-16">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-14">
               <p className="text-xs font-medium text-accent uppercase tracking-wider mb-3">Features</p>
               <h2 className="text-2xl sm:text-4xl font-bold text-white">Everything you need to close</h2>
             </div>
 
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid sm:grid-cols-2 gap-x-16 gap-y-8">
               {[
-                {
-                  icon: <Zap className="w-4 h-4" />,
-                  title: "AI business analysis",
-                  desc: "Understands their industry, customers, and brand tone — whether from their website or Google Maps listing.",
-                },
-                {
-                  icon: <MapPin className="w-4 h-4" />,
-                  title: "Google Maps to website",
-                  desc: "Businesses with no website? Paste their Maps link and PitchKit builds a complete site from their listing, photos, and reviews.",
-                },
-                {
-                  icon: <Sparkles className="w-4 h-4" />,
-                  title: "3 style directions",
-                  desc: "Choose from 3 unique design directions tailored to the business — never generic templates.",
-                },
-                {
-                  icon: <Check className="w-4 h-4" />,
-                  title: "Real content, not lorem ipsum",
-                  desc: "Uses their actual copy, images, and details — so the preview feels like a real project.",
-                },
-                {
-                  icon: <Send className="w-4 h-4" />,
-                  title: "Shareable preview links",
-                  desc: "One URL with your contact info built right in. Send it and let the work speak for itself.",
-                },
-                {
-                  icon: <Mail className="w-4 h-4" />,
-                  title: "Auto-generated cold email",
-                  desc: "Get a ready-to-send outreach email personalized to the prospect and their business.",
-                },
-                {
-                  icon: <Globe className="w-4 h-4" />,
-                  title: "AI revisions + text editing",
-                  desc: "Refine the design with AI-powered revisions or edit text directly — get it perfect before sending.",
-                },
-                {
-                  icon: <Clock className="w-4 h-4" />,
-                  title: "30-day hosted previews",
-                  desc: "Links stay live for a month. Plenty of time to follow up and close.",
-                },
+                { title: "AI business analysis", desc: "Understands their industry, customers, and brand tone automatically." },
+                { title: "Google Maps to website", desc: "No website? Build one from their Maps listing, photos, and reviews." },
+                { title: "3 style directions", desc: "Three unique designs tailored to the business — never generic templates." },
+                { title: "Real content, not lorem ipsum", desc: "Uses their actual copy, images, and details." },
+                { title: "Shareable preview links", desc: "One URL with your contact info built in. Send it and let the work talk." },
+                { title: "Auto-generated cold email", desc: "A ready-to-send outreach email personalized to the prospect." },
+                { title: "AI revisions + text editing", desc: "Refine with AI revisions or edit text directly before sending." },
+                { title: "30-day hosted previews", desc: "Links stay live for a month. Plenty of time to follow up." },
               ].map((item) => (
-                <div
-                  key={item.title}
-                  className="flex items-start gap-4 p-5 rounded-xl border border-[var(--border)] bg-surface/50 hover:border-[var(--border-light)] transition-colors"
-                >
-                  <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent shrink-0 mt-0.5">
-                    {item.icon}
-                  </div>
+                <div key={item.title} className="flex items-start gap-3">
+                  <span className="text-accent mt-1.5 shrink-0">
+                    <Check className="w-4 h-4" />
+                  </span>
                   <div>
                     <h3 className="text-white font-medium text-sm">{item.title}</h3>
-                    <p className="text-xs text-neutral-500 mt-1 leading-relaxed">{item.desc}</p>
+                    <p className="text-sm text-neutral-500 mt-0.5 leading-relaxed">{item.desc}</p>
                   </div>
                 </div>
               ))}
@@ -388,47 +278,39 @@ export default function Home() {
 
         {/* ═══════ WHO IT'S FOR ═══════ */}
         <section className="relative py-16 sm:py-24 px-4 sm:px-6 border-t border-white/5 noise-bg">
-          <div className="max-w-5xl mx-auto">
-            <div className="text-center mb-16">
+          <div className="relative z-10 max-w-4xl mx-auto">
+            <div className="text-center mb-14">
               <p className="text-xs font-medium text-accent uppercase tracking-wider mb-3">Who it&apos;s for</p>
               <h2 className="text-2xl sm:text-4xl font-bold text-white">Built for freelancers and agencies who sell websites</h2>
             </div>
 
-            <div className="grid sm:grid-cols-2 gap-6">
-              {/* Freelancers */}
-              <div className="p-8 rounded-2xl border border-[var(--border)] bg-surface">
-                <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent mb-5">
-                  <User className="w-5 h-5" />
-                </div>
-                <h3 className="text-xl font-bold text-white mb-4">Freelancers</h3>
+            <div className="grid sm:grid-cols-2 gap-12 sm:gap-16">
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-4">Freelancers</h3>
                 <ul className="space-y-3">
                   {[
                     "Prospect local businesses — redesign their site or build one from their Google Maps listing",
                     "Skip the free consultation — let the preview do the talking",
                     "Stand out from every other \"I build websites\" DM in their inbox",
                   ].map((item) => (
-                    <li key={item} className="flex items-start gap-3 text-sm text-neutral-400">
-                      <Check className="w-4 h-4 text-accent shrink-0 mt-0.5" />
+                    <li key={item} className="flex items-start gap-3 text-sm text-neutral-400 leading-relaxed">
+                      <span className="text-accent mt-0.5 shrink-0">&mdash;</span>
                       <span>{item}</span>
                     </li>
                   ))}
                 </ul>
               </div>
 
-              {/* Agencies */}
-              <div className="p-8 rounded-2xl border border-[var(--border)] bg-surface">
-                <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent mb-5">
-                  <Building className="w-5 h-5" />
-                </div>
-                <h3 className="text-xl font-bold text-white mb-4">Agencies</h3>
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-4">Agencies</h3>
                 <ul className="space-y-3">
                   {[
                     "Scale outbound without burning designer hours — target businesses with or without websites",
                     "Send personalized previews to dozens of prospects per week",
                     "Arm your sales team with auto-generated cold emails and shareable preview links",
                   ].map((item) => (
-                    <li key={item} className="flex items-start gap-3 text-sm text-neutral-400">
-                      <Check className="w-4 h-4 text-accent shrink-0 mt-0.5" />
+                    <li key={item} className="flex items-start gap-3 text-sm text-neutral-400 leading-relaxed">
+                      <span className="text-accent mt-0.5 shrink-0">&mdash;</span>
                       <span>{item}</span>
                     </li>
                   ))}
