@@ -13,7 +13,9 @@
       "Bash(npx tsc --noEmit --pretty 2>&1 | tail -20)",
       "Bash(npx tsc --noEmit --pretty 2>&1 | tail -10)",
       "Bash(npx tsc --noEmit 2>&1)",
-      "Bash(npx next build 2>&1 | tail -20)"
+      "Bash(npx next build 2>&1 | tail -20)",
+      "Bash(grep -n \"Pexels\\\\|stock.*image\\\\|image_search\" /home/stevan/presell/app/api/preview/[slug]/revise/route.ts | head -20)",
+      "Bash(grep -n \"reviseVariation\\\\|searchPexels\\\\|STOCK_IMAGE_URL\" /home/stevan/presell/app/api/preview/[slug]/revise/route.ts)"
     ]
   }
 }

@@ -46,7 +46,7 @@ export async function searchPexels(
 
         const data: PexelsResponse = await res.json();
         for (const photo of data.photos) {
-          allUrls.push(photo.src.large2x);
+          allUrls.push(photo.src.large);
         }
       } catch (err) {
         console.error(`Pexels search failed for "${query}":`, err);
@@ -85,7 +85,8 @@ export async function searchPexelsGrouped(
         for (const photo of data.photos) {
           // For hero candidates, prefer wider aspect ratios
           if (i === 0 && photo.width / photo.height < 1.2) continue;
-          groups[i].push(photo.src.large2x);
+          // Hero images get large2x (1880px), others get large (940px) for faster loading
+          groups[i].push(i === 0 ? photo.src.large2x : photo.src.large);
         }
       } catch (err) {
         console.error(`Pexels search failed for "${query}":`, err);

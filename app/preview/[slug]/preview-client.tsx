@@ -256,7 +256,9 @@ export default function PreviewClient({
       setPendingRevisionHtml(null);
       setIframeLoading(true);
       setIframeVersion((v) => v + 1);
+      setEditMode(false);
       setEditOpen(false);
+      setHasEdits(false);
       // Re-fetch revision info after accepting
       fetch(`/api/preview/${slug}/revision-info`)
         .then((r) => r.json())
@@ -414,13 +416,13 @@ export default function PreviewClient({
           transition: outline 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
           outline: 2px dashed transparent;
           outline-offset: 2px;
-          position: relative;
-          z-index: 10 !important;
         }
         [data-pitchkit-replaceable]:hover {
           outline-color: rgb(129 140 248) !important;
           box-shadow: inset 0 0 0 4px rgb(99 102 241), inset 0 0 60px 0 rgba(99, 102, 241, 0.25) !important;
           opacity: 0.8;
+          position: relative;
+          z-index: 10 !important;
         }
         [data-pitchkit-overlay-passthrough] {
           pointer-events: none !important;
@@ -788,6 +790,7 @@ export default function PreviewClient({
         new Blob([html], { type: "text/html" })
       );
       setEditMode(false);
+      setEditOpen(false);
       setHasEdits(false);
       setIframeLoading(true);
       setIframeVersion((v) => v + 1);

@@ -640,6 +640,8 @@ CONTENT COMPLETENESS — MANDATORY:
 - Before completing your response, verify: does every visible HTML element contain actual text content? If not, fix it.
 
 Critical Design Rules:
+- Add preconnect hints in <head> for fast image loading: <link rel="preconnect" href="https://images.pexels.com"> and <link rel="dns-prefetch" href="https://images.pexels.com">
+- IMAGE LOADING PERFORMANCE: The hero image must load eagerly (no loading attribute). ALL other images below the fold MUST use loading="lazy" to avoid blocking page load.
 - Load Tailwind CSS via CDN: <script src="https://cdn.tailwindcss.com"></script>
 - Use Lucide icons via <i data-lucide="name"> tags — NEVER use emoji characters as icons
 - Extend Tailwind config inline with <script> to add custom keyframe animations (fadeInUp, fadeIn, etc.) via tailwind.config
