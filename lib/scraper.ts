@@ -60,7 +60,13 @@ export async function scrapeWebsite(url: string): Promise<ScrapedData> {
           results.push(src);
         }
       }
-      return results.slice(0, 20).map(u => u.replace(/^http:\/\//, "https://"));
+      return results.slice(0, 20).map(u => {
+        if (u.startsWith("http://")) {
+          const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+          return `${baseUrl}/api/proxy-image?url=${encodeURIComponent(u)}`;
+        }
+        return u;
+      });
     });
 
     // Clip screenshot height to avoid exceeding Claude's 8000px image limit

@@ -5,7 +5,14 @@
       "Bash(head:*)",
       "Bash(npx tsc --noEmit 2>&1 | head -20)",
       "Bash(grep -r \"NEXT_PUBLIC_\" /home/stevan/presell --include=\"*.ts\" --include=\"*.tsx\" --include=\"*.js\" 2>/dev/null | head -20)",
-      "Bash(npx tsc --noEmit 2>&1 | head -10)"
+      "Bash(npx tsc --noEmit 2>&1 | head -10)",
+      "Bash(grep -r \"vercel\\\\|nextauth\\\\|preview.*url\\\\|domain\" /home/stevan/presell --include=\"*.ts\" --include=\"*.tsx\" --include=\"*.js\" --include=\"*.jsx\" --include=\"*.json\" --exclude-dir=node_modules 2>/dev/null | head -50)",
+      "Bash(find /home/stevan/presell/supabase -type f -name \"*.sql\" 2>/dev/null | head -5)",
+      "Bash(grep -B5 -A5 \"sandbox=\" /home/stevan/presell/app/preview/[slug]/preview-client.tsx)",
+      "Bash(npx next build --no-lint 2>&1 | tail -30)",
+      "Bash(npx tsc --noEmit --pretty 2>&1 | tail -20)",
+      "Bash(npx tsc --noEmit --pretty 2>&1 | tail -10)",
+      "Bash(npx tsc --noEmit 2>&1)"
     ]
   }
 }

@@ -28,6 +28,7 @@ interface PreviewClientProps {
   companyName?: string;
   logoUrl?: string;
   hasOriginalSite?: boolean;
+  originalDomain?: string;
   coldEmailSubject?: string | null;
   coldEmailBody?: string | null;
 }
@@ -44,6 +45,7 @@ export default function PreviewClient({
   companyName,
   logoUrl,
   hasOriginalSite = true,
+  originalDomain,
   coldEmailSubject,
   coldEmailBody,
 }: PreviewClientProps) {
@@ -87,12 +89,13 @@ export default function PreviewClient({
 
   const domain = useMemo(() => {
     if (businessName) return businessName;
+    const urlForDomain = originalDomain || originalUrl;
     try {
-      return new URL(originalUrl).hostname.replace(/^www\./, "");
+      return new URL(urlForDomain).hostname.replace(/^www\./, "");
     } catch {
-      return originalUrl;
+      return urlForDomain;
     }
-  }, [originalUrl, businessName]);
+  }, [originalUrl, originalDomain, businessName]);
 
   const displayName = companyName || devName;
   const initial = displayName.charAt(0).toUpperCase();
