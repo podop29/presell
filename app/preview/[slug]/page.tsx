@@ -120,16 +120,10 @@ export default async function PreviewPage({
       src: `/api/preview/${data.slug}/html`,
     });
 
-  // Always proxy the original site through our API to avoid:
-  // - Mixed-content blocking (HTTP sites on HTTPS page)
-  // - X-Frame-Options / CSP frame-ancestors restrictions
-  const originalUrl = `/api/preview/${data.slug}/original-site`;
-
   return (
     <PreviewClient
       slug={data.slug}
-      originalUrl={originalUrl}
-      originalDomain={data.original_url}
+      originalUrl={data.original_url}
       businessName={data.business_name}
       devName={data.dev_name}
       devEmail={data.dev_email}

@@ -28,7 +28,6 @@ interface PreviewClientProps {
   companyName?: string;
   logoUrl?: string;
   hasOriginalSite?: boolean;
-  originalDomain?: string;
   coldEmailSubject?: string | null;
   coldEmailBody?: string | null;
 }
@@ -45,7 +44,6 @@ export default function PreviewClient({
   companyName,
   logoUrl,
   hasOriginalSite = true,
-  originalDomain,
   coldEmailSubject,
   coldEmailBody,
 }: PreviewClientProps) {
@@ -53,6 +51,7 @@ export default function PreviewClient({
     variations[0]?.key ?? "original"
   );
   const [iframeLoading, setIframeLoading] = useState(true);
+  const isHttpSite = originalUrl.startsWith("http://");
   const [exporting, setExporting] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [revisePrompt, setRevisePrompt] = useState("");
@@ -89,13 +88,12 @@ export default function PreviewClient({
 
   const domain = useMemo(() => {
     if (businessName) return businessName;
-    const urlForDomain = originalDomain || originalUrl;
     try {
-      return new URL(urlForDomain).hostname.replace(/^www\./, "");
+      return new URL(originalUrl).hostname.replace(/^www\./, "");
     } catch {
-      return urlForDomain;
+      return originalUrl;
     }
-  }, [originalUrl, originalDomain, businessName]);
+  }, [originalUrl, businessName]);
 
   const displayName = companyName || devName;
   const initial = displayName.charAt(0).toUpperCase();
@@ -1296,13 +1294,22 @@ export default function PreviewClient({
             <span className="absolute top-3 left-3 z-20 px-2 py-0.5 bg-black/70 backdrop-blur text-[11px] font-medium text-zinc-400 rounded">
               Current
             </span>
-            <iframe
-              key={`compare-original`}
-              src={originalUrl}
-              sandbox="allow-scripts allow-same-origin"
-              className="w-full h-full absolute inset-0 border-0"
-              title="Current"
-            />
+            {isHttpSite ? (
+              <div className="absolute inset-0 flex items-center justify-center bg-zinc-950 p-6 text-center">
+                <div>
+                  <p className="text-sm text-zinc-400 mb-2">This site doesn&apos;t support secure connections, so it can&apos;t be previewed inline.</p>
+                  <a href={originalUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-emerald-400 hover:underline">Open current site in new tab &rarr;</a>
+                </div>
+              </div>
+            ) : (
+              <iframe
+                key={`compare-original`}
+                src={originalUrl}
+                sandbox="allow-scripts allow-same-origin"
+                className="w-full h-full absolute inset-0 border-0"
+                title="Current"
+              />
+            )}
           </div>
           {/* Variation */}
           <div className="h-1/2 sm:h-auto sm:w-1/2 relative">
@@ -1370,24 +1377,33 @@ export default function PreviewClient({
               </svg>
             </div>
           )}
-          <iframe
-            ref={activeView !== "original" ? iframeRef : undefined}
-            key={`${activeView}-${iframeVersion}`}
-            src={iframeSrc}
-            className="w-full h-full absolute inset-0 border-0"
-            title={tabs.find((t) => t.key === activeView)?.label || "Preview"}
-            sandbox={
-              activeView === "original"
-                ? "allow-scripts allow-same-origin"
-                : undefined
-            }
-            onLoad={() => {
-              setIframeLoading(false);
-              if (editMode && activeView !== "original") {
-                enableEditMode();
+          {activeView === "original" && isHttpSite ? (
+            <div className="absolute inset-0 flex items-center justify-center bg-zinc-950 p-6 text-center">
+              <div>
+                <p className="text-sm text-zinc-400 mb-2">This site doesn&apos;t support secure connections, so it can&apos;t be previewed inline.</p>
+                <a href={originalUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-emerald-400 hover:underline">Open current site in new tab &rarr;</a>
+              </div>
+            </div>
+          ) : (
+            <iframe
+              ref={activeView !== "original" ? iframeRef : undefined}
+              key={`${activeView}-${iframeVersion}`}
+              src={iframeSrc}
+              className="w-full h-full absolute inset-0 border-0"
+              title={tabs.find((t) => t.key === activeView)?.label || "Preview"}
+              sandbox={
+                activeView === "original"
+                  ? "allow-scripts allow-same-origin"
+                  : undefined
               }
-            }}
-          />
+              onLoad={() => {
+                setIframeLoading(false);
+                if (editMode && activeView !== "original") {
+                  enableEditMode();
+                }
+              }}
+            />
+          )}
         </div>
       )}
 
