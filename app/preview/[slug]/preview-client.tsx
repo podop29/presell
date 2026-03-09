@@ -1354,7 +1354,7 @@ export default function PreviewClient({
         </div>
       ) : (
         <div className="flex-1 relative">
-          {iframeLoading && (
+          {iframeLoading && !(activeView === "original" && isHttpSite) && (
             <div className="absolute inset-0 flex items-center justify-center bg-zinc-950 z-10">
               <svg
                 className="w-6 h-6 text-zinc-500 animate-spin"
