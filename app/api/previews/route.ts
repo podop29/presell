@@ -20,5 +20,8 @@ export async function GET() {
     return NextResponse.json({ error: "Failed to fetch previews." }, { status: 500 });
   }
 
-  return NextResponse.json(data);
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+  const previewBaseUrl = process.env.NEXT_PUBLIC_PREVIEW_URL || baseUrl;
+
+  return NextResponse.json({ previews: data, previewBaseUrl });
 }

@@ -166,6 +166,7 @@ export default function Dashboard() {
   const [emailTarget, setEmailTarget] = useState<PreviewRow | null>(null);
   const [emailCopied, setEmailCopied] = useState(false);
   const [regeneratingEmail, setRegeneratingEmail] = useState(false);
+  const [previewBaseUrl, setPreviewBaseUrl] = useState("");
 
   useEffect(() => {
     fetchPreviews();
@@ -175,7 +176,10 @@ export default function Dashboard() {
     try {
       const res = await fetch("/api/previews");
       const data = await res.json();
-      if (Array.isArray(data)) setPreviews(data);
+      if (data.previews && Array.isArray(data.previews)) {
+        setPreviews(data.previews);
+        setPreviewBaseUrl(data.previewBaseUrl || "");
+      }
     } catch {
       console.error("Failed to fetch previews");
     } finally {
@@ -198,8 +202,7 @@ export default function Dashboard() {
   }
 
   function handleCopy(slug: string) {
-    const previewBase = process.env.NEXT_PUBLIC_PREVIEW_URL || window.location.origin;
-    const url = `${previewBase}/preview/${slug}`;
+    const url = `${previewBaseUrl || window.location.origin}/preview/${slug}`;
     navigator.clipboard.writeText(url);
     setCopiedSlug(slug);
     setTimeout(() => setCopiedSlug(""), 2000);
