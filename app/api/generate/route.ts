@@ -97,7 +97,8 @@ export async function POST(req: NextRequest) {
     const now = new Date();
     const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-    const previewUrl = `${baseUrl}/preview/${slug}`;
+    const previewBaseUrl = process.env.NEXT_PUBLIC_PREVIEW_URL || baseUrl;
+    const previewUrl = `${previewBaseUrl}/preview/${slug}`;
 
     // Generate cold email (non-blocking — don't fail the whole request if this errors)
     let coldEmail = { subject: "", body: "" };

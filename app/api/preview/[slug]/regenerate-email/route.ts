@@ -43,7 +43,8 @@ export async function POST(
     const isNewSite = mapsPattern.test(data.original_url);
 
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-    const previewUrl = `${baseUrl}/preview/${slug}`;
+    const previewBaseUrl = process.env.NEXT_PUBLIC_PREVIEW_URL || baseUrl;
+    const previewUrl = `${previewBaseUrl}/preview/${slug}`;
 
     // Build a minimal profile from what we have stored
     const profile: BusinessProfile = {

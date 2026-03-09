@@ -240,6 +240,7 @@ function CreatePageInner() {
   const [showCustomInstructions, setShowCustomInstructions] = useState(false);
 
   const [previewUrl, setPreviewUrl] = useState("");
+  const [previewSlug, setPreviewSlug] = useState("");
   const [copied, setCopied] = useState(false);
   const [insufficientCredits, setInsufficientCredits] = useState(false);
 
@@ -344,6 +345,7 @@ function CreatePageInner() {
         return;
       }
       setPreviewUrl(data.previewUrl);
+      setPreviewSlug(data.slug);
       setGenerationDone(true);
       transitionToDone();
     } catch {
@@ -602,17 +604,17 @@ function CreatePageInner() {
                 </code>
                 <button
                   onClick={handleCopy}
-                  className="px-4 py-2 bg-white/10 hover:bg-white/15 text-white text-xs font-medium rounded-lg transition-colors whitespace-nowrap border border-white/10"
+                  className="px-4 py-2 bg-accent hover:bg-accent-light text-black text-xs font-semibold rounded-lg transition-colors whitespace-nowrap"
                 >
-                  {copied ? "Copied!" : "Copy"}
+                  {copied ? "Copied!" : "Share Preview"}
                 </button>
               </div>
 
               <a
-                href={previewUrl}
+                href={`/preview/${previewSlug}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 w-full py-3 bg-accent hover:bg-accent-light text-black font-semibold text-sm rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-accent/20"
+                className="flex items-center justify-center gap-2 w-full py-3 bg-white/10 hover:bg-white/15 text-white font-semibold text-sm rounded-xl transition-all duration-200 border border-white/10"
               >
                 <span>Open Preview</span>
                 <ArrowRight className="w-4 h-4" />
