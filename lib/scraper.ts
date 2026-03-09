@@ -1,5 +1,60 @@
 import { chromium } from "playwright";
 import type { ScrapedData } from "@/types";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+import crypto from "crypto";
+
+/**
+ * Re-host an HTTP image to Supabase storage so it's available over HTTPS.
+ * Returns the public URL, or null on failure.
+ */
+async function rehostedUrl(httpUrl: string): Promise<string | null> {
+  try {
+    const res = await fetch(httpUrl, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        Accept: "image/*,*/*;q=0.8",
+      },
+      redirect: "follow",
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!res.ok) return null;
+
+    const contentType = res.headers.get("content-type") || "image/jpeg";
+    const buffer = Buffer.from(await res.arrayBuffer());
+    if (buffer.length < 500) return null; // skip tiny/empty responses
+
+    const ext =
+      contentType.includes("png")
+        ? "png"
+        : contentType.includes("webp")
+          ? "webp"
+          : contentType.includes("gif")
+            ? "gif"
+            : "jpg";
+
+    const hash = crypto.createHash("md5").update(httpUrl).digest("hex").slice(0, 12);
+    const path = `scraped/${hash}.${ext}`;
+
+    // Upsert so re-scraping the same URL reuses the same file
+    const { error } = await supabaseAdmin.storage
+      .from("preview-images")
+      .upload(path, buffer, { contentType, upsert: true });
+
+    if (error) {
+      console.error(`[rehost] upload failed for ${httpUrl}:`, error.message);
+      return null;
+    }
+
+    const {
+      data: { publicUrl },
+    } = supabaseAdmin.storage.from("preview-images").getPublicUrl(path);
+
+    return publicUrl;
+  } catch {
+    return null;
+  }
+}
 
 export async function scrapeWebsite(url: string): Promise<ScrapedData> {
   const browser = await chromium.launch({
@@ -41,7 +96,7 @@ export async function scrapeWebsite(url: string): Promise<ScrapedData> {
       return (body.innerText || "").replace(/\s+/g, " ").trim();
     });
 
-    const imageUrls = await page.evaluate(() => {
+    const rawImageUrls = await page.evaluate(() => {
       const imgs = Array.from(document.querySelectorAll("img"));
       const seen = new Set<string>();
       const results: string[] = [];
@@ -60,8 +115,20 @@ export async function scrapeWebsite(url: string): Promise<ScrapedData> {
           results.push(src);
         }
       }
-      return results.slice(0, 20).map(u => u.replace(/^http:\/\//, "https://"));
+      return results.slice(0, 20);
     });
+
+    // For HTTP images, re-host to Supabase so they're available over HTTPS.
+    // HTTPS images are kept as-is. Done in parallel for speed.
+    const imageUrls = await Promise.all(
+      rawImageUrls.map(async (u) => {
+        if (u.startsWith("http://")) {
+          const hosted = await rehostedUrl(u);
+          return hosted ?? u.replace(/^http:\/\//, "https://");
+        }
+        return u;
+      })
+    );
 
     // Clip screenshot height to avoid exceeding Claude's 8000px image limit
     const viewportSize = page.viewportSize() || { width: 1280, height: 720 };
