@@ -60,13 +60,18 @@ export async function scrapeWebsite(url: string): Promise<ScrapedData> {
           results.push(src);
         }
       }
-      return results.slice(0, 20).map(u => {
-        if (u.startsWith("http://")) {
-          const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-          return `${baseUrl}/api/proxy-image?url=${encodeURIComponent(u)}`;
-        }
-        return u;
-      });
+      return results.slice(0, 20);
+    });
+
+    // Proxy HTTP image URLs through our API to avoid mixed-content issues.
+    // This must be outside page.evaluate() since process.env is not
+    // available in the browser context.
+    const proxyBase = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const proxiedImageUrls = imageUrls.map((u: string) => {
+      if (u.startsWith("http://")) {
+        return `${proxyBase}/api/proxy-image?url=${encodeURIComponent(u)}`;
+      }
+      return u;
     });
 
     // Clip screenshot height to avoid exceeding Claude's 8000px image limit
@@ -84,7 +89,7 @@ export async function scrapeWebsite(url: string): Promise<ScrapedData> {
       title: title || "Untitled",
       description,
       content: content.slice(0, 5000),
-      imageUrls,
+      imageUrls: proxiedImageUrls,
       screenshot,
     };
   } finally {
