@@ -135,10 +135,15 @@ export async function POST(
 
     // Call AI to revise
     let revisedHtml: string;
+    let imageOptions: string[] = [];
+    let appliedImageUrl: string | null = null;
     try {
       const profile = data.profile_json ? JSON.parse(data.profile_json as string) : null;
       const pageContent = (data.page_content as string) || null;
-      revisedHtml = await reviseVariation(existingHtml, prompt.trim(), profile, pageContent);
+      const result = await reviseVariation(existingHtml, prompt.trim(), profile, pageContent);
+      revisedHtml = result.html;
+      imageOptions = result.imageOptions;
+      appliedImageUrl = result.appliedImageUrl;
     } catch (aiErr) {
       console.error("AI revision error:", aiErr);
       notifyError("AI revision error", aiErr, { slug: params.slug });
@@ -155,6 +160,10 @@ export async function POST(
       success: true,
       revisedHtml: injectLucide(revisedHtml),
       revisionInfo: updatedRevisionInfo,
+      // Include image alternatives so the user can pick a different one
+      ...(imageOptions.length > 1 && appliedImageUrl
+        ? { imageOptions, appliedImageUrl }
+        : {}),
     });
   } catch (err) {
     console.error("Revise error:", err);

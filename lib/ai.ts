@@ -743,10 +743,12 @@ Rules:
 5. NEVER touch anything the user didn't ask about. No "while I'm at it" fixes. No adjusting colors for contrast. No improving hover states. No fixing things that look wrong to you. ONLY what was explicitly requested.
 
 IMAGE CHANGES:
-When the user asks to change, replace, or swap an image:
-1. Set "image_search" to a descriptive Pexels search query for the desired image (e.g. "modern kitchen interior bright lighting").
-2. For the "search" string, copy the EXACT <img> tag from the HTML — include the full tag from <img to the closing > or />. Copy it character-for-character. The src URL must be IDENTICAL to what appears in the HTML.
-3. For the "replace" string, write a new <img> tag with src="{{STOCK_IMAGE_URL}}" — the system will replace this placeholder with a real image URL. Keep the same class, alt, and other attributes.`;
+When the user asks to add, change, move, or replace an image:
+1. FIRST check EXISTING IMAGES IN THE PAGE (listed below the HTML). If the user refers to a logo, brand image, or any image already present elsewhere on the page, REUSE that existing URL — do NOT use {{STOCK_IMAGE_URL}} or request a stock photo. For example, if the logo appears in the footer and the user asks to add it to the header, copy the same src URL.
+2. Only set "image_search" to a Pexels query if no suitable image already exists on the page. If you are reusing an existing image, set "image_search" to null.
+3. For the "search" string, copy the EXACT HTML substring to replace — character-for-character, including whitespace and quotes.
+4. For the "replace" string, write the new HTML. Use the existing image URL directly when reusing, or src="{{STOCK_IMAGE_URL}}" only when a new stock photo is truly needed.
+5. Keep the same class, alt, and other attributes unless the user asks to change them.`;
 
 const REVISION_TOOL = {
   name: "apply_revisions" as const,
@@ -793,12 +795,18 @@ interface RevisionResponse {
   operations: SearchReplace[];
 }
 
+export interface RevisionResult {
+  html: string;
+  imageOptions: string[];
+  appliedImageUrl: string | null;
+}
+
 export async function reviseVariation(
   existingHtml: string,
   userPrompt: string,
   profile?: BusinessProfile | null,
   pageContent?: string | null
-): Promise<string> {
+): Promise<RevisionResult> {
   // Build business context block so the AI can reference real data
   let contextBlock = "";
   if (profile) {
@@ -806,6 +814,26 @@ export async function reviseVariation(
   }
   if (pageContent) {
     contextBlock += `\n\nORIGINAL PAGE CONTENT (real business data — use for accurate details like hours, services, menu items, reviews, phone, address):\n${pageContent.slice(0, 3000)}`;
+  }
+
+  // Extract existing images from the HTML so the AI knows what's available to reuse
+  let existingImagesBlock = "";
+  const imgTagRegex = /<img[^>]*src=["']([^"']+)["'][^>]*>/gi;
+  const seenUrls = new Set<string>();
+  const imageEntries: string[] = [];
+  let imgMatch;
+  while ((imgMatch = imgTagRegex.exec(existingHtml)) !== null) {
+    const url = imgMatch[1];
+    if (!seenUrls.has(url)) {
+      seenUrls.add(url);
+      // Try to extract alt text for context
+      const altMatch = imgMatch[0].match(/alt=["']([^"']*)["']/i);
+      const alt = altMatch?.[1] || "";
+      imageEntries.push(`- ${alt ? `"${alt}"` : "(no alt)"}: ${url}`);
+    }
+  }
+  if (imageEntries.length > 0) {
+    existingImagesBlock = `\n\nEXISTING IMAGES IN THE PAGE (reuse these when the user refers to something already on the site — especially logos and brand images):\n${imageEntries.join("\n")}`;
   }
 
   const message = await anthropic.messages.create({
@@ -817,7 +845,7 @@ export async function reviseVariation(
     messages: [
       {
         role: "user",
-        content: `Here is the current HTML document:\n\n${existingHtml}\n\n---${contextBlock}\n\n---\n\nRevision request: ${userPrompt}`,
+        content: `Here is the current HTML document:\n\n${existingHtml}\n\n---${contextBlock}${existingImagesBlock}\n\n---\n\nRevision request: ${userPrompt}`,
       },
     ],
   });
@@ -834,11 +862,13 @@ export async function reviseVariation(
     throw new Error("No revision operations returned");
   }
 
-  // If the revision needs a stock image, fetch one from Pexels
+  // If the revision needs a stock image, fetch candidates from Pexels
   let stockImageUrl: string | null = null;
+  let imageOptions: string[] = [];
   if (revision.image_search) {
     const { searchPexels } = await import("@/lib/pexels");
-    const urls = await searchPexels([revision.image_search], 1);
+    const urls = await searchPexels([revision.image_search], 5);
+    imageOptions = urls;
     stockImageUrl = urls[0] ?? null;
   }
 
@@ -884,7 +914,7 @@ export async function reviseVariation(
     );
   }
 
-  return html;
+  return { html, imageOptions, appliedImageUrl: stockImageUrl };
 }
 
 // ── Cold Email Generation ──

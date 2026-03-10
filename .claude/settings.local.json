@@ -18,7 +18,11 @@
       "Bash(grep -n \"reviseVariation\\\\|searchPexels\\\\|STOCK_IMAGE_URL\" /home/stevan/presell/app/api/preview/[slug]/revise/route.ts)",
       "Bash(npm install gray-matter remark remark-html)",
       "Bash(npm install @tailwindcss/typography)",
-      "Bash(npm run build 2>&1 | tail -40)"
+      "Bash(npm run build 2>&1 | tail -40)",
+      "Bash(grep -n \"page_content\\\\|profile_json\" /home/stevan/presell/app/api/preview/[slug]/revise/route.ts)",
+      "Bash(find /home/stevan/presell -type f \\\\\\( -name \"*.sql\" -o -name \"schema*\" -o -name \"migrations*\" \\\\\\) 2>/dev/null | head -10)",
+      "Bash(ls -la /home/stevan/presell/supabase* 2>/dev/null || echo \"No supabase dir\")",
+      "Bash(npx tsc --noEmit --pretty 2>&1 | head -40)"
     ]
   }
 }

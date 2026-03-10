@@ -59,6 +59,8 @@ export default function PreviewClient({
   const [reviseError, setReviseError] = useState<string | null>(null);
   const [iframeVersion, setIframeVersion] = useState(0);
   const [pendingRevisionHtml, setPendingRevisionHtml] = useState<string | null>(null);
+  const [imageOptions, setImageOptions] = useState<string[]>([]);
+  const [appliedImageUrl, setAppliedImageUrl] = useState<string | null>(null);
   const [accepting, setAccepting] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [hasEdits, setHasEdits] = useState(false);
@@ -218,6 +220,8 @@ export default function PreviewClient({
       );
       pendingBlobUrl.current = blobUrl;
       setPendingRevisionHtml(data.revisedHtml);
+      setImageOptions(data.imageOptions ?? []);
+      setAppliedImageUrl(data.appliedImageUrl ?? null);
       setRevisePrompt("");
       if (data.revisionInfo) {
         setRevisionInfo(data.revisionInfo);
@@ -254,6 +258,8 @@ export default function PreviewClient({
       );
       revokePendingBlob();
       setPendingRevisionHtml(null);
+      setImageOptions([]);
+      setAppliedImageUrl(null);
       setIframeLoading(true);
       setIframeVersion((v) => v + 1);
       setEditMode(false);
@@ -274,7 +280,22 @@ export default function PreviewClient({
   function handleDiscardRevision() {
     revokePendingBlob();
     setPendingRevisionHtml(null);
+    setImageOptions([]);
+    setAppliedImageUrl(null);
     setReviseError(null);
+  }
+
+  function handleSwapImage(newUrl: string) {
+    if (!pendingRevisionHtml || !appliedImageUrl || newUrl === appliedImageUrl) return;
+    const updated = pendingRevisionHtml.split(appliedImageUrl).join(newUrl);
+    revokePendingBlob();
+    const blobUrl = URL.createObjectURL(
+      new Blob([updated], { type: "text/html" })
+    );
+    pendingBlobUrl.current = blobUrl;
+    setPendingRevisionHtml(updated);
+    setAppliedImageUrl(newUrl);
+    setIframeVersion((v) => v + 1);
   }
 
   async function handleUnlockRevisions() {
@@ -1091,23 +1112,24 @@ export default function PreviewClient({
         <div className="relative z-20 shrink-0 bg-black/60 backdrop-blur-xl border-b border-white/10 px-4 py-2.5">
           {pendingRevisionHtml ? (
             /* ── Pending revision: accept / discard ── */
-            <div className="max-w-3xl mx-auto flex items-center justify-between gap-3">
-              <p className="text-sm text-zinc-300">
-                Review the changes below
-              </p>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleDiscardRevision}
-                  disabled={accepting}
-                  className="px-4 py-1.5 text-sm font-medium text-zinc-400 hover:text-white rounded-lg border border-white/10 hover:border-white/20 transition-colors disabled:opacity-40"
-                >
-                  Discard
-                </button>
-                <button
-                  onClick={handleAcceptRevision}
-                  disabled={accepting}
-                  className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-40 flex items-center gap-2"
-                >
+            <div className="max-w-3xl mx-auto">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm text-zinc-300">
+                  Review the changes below
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleDiscardRevision}
+                    disabled={accepting}
+                    className="px-4 py-1.5 text-sm font-medium text-zinc-400 hover:text-white rounded-lg border border-white/10 hover:border-white/20 transition-colors disabled:opacity-40"
+                  >
+                    Discard
+                  </button>
+                  <button
+                    onClick={handleAcceptRevision}
+                    disabled={accepting}
+                    className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-40 flex items-center gap-2"
+                  >
                   {accepting && (
                     <svg
                       className="w-3.5 h-3.5 animate-spin"
@@ -1131,7 +1153,33 @@ export default function PreviewClient({
                   )}
                   Accept
                 </button>
+                </div>
               </div>
+              {imageOptions.length > 1 && (
+                <div className="mt-3 pt-3 border-t border-white/[0.06]">
+                  <p className="text-xs text-zinc-500 mb-2">Pick a different image</p>
+                  <div className="flex gap-2 overflow-x-auto pb-1">
+                    {imageOptions.map((url) => (
+                      <button
+                        key={url}
+                        onClick={() => handleSwapImage(url)}
+                        disabled={accepting}
+                        className={`shrink-0 rounded-lg overflow-hidden border-2 transition-all ${
+                          url === appliedImageUrl
+                            ? "border-white shadow-lg shadow-white/20 scale-[1.02]"
+                            : "border-white/10 hover:border-white/40 opacity-50 hover:opacity-100"
+                        }`}
+                      >
+                        <img
+                          src={url}
+                          alt=""
+                          className="h-20 w-32 object-cover"
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           ) : revisionLimitReached ? (
             /* ── Revision limit reached: unlock UI ── */
