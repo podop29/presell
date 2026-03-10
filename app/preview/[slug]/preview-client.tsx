@@ -901,17 +901,21 @@ export default function PreviewClient({
         setEditMode(false);
         return;
       }
-      // Clean up any contenteditable="false" artifacts left by disableEditMode
-      doc.querySelectorAll('[contenteditable="false"]').forEach((el) => {
+      // Strip all edit-mode artifacts before extracting HTML
+      doc.querySelectorAll('[contenteditable]').forEach((el) => {
         el.removeAttribute("contenteditable");
       });
-      // Safety net: remove image replacement artifacts before extracting HTML
+      doc.querySelectorAll("[data-pitchkit-editable]").forEach((el) => {
+        el.removeAttribute("data-pitchkit-editable");
+      });
       doc.querySelectorAll("[data-pitchkit-replaceable]").forEach((el) => {
         el.removeAttribute("data-pitchkit-replaceable");
       });
       doc.querySelectorAll("[data-pitchkit-overlay-passthrough]").forEach((el) => {
         el.removeAttribute("data-pitchkit-overlay-passthrough");
       });
+      const editStyle = doc.getElementById(EDIT_STYLE_ID);
+      if (editStyle) editStyle.remove();
       const hiddenInput = doc.querySelector('input[type="file"][style*="display: none"]');
       if (hiddenInput) hiddenInput.remove();
       const linkPopover = doc.getElementById(LINK_POPOVER_ID);

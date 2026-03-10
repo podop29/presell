@@ -34,8 +34,17 @@ const LUCIDE_INIT = `
 </script>`;
 
 export function injectLucide(html: string): string {
+  // Strip edit-mode artifacts that may have been saved to the database
+  let cleaned = html
+    .replace(/\s*data-pitchkit-editable="[^"]*"/gi, "")
+    .replace(/\s*data-pitchkit-replaceable="[^"]*"/gi, "")
+    .replace(/\s*data-pitchkit-overlay-passthrough="[^"]*"/gi, "")
+    .replace(/\s*contenteditable="[^"]*"/gi, "");
+  // Remove the injected edit-mode style block
+  cleaned = cleaned.replace(/<style[^>]*id="pitchkit-edit-style"[^>]*>[\s\S]*?<\/style>/gi, "");
+
   // Remove any existing lucide script tags (attribute-based: CDN, data-lucide-init, AI-added)
-  let cleaned = html.replace(
+  cleaned = cleaned.replace(
     /<script[^>]*lucide[^>]*>[\s\S]*?<\/script>/gi,
     ""
   );
