@@ -22,7 +22,9 @@
       "Bash(grep -n \"page_content\\\\|profile_json\" /home/stevan/presell/app/api/preview/[slug]/revise/route.ts)",
       "Bash(find /home/stevan/presell -type f \\\\\\( -name \"*.sql\" -o -name \"schema*\" -o -name \"migrations*\" \\\\\\) 2>/dev/null | head -10)",
       "Bash(ls -la /home/stevan/presell/supabase* 2>/dev/null || echo \"No supabase dir\")",
-      "Bash(npx tsc --noEmit --pretty 2>&1 | head -40)"
+      "Bash(npx tsc --noEmit --pretty 2>&1 | head -40)",
+      "Bash(npx tsc --noEmit --pretty 2>&1 | head -30)",
+      "Bash(npx tsc --noEmit --pretty 2>&1 | head -20)"
     ]
   }
 }

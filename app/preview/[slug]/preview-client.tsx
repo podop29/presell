@@ -87,6 +87,10 @@ export default function PreviewClient({
   const editStyleRef = useRef<HTMLStyleElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const replacingImageRef = useRef<HTMLElement | null>(null);
+  const preRevisionHtml = useRef<string | null>(null);
+  const [undoRedoLoading, setUndoRedoLoading] = useState(false);
+  const historyRef = useRef<Record<string, { past: string[]; future: string[] }>>({});
+  const [historyVersion, setHistoryVersion] = useState(0);
 
   const domain = useMemo(() => {
     if (businessName) return businessName;
@@ -193,6 +197,11 @@ export default function PreviewClient({
   async function handleRevise(e: React.FormEvent) {
     e.preventDefault();
     if (!revisePrompt.trim() || revising || pendingRevisionHtml) return;
+    // Capture current HTML before revision so we can undo later
+    const doc = iframeRef.current?.contentDocument;
+    if (doc) {
+      preRevisionHtml.current = `<!DOCTYPE html>\n${doc.documentElement.outerHTML}`;
+    }
     setRevising(true);
     setReviseError(null);
     try {
@@ -235,6 +244,11 @@ export default function PreviewClient({
 
   async function handleAcceptRevision() {
     if (!pendingRevisionHtml || accepting) return;
+    // Push the pre-revision HTML to undo history
+    if (preRevisionHtml.current) {
+      pushToHistory(activeView, preRevisionHtml.current);
+      preRevisionHtml.current = null;
+    }
     setAccepting(true);
     setReviseError(null);
     try {
@@ -297,6 +311,79 @@ export default function PreviewClient({
     setAppliedImageUrl(newUrl);
     setIframeVersion((v) => v + 1);
   }
+
+  function getHistory(key: string) {
+    if (!historyRef.current[key]) {
+      historyRef.current[key] = { past: [], future: [] };
+    }
+    return historyRef.current[key];
+  }
+
+  function pushToHistory(variationKey: string, html: string) {
+    const h = getHistory(variationKey);
+    h.past.push(html);
+    h.future = []; // clear redo stack on new change
+    setHistoryVersion((v) => v + 1);
+  }
+
+  async function applyHistoryHtml(html: string) {
+    setUndoRedoLoading(true);
+    try {
+      const res = await fetch(`/api/preview/${slug}/accept-revision`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ variationKey: activeView, html, isManualEdit: true }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setReviseError(data.error || "Failed to apply change.");
+        return;
+      }
+      revokeAcceptedBlob();
+      acceptedBlobUrl.current = URL.createObjectURL(
+        new Blob([html], { type: "text/html" })
+      );
+      setIframeLoading(true);
+      setIframeVersion((v) => v + 1);
+    } catch {
+      setReviseError("Network error. Please try again.");
+    } finally {
+      setUndoRedoLoading(false);
+    }
+  }
+
+  async function handleUndo() {
+    const h = getHistory(activeView);
+    if (h.past.length === 0 || undoRedoLoading) return;
+    // Get current HTML from iframe to push to future
+    const doc = iframeRef.current?.contentDocument;
+    if (doc) {
+      const currentHtml = `<!DOCTYPE html>\n${doc.documentElement.outerHTML}`;
+      h.future.push(currentHtml);
+    }
+    const previousHtml = h.past.pop()!;
+    setHistoryVersion((v) => v + 1);
+    await applyHistoryHtml(previousHtml);
+  }
+
+  async function handleRedo() {
+    const h = getHistory(activeView);
+    if (h.future.length === 0 || undoRedoLoading) return;
+    // Get current HTML from iframe to push to past
+    const doc = iframeRef.current?.contentDocument;
+    if (doc) {
+      const currentHtml = `<!DOCTYPE html>\n${doc.documentElement.outerHTML}`;
+      h.past.push(currentHtml);
+    }
+    const nextHtml = h.future.pop()!;
+    setHistoryVersion((v) => v + 1);
+    await applyHistoryHtml(nextHtml);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _hv = historyVersion; // subscribe to history changes for re-render
+  const canUndo = (historyRef.current[activeView]?.past.length ?? 0) > 0;
+  const canRedo = (historyRef.current[activeView]?.future.length ?? 0) > 0;
 
   async function handleUnlockRevisions() {
     if (unlocking) return;
@@ -763,12 +850,22 @@ export default function PreviewClient({
       setEditMode(true);
       setHasEdits(false);
       setReviseError(null);
+      // Snapshot current HTML so we can undo manual edits
+      const doc = iframeRef.current?.contentDocument;
+      if (doc) {
+        preRevisionHtml.current = `<!DOCTYPE html>\n${doc.documentElement.outerHTML}`;
+      }
       enableEditMode();
     }
   }
 
   async function saveEdits() {
     if (saving) return;
+    // Push pre-edit snapshot to undo history
+    if (preRevisionHtml.current) {
+      pushToHistory(activeView, preRevisionHtml.current);
+      preRevisionHtml.current = null;
+    }
     setSaving(true);
     try {
       disableEditMode();
@@ -1011,6 +1108,32 @@ export default function PreviewClient({
                 <path d="m15 5 4 4" />
               </svg>
             </button>
+            {(canUndo || canRedo) && !editOpen && (
+              <>
+                <button
+                  onClick={handleUndo}
+                  disabled={!canUndo || undoRedoLoading}
+                  title="Undo"
+                  className="flex items-center justify-center w-8 h-8 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-zinc-400"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="1 4 1 10 7 10" />
+                    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+                  </svg>
+                </button>
+                <button
+                  onClick={handleRedo}
+                  disabled={!canRedo || undoRedoLoading}
+                  title="Redo"
+                  className="flex items-center justify-center w-8 h-8 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-zinc-400"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="23 4 23 10 17 10" />
+                    <path d="M20.49 15a9 9 0 1 1-2.13-9.36L23 10" />
+                  </svg>
+                </button>
+              </>
+            )}
             {emailBody && (
               <button
                 onClick={() => setEmailOpen(true)}
@@ -1320,6 +1443,33 @@ export default function PreviewClient({
                   >
                     Cancel
                   </button>
+                  {(canUndo || canRedo) && (
+                    <>
+                      <div className="w-px h-4 bg-white/10" />
+                      <button
+                        onClick={handleUndo}
+                        disabled={!canUndo || undoRedoLoading || revising}
+                        title="Undo"
+                        className="p-1.5 rounded-md text-zinc-500 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-zinc-500"
+                      >
+                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="1 4 1 10 7 10" />
+                          <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={handleRedo}
+                        disabled={!canRedo || undoRedoLoading || revising}
+                        title="Redo"
+                        className="p-1.5 rounded-md text-zinc-500 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-zinc-500"
+                      >
+                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="23 4 23 10 17 10" />
+                          <path d="M20.49 15a9 9 0 1 1-2.13-9.36L23 10" />
+                        </svg>
+                      </button>
+                    </>
+                  )}
                 </div>
                 {revisionInfo && (
                   <p className="text-[11px] text-zinc-600">
