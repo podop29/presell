@@ -124,6 +124,7 @@ export default function Home() {
             <a href="#how" className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors hidden sm:block">How it works</a>
             <a href="#features" className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors hidden sm:block">Features</a>
             <a href="#faq" className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors hidden sm:block">FAQ</a>
+            <a href="/blog" className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors hidden sm:block">Blog</a>
             <AuthButton />
           </div>
         </div>
@@ -358,9 +359,12 @@ export default function Home() {
           <span className="text-sm font-semibold tracking-tight text-neutral-600">
             pitchkit<span className="text-accent/50">.</span>
           </span>
-          <p className="text-xs text-neutral-700">
-            Built for freelancers and agencies who let their work do the talking.
-          </p>
+          <div className="flex items-center gap-4">
+            <a href="/blog" className="text-xs text-neutral-700 hover:text-neutral-500 transition-colors">Blog</a>
+            <p className="text-xs text-neutral-700">
+              Built for freelancers and agencies who let their work do the talking.
+            </p>
+          </div>
         </div>
       </footer>
     </div>
