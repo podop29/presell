@@ -61,6 +61,8 @@ export default function PreviewClient({
   const [pendingRevisionHtml, setPendingRevisionHtml] = useState<string | null>(null);
   const [imageOptions, setImageOptions] = useState<string[]>([]);
   const [appliedImageUrl, setAppliedImageUrl] = useState<string | null>(null);
+  const [imageSearchQuery, setImageSearchQuery] = useState("");
+  const [imageSearching, setImageSearching] = useState(false);
   const [accepting, setAccepting] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [hasEdits, setHasEdits] = useState(false);
@@ -296,6 +298,7 @@ export default function PreviewClient({
     setPendingRevisionHtml(null);
     setImageOptions([]);
     setAppliedImageUrl(null);
+    setImageSearchQuery("");
     setReviseError(null);
   }
 
@@ -310,6 +313,29 @@ export default function PreviewClient({
     setPendingRevisionHtml(updated);
     setAppliedImageUrl(newUrl);
     setIframeVersion((v) => v + 1);
+  }
+
+  async function handleImageSearch(e: React.FormEvent) {
+    e.preventDefault();
+    const q = imageSearchQuery.trim();
+    if (!q || imageSearching) return;
+    setImageSearching(true);
+    try {
+      const res = await fetch(`/api/search-images?q=${encodeURIComponent(q)}`);
+      const data = await res.json();
+      if (!res.ok) return;
+      if (data.images?.length > 0) {
+        // Merge new results, keeping the currently applied image first, deduplicating
+        const existing = new Set(imageOptions);
+        const newImages = (data.images as string[]).filter((u: string) => !existing.has(u));
+        setImageOptions((prev) => [...prev, ...newImages]);
+      }
+    } catch {
+      // silent fail
+    } finally {
+      setImageSearching(false);
+      setImageSearchQuery("");
+    }
   }
 
   function getHistory(key: string) {
@@ -1301,6 +1327,30 @@ export default function PreviewClient({
                       </button>
                     ))}
                   </div>
+                  <form onSubmit={handleImageSearch} className="flex items-center gap-2 mt-2">
+                    <input
+                      type="text"
+                      value={imageSearchQuery}
+                      onChange={(e) => setImageSearchQuery(e.target.value)}
+                      placeholder="Search for more images..."
+                      maxLength={200}
+                      disabled={imageSearching || accepting}
+                      className="flex-1 min-w-0 bg-white/[0.06] border border-white/[0.08] rounded-lg px-2.5 py-1 text-xs text-white placeholder-zinc-600 outline-none focus:border-white/20 transition-colors disabled:opacity-50"
+                    />
+                    <button
+                      type="submit"
+                      disabled={imageSearching || !imageSearchQuery.trim() || accepting}
+                      className="shrink-0 px-3 py-1 text-xs font-medium text-zinc-400 hover:text-white rounded-lg border border-white/10 hover:border-white/20 transition-colors disabled:opacity-30 flex items-center gap-1.5"
+                    >
+                      {imageSearching && (
+                        <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                      )}
+                      Search
+                    </button>
+                  </form>
                 </div>
               )}
             </div>
