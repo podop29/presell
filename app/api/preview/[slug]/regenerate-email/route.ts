@@ -49,6 +49,7 @@ export async function POST(
     // Build a minimal profile from what we have stored
     const profile: BusinessProfile = {
       businessName: data.business_name || "this business",
+      businessType: "local",
       industry: "",
       whatTheyDo: "",
       targetCustomer: "",

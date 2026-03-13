@@ -15,6 +15,7 @@ const anthropic = new Anthropic({
 
 const DEFAULT_PROFILE: BusinessProfile = {
   businessName: "This Business",
+  businessType: "local",
   industry: "General",
   whatTheyDo: "Provides products and services to customers",
   targetCustomer: "General public",
@@ -87,6 +88,7 @@ You always respond with valid JSON only — no explanation, no markdown, no code
 "profile" must have exactly these fields:
 {
   "businessName": "string",
+  "businessType": "string ('local' for physical/location-based businesses like restaurants, salons, contractors, clinics, retail stores — or 'digital' for SaaS, software products, digital agencies, online platforms, dev tools, portfolios, apps)",
   "industry": "string",
   "whatTheyDo": "string (one clear sentence)",
   "targetCustomer": "string",
@@ -100,6 +102,8 @@ You always respond with valid JSON only — no explanation, no markdown, no code
 - A restaurant might have: ["Navigation with logo", "Hero with restaurant name and tagline", "Menu highlights section with food categories", "Photo gallery of dishes", "About the chef / our story", "Customer reviews", "Hours and location with map", "Reservation CTA", "Footer with social links"]
 - A law firm might have: ["Navigation with firm name", "Hero with firm tagline", "Practice areas grid", "Attorney profiles", "Case results / track record", "Client testimonials", "Contact form with office address", "Footer"]
 - A plumber might have: ["Navigation with phone number", "Hero with emergency CTA", "Services list", "Service area map", "Before/after gallery", "Reviews from Google", "Pricing or free estimate CTA", "Footer with license number"]
+- A SaaS product might have: ["Navigation with logo and sign-up CTA", "Hero with product headline, subheadline, and demo CTA", "Social proof logos bar", "Features grid with icons", "How it works / workflow section", "Pricing table with tiers", "Testimonials from companies", "FAQ accordion", "Final CTA section", "Footer with product links"]
+- A web agency might have: ["Navigation with logo and contact CTA", "Hero with agency tagline and portfolio CTA", "Selected work / case studies grid", "Services overview", "Process / how we work", "Team section", "Client logos", "Contact form", "Footer"]
 
 Be specific about what content each section contains — don't just say "Hero section", say "Hero with bakery name, 'Fresh baked daily' tagline, and order online button". Include 6-10 sections.
 
@@ -108,6 +112,7 @@ Be specific about what content each section contains — don't just say "Hero se
 - Query 2: A secondary/lifestyle image showing the business's work or customers (e.g. "relaxed woman enjoying facial treatment spa" or "happy family receiving car keys dealership")
 - Query 3: A background/atmosphere image for secondary sections (e.g. "zen spa stones candles peaceful" or "clean modern office workspace minimal")
 Tailor these to the specific business and industry. Use descriptive keywords that will return professional, high-quality photos.
+For digital/SaaS businesses: focus on abstract tech imagery, workspace environments, or conceptual photos. Examples: "minimal workspace laptop clean desk natural light", "abstract gradient mesh colorful background", "team collaborating modern office whiteboard". Do NOT search for physical storefronts or location-based imagery.
 
 "classifiedImages" must be an array of objects classifying the images found on the original website. For each image URL listed below, determine its role on the page using the screenshot for visual context and the URL for hints. Each object has:
 {
@@ -122,6 +127,7 @@ Category definitions:
 - "product": Product photos, menu items, work samples, portfolio pieces
 - "team": Photos of people — staff, owners, team members
 - "storefront": Exterior or interior shots of the physical business location
+- "screenshot": Product screenshots, dashboard UIs, app interfaces, software demos
 - "gallery": Other decent-quality images worth showing in a gallery or content section
 - "decorative": Small decorative elements, icons, badges, pattern images
 - "skip": Low-quality, broken-looking, tiny icons, social media badges, tracking pixels, or irrelevant images not worth using
@@ -187,6 +193,7 @@ Page Content: ${data.content.slice(0, 3000)}`,
 
     const profile: BusinessProfile = {
       businessName: parsed.profile?.businessName || DEFAULT_PROFILE.businessName,
+      businessType: parsed.profile?.businessType === "digital" ? "digital" : "local",
       industry: parsed.profile?.industry || DEFAULT_PROFILE.industry,
       whatTheyDo: parsed.profile?.whatTheyDo || DEFAULT_PROFILE.whatTheyDo,
       targetCustomer: parsed.profile?.targetCustomer || DEFAULT_PROFILE.targetCustomer,
@@ -232,7 +239,7 @@ Page Content: ${data.content.slice(0, 3000)}`,
       imageSearchQueries = parsed.imageSearchQueries;
     }
 
-    const validCategories = new Set(["logo", "hero-worthy", "product", "team", "storefront", "gallery", "decorative", "skip"]);
+    const validCategories = new Set(["logo", "hero-worthy", "product", "team", "storefront", "screenshot", "gallery", "decorative", "skip"]);
     let classifiedImages: ClassifiedImage[] = [];
     if (Array.isArray(parsed.classifiedImages)) {
       classifiedImages = parsed.classifiedImages
@@ -370,6 +377,7 @@ Rules for all 3 styles:
 
     const profile: BusinessProfile = {
       businessName: parsed.profile?.businessName || placeData.name,
+      businessType: "local",
       industry: parsed.profile?.industry || categoryText,
       whatTheyDo: parsed.profile?.whatTheyDo || DEFAULT_PROFILE.whatTheyDo,
       targetCustomer: parsed.profile?.targetCustomer || DEFAULT_PROFILE.targetCustomer,
@@ -506,8 +514,9 @@ CRITICAL: The data-lucide attribute is REQUIRED for icons to render. Never omit 
 
 Common icon names: phone, mail, map-pin, star, check, check-circle, arrow-right, menu, x, heart, shield, clock, users, building-2, wrench, utensils, briefcase, globe, zap, award, trending-up, calendar, dollar-sign, thumbs-up, sparkles, home, camera, music, scissors, truck, leaf, sun, moon.
 
-INTERACTIVE MAP — INCLUDE WHEN LOCATION IS KNOWN:
-If the business has a physical address/location (not "unknown"), include a Google Maps embed in the contact or location section.
+INTERACTIVE MAP — ONLY FOR LOCAL/PHYSICAL BUSINESSES:
+If the business has a physical address/location (not "unknown") AND is a local/physical business (businessType is "local", not a SaaS or digital product), include a Google Maps embed in the contact or location section.
+Do NOT include a map for digital/SaaS businesses, even if they list an office address.
 Use this exact iframe pattern:
 <iframe src="https://maps.google.com/maps?q=ENCODED_ADDRESS&t=&z=15&ie=UTF8&iwloc=&output=embed" class="w-full h-64 md:h-80 rounded-xl" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Business Location"></iframe>
 Replace ENCODED_ADDRESS with the URL-encoded exact street address from the provided location field. Use ONLY the street address — NEVER use the business name in the map query, as it may resolve to a different business with the same name at a different location.
@@ -569,13 +578,22 @@ function buildVariationPrompt(
 
 Business Profile:
 - Business Name: ${profile.businessName}
+- Business Type: ${profile.businessType === "digital" ? "Digital/SaaS" : "Local/Physical"}
 - Industry: ${profile.industry}
 - What They Do: ${profile.whatTheyDo}
 - Target Customer: ${profile.targetCustomer}
 - Key Selling Points: ${profile.keySellingPoints.join(", ")}
 - Brand Tone: ${profile.brandTone}
 - Location: ${profile.location}
-
+${profile.businessType === "digital" ? `
+DIGITAL/SAAS BUSINESS — SPECIAL INSTRUCTIONS:
+- Do NOT include a Google Maps embed — this is not a physical storefront business.
+- Focus sections on: product features, pricing, integrations, workflows, social proof from companies/users.
+- Hero should focus on the product value proposition, not a physical environment.
+- Use product screenshots or abstract imagery, not storefront/environment photos.
+- CTAs should focus on sign-up, demo, or trial — not "visit us" or "call now".
+- Testimonials should reference companies or roles, not local community members.
+` : ""}
 Design Style: ${style.styleName}
 Style Direction:
 ${style.styleBrief}
@@ -592,6 +610,7 @@ ${hasClassified ? `Image Usage Strategy — CLASSIFIED IMAGES (use the category 
 - [product] images: Use in service/product showcases, menu sections, portfolio grids, and feature highlights. These are the business's real work — the owner will recognize them.
 - [team] images: Use in about sections, team grids, or founder spotlights.
 - [storefront] images: Use in about/location sections, or as secondary section backgrounds.
+- [screenshot] images: Product screenshots, dashboard UIs, app interfaces — use in feature sections, hero areas, or product demo sections. Display them in device mockup frames or with subtle shadows.
 - [gallery] images: Use in gallery grids, content sections, or testimonial backgrounds.
 - [decorative] images: Use sparingly as small visual accents, or skip if not needed.
 - STOCK images are grouped by purpose: HERO CANDIDATES are pre-selected wide images ideal for full-width hero backgrounds, SECONDARY are lifestyle/detail shots for content sections, ATMOSPHERE are mood images for section backgrounds. Use the right group for the right placement.
@@ -937,7 +956,7 @@ export async function generateColdEmail(
   const message = await anthropic.messages.create({
     model: "claude-sonnet-4-20250514",
     max_tokens: 1024,
-    system: `You are an expert cold email copywriter who helps web developers land local business clients. You understand sales psychology — specifically that showing beats telling, and that reducing friction beats hard selling.
+    system: `You are an expert cold email copywriter who helps web developers land clients. You understand sales psychology — specifically that showing beats telling, and that reducing friction beats hard selling.
 
 You always respond with valid JSON only — no explanation, no markdown, no code fences.
 
@@ -975,11 +994,13 @@ RULES:
 I'm ${devName}, a web developer/designer. ${situationContext}
 
 Business: ${profile.businessName}
+Business Type: ${profile.businessType === "digital" ? "Digital/SaaS product" : "Local/physical business"}
 Industry: ${profile.industry}
 What they do: ${profile.whatTheyDo}
 Target customers: ${profile.targetCustomer}
 Key selling points: ${profile.keySellingPoints?.join(", ") || "N/A"}
 Location: ${profile.location}
+${profile.businessType === "digital" ? "\nNote: This is a digital/SaaS business. Do NOT reference their physical location, hours, or storefront. Instead reference their product, online presence, market position, and conversion optimization opportunities." : ""}
 
 Preview link: ${previewUrl}
 
