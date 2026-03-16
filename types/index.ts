@@ -41,8 +41,6 @@ export interface AnalyzeResponse {
   stockImages?: StockImages;
   pageContent: string;
   classifiedImages: ClassifiedImage[];
-  screenshot?: string;
-  siteQuality?: "poor" | "average" | "strong";
 }
 
 export interface GenerateRequest {
@@ -59,8 +57,6 @@ export interface GenerateRequest {
   pageContent: string;
   customInstructions?: string;
   classifiedImages?: ClassifiedImage[];
-  screenshot?: string;
-  siteQuality?: "poor" | "average" | "strong";
 }
 
 export interface GenerateResponse {
@@ -105,5 +101,4 @@ export interface AnalysisResult {
   pageStructure: string[];
   imageSearchQueries: string[];
   classifiedImages: ClassifiedImage[];
-  siteQuality: "poor" | "average" | "strong";
 }
