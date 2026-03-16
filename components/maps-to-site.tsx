@@ -31,6 +31,7 @@ export default function MapsToSite() {
 
   const syncScroll = useCallback((source: "left" | "right") => {
     if (isSyncing.current) return;
+    if (window.innerWidth < 768) return;
     isSyncing.current = true;
 
     const from = source === "left" ? leftRef.current : rightRef.current;
@@ -46,9 +47,9 @@ export default function MapsToSite() {
   }, []);
 
   return (
-    <div className="grid md:grid-cols-2 gap-6 max-w-6xl mx-auto">
+    <div className="grid md:grid-cols-2 gap-6 max-w-6xl mx-auto overflow-hidden">
       {/* ───── GOOGLE MAPS LISTING ───── */}
-      <div className="flex flex-col">
+      <div className="flex flex-col min-w-0">
         <p className="text-xs font-medium text-neutral-400 uppercase tracking-wider mb-3 text-center">
           Google Maps listing
         </p>
@@ -57,7 +58,7 @@ export default function MapsToSite() {
           <div
             ref={leftRef}
             onScroll={() => syncScroll("left")}
-            className="h-[480px] overflow-y-auto overscroll-contain scrollbar-thin"
+            className="h-[480px] overflow-y-auto overflow-x-hidden overscroll-contain scrollbar-thin"
           >
             <MapsListing />
           </div>
@@ -65,7 +66,7 @@ export default function MapsToSite() {
       </div>
 
       {/* ───── GENERATED SITE ───── */}
-      <div className="flex flex-col">
+      <div className="flex flex-col min-w-0">
         <p className="text-xs font-medium text-emerald-400 uppercase tracking-wider mb-3 text-center">
           PitchKit generated site
         </p>
@@ -74,7 +75,7 @@ export default function MapsToSite() {
           <div
             ref={rightRef}
             onScroll={() => syncScroll("right")}
-            className="h-[480px] overflow-y-auto overscroll-contain scrollbar-thin"
+            className="h-[480px] overflow-y-auto overflow-x-hidden overscroll-contain scrollbar-thin"
           >
             <GeneratedSite />
           </div>

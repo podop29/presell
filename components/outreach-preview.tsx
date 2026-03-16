@@ -15,6 +15,7 @@ export default function OutreachPreview() {
 
   const syncScroll = useCallback((source: "left" | "right") => {
     if (isSyncing.current) return;
+    if (window.innerWidth < 768) return;
     isSyncing.current = true;
 
     const from = source === "left" ? leftRef.current : rightRef.current;
@@ -30,9 +31,9 @@ export default function OutreachPreview() {
   }, []);
 
   return (
-    <div className="grid md:grid-cols-2 gap-6 max-w-6xl mx-auto">
+    <div className="grid md:grid-cols-2 gap-6 max-w-6xl mx-auto overflow-hidden">
       {/* ───── EMAIL ───── */}
-      <div className="flex flex-col">
+      <div className="flex flex-col min-w-0">
         <p className="text-xs font-medium text-neutral-400 uppercase tracking-wider mb-3 text-center">
           The cold email
         </p>
@@ -41,7 +42,7 @@ export default function OutreachPreview() {
           <div
             ref={leftRef}
             onScroll={() => syncScroll("left")}
-            className="h-[480px] overflow-y-auto overscroll-contain scrollbar-thin"
+            className="h-[480px] overflow-y-auto overflow-x-hidden overscroll-contain scrollbar-thin"
           >
             <EmailMockup />
           </div>
@@ -49,7 +50,7 @@ export default function OutreachPreview() {
       </div>
 
       {/* ───── PREVIEW PAGE ───── */}
-      <div className="flex flex-col">
+      <div className="flex flex-col min-w-0">
         <p className="text-xs font-medium text-emerald-400 uppercase tracking-wider mb-3 text-center">
           What they see when they click
         </p>
@@ -58,7 +59,7 @@ export default function OutreachPreview() {
           <div
             ref={rightRef}
             onScroll={() => syncScroll("right")}
-            className="h-[480px] overflow-y-auto overscroll-contain scrollbar-thin"
+            className="h-[480px] overflow-y-auto overflow-x-hidden overscroll-contain scrollbar-thin"
           >
             <PreviewPageMockup />
           </div>

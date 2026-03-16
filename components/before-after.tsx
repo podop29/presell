@@ -37,6 +37,7 @@ export default function BeforeAfter() {
 
   const syncScroll = useCallback((source: "left" | "right") => {
     if (isSyncing.current) return;
+    if (window.innerWidth < 768) return;
     isSyncing.current = true;
 
     const from = source === "left" ? leftRef.current : rightRef.current;
@@ -52,9 +53,9 @@ export default function BeforeAfter() {
   }, []);
 
   return (
-    <div className="grid md:grid-cols-2 gap-6 max-w-6xl mx-auto">
+    <div className="grid md:grid-cols-2 gap-6 max-w-6xl mx-auto overflow-hidden">
       {/* ───── BAD SITE ───── */}
-      <div className="flex flex-col">
+      <div className="flex flex-col min-w-0">
         <p className="text-xs font-medium text-red-400 uppercase tracking-wider mb-3 text-center">
           Their current site
         </p>
@@ -63,7 +64,7 @@ export default function BeforeAfter() {
           <div
             ref={leftRef}
             onScroll={() => syncScroll("left")}
-            className="h-[480px] overflow-y-auto overscroll-contain scrollbar-thin"
+            className="h-[480px] overflow-y-auto overflow-x-hidden overscroll-contain scrollbar-thin"
           >
             <BadSite />
           </div>
@@ -71,7 +72,7 @@ export default function BeforeAfter() {
       </div>
 
       {/* ───── GOOD SITE ───── */}
-      <div className="flex flex-col">
+      <div className="flex flex-col min-w-0">
         <p className="text-xs font-medium text-emerald-400 uppercase tracking-wider mb-3 text-center">
           PitchKit redesign
         </p>
@@ -80,7 +81,7 @@ export default function BeforeAfter() {
           <div
             ref={rightRef}
             onScroll={() => syncScroll("right")}
-            className="h-[480px] overflow-y-auto overscroll-contain scrollbar-thin"
+            className="h-[480px] overflow-y-auto overflow-x-hidden overscroll-contain scrollbar-thin"
           >
             <GoodSite />
           </div>
@@ -89,6 +90,12 @@ export default function BeforeAfter() {
     </div>
   );
 }
+
+/**
+ * Wrapper that renders children at a fixed 480px width and scales down
+ * to fit the container. Uses ResizeObserver on an empty measuring div
+ * that isn't affected by the scaled content's width.
+ */
 
 function BrowserChrome({ url }: { url: string }) {
   return (

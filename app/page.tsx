@@ -171,7 +171,7 @@ export default function Home() {
         </section>
 
         {/* ═══════ BEFORE / AFTER ═══════ */}
-        <section id="examples" className="relative py-16 sm:py-24 px-4 sm:px-6 border-t border-white/5 noise-bg">
+        <section id="examples" className="relative py-16 sm:py-24 px-4 sm:px-6 border-t border-white/5 noise-bg overflow-hidden">
           <div className="relative z-10 max-w-6xl mx-auto">
             <div className="text-center mb-14">
               <p className="text-xs font-medium text-accent uppercase tracking-wider mb-3">Redesign existing sites</p>
@@ -188,7 +188,7 @@ export default function Home() {
         </section>
 
         {/* ═══════ MAPS TO SITE ═══════ */}
-        <section className="relative py-16 sm:py-24 px-4 sm:px-6 border-t border-white/5">
+        <section className="relative py-16 sm:py-24 px-4 sm:px-6 border-t border-white/5 overflow-hidden">
           <div className="relative z-10 max-w-6xl mx-auto">
             <div className="text-center mb-14">
               <p className="text-xs font-medium text-accent uppercase tracking-wider mb-3">Build sites from scratch</p>
@@ -209,7 +209,7 @@ export default function Home() {
         </section>
 
         {/* ═══════ OUTREACH PREVIEW ═══════ */}
-        <section className="relative py-16 sm:py-24 px-4 sm:px-6 border-t border-white/5 noise-bg">
+        <section className="relative py-16 sm:py-24 px-4 sm:px-6 border-t border-white/5 noise-bg overflow-hidden">
           <div className="relative z-10 max-w-6xl mx-auto">
             <div className="text-center mb-14">
               <p className="text-xs font-medium text-accent uppercase tracking-wider mb-3">Send it &amp; close</p>
