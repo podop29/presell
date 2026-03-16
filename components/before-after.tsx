@@ -76,7 +76,7 @@ export default function BeforeAfter() {
           PitchKit redesign
         </p>
         <div className="flex-1 rounded-xl border border-white/10 overflow-hidden bg-[#1a1a1a]">
-          <BrowserChrome url="pitchkit.pro/preview/green-valley-plumbing" />
+          <BrowserChrome url="mypreviewsite.link/preview/green-valley-plumbing" />
           <div
             ref={rightRef}
             onScroll={() => syncScroll("right")}

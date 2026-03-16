@@ -70,7 +70,7 @@ export default function MapsToSite() {
           PitchKit generated site
         </p>
         <div className="flex-1 rounded-xl border border-white/10 overflow-hidden bg-[#1a1a1a]">
-          <BrowserChrome url="pitchkit.pro/preview/sunrise-bakery" />
+          <BrowserChrome url="mypreviewsite.link/preview/sunrise-bakery" />
           <div
             ref={rightRef}
             onScroll={() => syncScroll("right")}

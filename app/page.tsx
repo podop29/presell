@@ -5,6 +5,7 @@ import FaqAccordion from "@/components/faq-accordion";
 import BeforeAfter from "@/components/before-after";
 import MapsToSite from "@/components/maps-to-site";
 import ScrollToTopLink from "@/components/scroll-to-top-link";
+import OutreachPreview from "@/components/outreach-preview";
 
 /* ───── SEO metadata ───── */
 export const metadata: Metadata = {
@@ -204,6 +205,23 @@ export default function Home() {
             <div className="mt-14 text-center">
               <ScrollToTopLink />
             </div>
+          </div>
+        </section>
+
+        {/* ═══════ OUTREACH PREVIEW ═══════ */}
+        <section className="relative py-16 sm:py-24 px-4 sm:px-6 border-t border-white/5 noise-bg">
+          <div className="relative z-10 max-w-6xl mx-auto">
+            <div className="text-center mb-14">
+              <p className="text-xs font-medium text-accent uppercase tracking-wider mb-3">Send it &amp; close</p>
+              <h2 className="text-2xl sm:text-4xl font-bold text-white">
+                A cold email with proof attached
+              </h2>
+              <p className="mt-4 text-neutral-500 max-w-2xl mx-auto text-sm sm:text-base">
+                PitchKit auto-generates a personalized cold email with your preview link.
+                When the prospect clicks, they land on a branded page built just for their business — with your name and contact info front and center.
+              </p>
+            </div>
+            <OutreachPreview />
           </div>
         </section>
 

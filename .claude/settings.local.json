@@ -26,7 +26,9 @@
       "Bash(npx tsc --noEmit --pretty 2>&1 | head -30)",
       "Bash(npx tsc --noEmit --pretty 2>&1 | head -20)",
       "Bash(npx next:*)",
-      "Bash(source:*)"
+      "Bash(source:*)",
+      "Bash(git config:*)",
+      "Bash(wc:*)"
     ]
   }
 }
