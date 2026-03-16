@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import AuthButton from "@/components/auth-button";
 import UrlInput from "@/components/url-input";
 import FaqAccordion from "@/components/faq-accordion";
+import BeforeAfter from "@/components/before-after";
+import MapsToSite from "@/components/maps-to-site";
 
 /* ───── SEO metadata ───── */
 export const metadata: Metadata = {
@@ -241,6 +243,38 @@ export default function Home() {
             <p className="text-center mt-12 text-neutral-400 text-lg">
               What if you could <span className="text-white font-medium">show them the result</span> before doing any work?
             </p>
+          </div>
+        </section>
+
+        {/* ═══════ BEFORE / AFTER ═══════ */}
+        <section className="relative py-16 sm:py-24 px-4 sm:px-6 border-t border-white/5 noise-bg">
+          <div className="relative z-10 max-w-6xl mx-auto">
+            <div className="text-center mb-14">
+              <p className="text-xs font-medium text-accent uppercase tracking-wider mb-3">See the difference</p>
+              <h2 className="text-2xl sm:text-4xl font-bold text-white">
+                From outdated to outstanding — in seconds
+              </h2>
+              <p className="mt-4 text-neutral-500 max-w-xl mx-auto text-sm sm:text-base">
+                Scroll through both sites. This is what your prospects see when you send a PitchKit preview.
+              </p>
+            </div>
+            <BeforeAfter />
+          </div>
+        </section>
+
+        {/* ═══════ MAPS TO SITE ═══════ */}
+        <section className="relative py-16 sm:py-24 px-4 sm:px-6 border-t border-white/5">
+          <div className="relative z-10 max-w-6xl mx-auto">
+            <div className="text-center mb-14">
+              <p className="text-xs font-medium text-accent uppercase tracking-wider mb-3">No website? No problem.</p>
+              <h2 className="text-2xl sm:text-4xl font-bold text-white">
+                Google Maps listing to full website
+              </h2>
+              <p className="mt-4 text-neutral-500 max-w-xl mx-auto text-sm sm:text-base">
+                Paste a Google Maps link and PitchKit builds a complete site from their photos, reviews, and business info.
+              </p>
+            </div>
+            <MapsToSite />
           </div>
         </section>
 
