@@ -35,9 +35,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Rate limit: 5 analyses per 10 minutes per IP
+    // Rate limit: 15 analyses per 10 minutes per IP
     const ip = getIP(req.headers);
-    const limit = await rateLimit(`analyze:${ip}`, { maxRequests: 5, windowMs: 10 * 60 * 1000 });
+    const limit = await rateLimit(`analyze:${ip}`, { maxRequests: 15, windowMs: 10 * 60 * 1000 });
     if (!limit.success) {
       return NextResponse.json(
         { error: `Too many requests. Please try again in ${limit.retryAfter} seconds.` },

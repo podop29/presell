@@ -28,7 +28,10 @@
       "Bash(npx next:*)",
       "Bash(source:*)",
       "Bash(git config:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(find /home/steva/presell -path */node_modules -prune -o -name *.test.* -o -name *.spec.* -type f)",
+      "Bash(find /home/steva/presell -path */node_modules -prune -o -type f \\\\\\(-name *.sql -o -name *schema* -o -name *migration* \\\\\\) -print)",
+      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")"
     ]
   }
 }
