@@ -472,6 +472,8 @@ Spatial Composition & Layout:
 - Sections breathe with py-20 to py-32 padding, never cramped
 - Use max-w-7xl mx-auto containers but let hero elements break out
 - Unexpected layouts that feel genuinely designed, not template-driven
+- NAVBAR OVERLAP FIX: The navbar is fixed/sticky, so the hero section's content must not be hidden behind it. The simplest fix: add pt-20 or pt-24 to the hero section (just enough to clear the nav height). Do NOT overdo it — the goal is to prevent overlap, not add excessive whitespace.
+- HERO BOTTOM SPACING: The hero section must have enough bottom padding (pb-12 or pb-16) so that CTA buttons at the bottom of the hero don't touch or crowd the next section below.
 
 Motion & Interaction:
 - Orchestrated page load: staggered fade-in-up reveals using animation-delay create more delight than scattered animations
@@ -679,6 +681,8 @@ Critical Design Rules:
 - Create visual depth: use background textures (subtle noise/grain via CSS), layered transparencies, and atmospheric gradients — not flat solid-color sections
 - The design must feel like it was hand-crafted by a senior designer for this specific business, not generated from a template
 - HERO SECTIONS WITH BACKGROUND IMAGES: Always add a dark overlay div (absolute inset-0 bg-black/50 or bg-gradient-to-t from-black/70 to-black/30) between the image and the text content. The text container must be relative with z-10. This is MANDATORY — never skip the overlay.
+- NAVBAR OVERLAP FIX: The nav is fixed/sticky, so the hero's first visible content must clear the nav. Add pt-20 or pt-24 to the hero section to prevent the headline from hiding behind the navbar. Don't overdo the spacing — just enough to clear the nav.
+- HERO BOTTOM SPACING: The hero section must have enough bottom padding (pb-12 or pb-16) so that CTA buttons at the bottom of the hero don't touch or crowd the next section below.
 - FINAL CONTRAST CHECK: After generating the full HTML, scan every section top to bottom. For each section, verify the text color has high contrast against the section background. If any text would be hard to read, fix it before outputting.
 ${customInstructions ? `\nADDITIONAL INSTRUCTIONS FROM THE USER — follow these closely:\n${customInstructions}\n` : ""}
 - Keep the total HTML under 800 lines. Favor clean, efficient code — combine utility classes, avoid unnecessary wrapper divs, and keep sections impactful but concise. Quality over quantity.
