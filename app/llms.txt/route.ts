@@ -9,6 +9,10 @@ export async function GET() {
     "",
     "> AI-powered website redesign tool for freelancers and agencies. Generate redesign previews and send shareable links to land web design clients through cold outreach.",
     "",
+    "## Pages",
+    "",
+    `- [Homepage](${baseUrl}/md): Product overview, features, how it works, FAQ`,
+    "",
     "## Blog Posts",
     "",
     ...posts.map(
@@ -18,7 +22,7 @@ export async function GET() {
     "",
     `## Full Content`,
     "",
-    `- [All blog posts (full text)](${baseUrl}/llms-full.txt)`,
+    `- [All content (full text)](${baseUrl}/llms-full.txt)`,
     "",
   ];
 

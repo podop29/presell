@@ -1,6 +1,15 @@
-import { getAllPosts } from "@/lib/blog";
+export async function GET() {
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://pitchkit.co";
 
-const HOMEPAGE_CONTENT = `## What is PitchKit?
+  const body = `# PitchKit — AI Website Redesign Tool for Freelancers & Agencies
+
+> Generate AI-powered website redesigns and send shareable preview links to land web design clients. The cold outreach tool built for freelancers and agencies.
+
+URL: ${baseUrl}
+
+---
+
+## What is PitchKit?
 
 Paste any website URL to generate an AI website redesign — or drop a Google Maps link to build a brand new site. Send it as a shareable preview to land your next web design client.
 
@@ -13,6 +22,8 @@ Cold outreach for web design doesn't work when you have nothing to show.
 - **Cold emails get ignored.** "I can build you a website" sounds like every other pitch in their inbox. Without proof, there's no reply.
 - **Portfolios don't convert.** Your past work looks great — but it's someone else's brand. Prospects can't picture what you'd build for them.
 - **Proposals take hours.** Spending 3 hours on a custom mockup for a prospect who might ghost you? Not a sustainable strategy.
+
+What if you could show them the result before doing any work?
 
 ## How It Works
 
@@ -34,11 +45,13 @@ Cold outreach for web design doesn't work when you have nothing to show.
 ## Who It's For
 
 ### Freelancers
+
 - Prospect local businesses — redesign their site or build one from their Google Maps listing
 - Skip the free consultation — let the preview do the talking
 - Stand out from every other "I build websites" DM in their inbox
 
 ### Agencies
+
 - Scale outbound without burning designer hours — target businesses with or without websites
 - Send personalized previews to dozens of prospects per week
 - Arm your sales team with auto-generated cold emails and shareable preview links
@@ -61,48 +74,12 @@ Every preview is hosted for 30 days. That gives you plenty of time to follow up,
 You get free credits to start. Each generation costs one credit. No subscriptions, no monthly fees — just pay for what you use.
 
 **Can I customize the design before sending it?**
-You choose from 3 AI-generated style directions, each tailored to the prospect's brand. After generating, you can refine the design with AI-powered revisions or edit text directly.`;
-
-export async function GET() {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://pitchkit.co";
-  const posts = getAllPosts();
-
-  const sections = posts.map((post) => {
-    return [
-      `# ${post.title}`,
-      "",
-      `> ${post.description}`,
-      "",
-      `Date: ${post.date}`,
-      `Author: ${post.author}`,
-      `Tags: ${post.tags.join(", ")}`,
-      `URL: ${baseUrl}/blog/${post.slug}`,
-      "",
-      post.content,
-    ].join("\n");
-  });
-
-  const body = [
-    "# PitchKit — AI Website Redesign Tool for Freelancers & Agencies",
-    "",
-    "> Generate AI-powered website redesigns and send shareable preview links to land web design clients. The cold outreach tool built for freelancers and agencies.",
-    "",
-    `URL: ${baseUrl}`,
-    "",
-    "---",
-    "",
-    HOMEPAGE_CONTENT,
-    "",
-    "---",
-    "",
-    "# Blog",
-    "",
-    sections.join("\n\n---\n\n"),
-  ].join("\n");
+You choose from 3 AI-generated style directions, each tailored to the prospect's brand. After generating, you can refine the design with AI-powered revisions or edit text directly.
+`;
 
   return new Response(body, {
     headers: {
-      "Content-Type": "text/plain; charset=utf-8",
+      "Content-Type": "text/markdown; charset=utf-8",
       "Cache-Control": "public, max-age=3600, s-maxage=86400",
     },
   });
