@@ -3,6 +3,7 @@ import { getStripe } from "@/lib/stripe";
 import { addCredits, getBalance } from "@/lib/credits";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { notifyError, notifySuccess } from "@/lib/discord";
+import { trackEvent } from "@/lib/analytics";
 
 export async function POST(req: NextRequest) {
   try {
@@ -77,6 +78,7 @@ export async function POST(req: NextRequest) {
       );
 
       notifySuccess("Credits purchased", { credits: String(credits), userId });
+      trackEvent("credits_purchased", { credits, amount: session.amount_total }, { userId });
     }
 
     return NextResponse.json({ received: true });

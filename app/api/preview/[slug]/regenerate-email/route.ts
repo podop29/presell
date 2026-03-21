@@ -4,6 +4,7 @@ import { generateColdEmail } from "@/lib/ai";
 import { getUser } from "@/lib/auth";
 import type { BusinessProfile } from "@/types";
 import { notifyError } from "@/lib/discord";
+import { trackEvent } from "@/lib/analytics";
 
 export async function POST(
   _req: NextRequest,
@@ -80,6 +81,8 @@ export async function POST(
         { status: 500 }
       );
     }
+
+    trackEvent("cold_email_generated", { slug }, { userId: user.id });
 
     return NextResponse.json({
       subject: coldEmail.subject,

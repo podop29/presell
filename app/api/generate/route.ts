@@ -7,6 +7,7 @@ import { getUser } from "@/lib/auth";
 import { getBalance, deductCredit } from "@/lib/credits";
 import type { GenerateRequest } from "@/types";
 import { notifyError, notifySuccess } from "@/lib/discord";
+import { trackEvent } from "@/lib/analytics";
 
 export const maxDuration = 300;
 
@@ -141,6 +142,10 @@ export async function POST(req: NextRequest) {
     await deductCredit(user.id, 1, "generation", `Generated preview for ${url}`, slug);
 
     notifySuccess("Preview generated", { url, slug, email: devEmail });
+
+    trackEvent("generation_completed", { url, slug, style: selectedStyle?.styleName }, {
+      userId: user.id, ip, userAgent: req.headers.get("user-agent") || undefined,
+    });
 
     return NextResponse.json({
       slug,

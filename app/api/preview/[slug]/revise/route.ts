@@ -6,6 +6,7 @@ import { getUser } from "@/lib/auth";
 import { injectLucide } from "@/lib/inject-lucide";
 import { getRevisionInfo } from "@/lib/credits";
 import { notifyError } from "@/lib/discord";
+import { trackEvent } from "@/lib/analytics";
 
 export const maxDuration = 300;
 
@@ -153,6 +154,8 @@ export async function POST(
           : "Revision failed. Please try again.";
       return NextResponse.json({ error: message }, { status: 502 });
     }
+
+    trackEvent("revision_made", { slug }, { userId: user.id });
 
     // Return revised HTML for preview (not saved yet) with revision info
     const updatedRevisionInfo = await getRevisionInfo(slug);

@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
+import { trackEventClient } from "@/lib/analytics";
 
 interface Variation {
   key: string;
@@ -139,6 +140,34 @@ export default function PreviewClient({
       }
     }
   }, [isOwner, slug]);
+
+  // View tracking + heartbeat
+  useEffect(() => {
+    let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
+    let viewId: string | null = null;
+
+    fetch(`/api/preview/${slug}/track`, { method: "POST" })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.viewId) {
+          viewId = data.viewId;
+          heartbeatInterval = setInterval(() => {
+            if (viewId) {
+              fetch(`/api/preview/${slug}/heartbeat`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ viewId }),
+              }).catch(() => {});
+            }
+          }, 30_000);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      if (heartbeatInterval) clearInterval(heartbeatInterval);
+    };
+  }, [slug]);
 
   const tabs: { key: string; label: string }[] = [
     ...(hasOriginalSite ? [{ key: "original", label: "Current" }] : []),
@@ -514,6 +543,7 @@ export default function PreviewClient({
       }
       el.style.opacity = "";
       setHasEdits(true);
+      trackEventClient("image_swapped", { slug });
     } catch {
       if (isImg) (el as HTMLImageElement).src = originalSrc;
       else el.style.backgroundImage = originalSrc;
@@ -937,6 +967,7 @@ export default function PreviewClient({
       acceptedBlobUrl.current = URL.createObjectURL(
         new Blob([html], { type: "text/html" })
       );
+      trackEventClient("text_edited", { slug });
       setEditMode(false);
       setEditOpen(false);
       setHasEdits(false);

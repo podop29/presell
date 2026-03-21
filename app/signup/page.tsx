@@ -4,6 +4,7 @@ import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { trackEventClient } from "@/lib/analytics";
 
 function GoogleIcon({ className = "w-5 h-5" }: { className?: string }) {
   return (
@@ -61,6 +62,7 @@ function SignupInner() {
       return;
     }
 
+    trackEventClient("user_signup", { method: "email" });
     setSuccess(true);
     setLoading(false);
   }

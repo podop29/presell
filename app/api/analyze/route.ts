@@ -12,6 +12,7 @@ import {
 } from "@/lib/google-places";
 import { notifyError } from "@/lib/discord";
 import { validateExternalUrl } from "@/lib/validate-url";
+import { trackEvent } from "@/lib/analytics";
 
 export const maxDuration = 120;
 
@@ -47,6 +48,10 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const source: "website" | "google-maps" = body.source || "website";
+
+    trackEvent("analysis_started", { source, url: body.url || body.mapsUrl }, {
+      userId: user.id, ip, userAgent: req.headers.get("user-agent") || undefined,
+    });
 
     // ─── Google Maps flow ───
     if (source === "google-maps") {

@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import AuthButton from "@/components/auth-button";
+import { trackEventClient } from "@/lib/analytics";
 
 /* ─── Types ─── */
 interface PreviewRow {
@@ -15,6 +16,13 @@ interface PreviewRow {
   cold_email_subject: string | null;
   cold_email_body: string | null;
   business_name: string | null;
+}
+
+interface ViewStats {
+  totalViews: number;
+  uniqueVisitors: number;
+  lastViewed: string;
+  totalTimeSeconds: number;
 }
 
 type FilterStatus = "all" | "active" | "expired";
@@ -51,6 +59,16 @@ function formatRelativeDate(dateStr: string) {
   if (diffDays < 14) return "1 week ago";
   if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function formatDuration(seconds: number) {
+  if (seconds < 60) return `${seconds}s`;
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  if (mins < 60) return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
+  const hrs = Math.floor(mins / 60);
+  const remainMins = mins % 60;
+  return remainMins > 0 ? `${hrs}h ${remainMins}m` : `${hrs}h`;
 }
 
 /* ─── Inline SVG Icons ─── */
@@ -138,6 +156,20 @@ function AlertTriangleIcon({ className = "w-4 h-4" }: { className?: string }) {
     </svg>
   );
 }
+function EyeIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+function UserIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" /><circle cx="12" cy="7" r="4" />
+    </svg>
+  );
+}
 function PlusIcon({ className = "w-4 h-4" }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -167,9 +199,12 @@ export default function Dashboard() {
   const [emailCopied, setEmailCopied] = useState(false);
   const [regeneratingEmail, setRegeneratingEmail] = useState(false);
   const [previewBaseUrl, setPreviewBaseUrl] = useState("");
+  const [viewStats, setViewStats] = useState<Record<string, ViewStats>>({});
 
   useEffect(() => {
     fetchPreviews();
+    fetchViewStats();
+    trackEventClient("dashboard_viewed");
   }, []);
 
   async function fetchPreviews() {
@@ -184,6 +219,16 @@ export default function Dashboard() {
       console.error("Failed to fetch previews");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function fetchViewStats() {
+    try {
+      const res = await fetch("/api/analytics/preview-stats");
+      const data = await res.json();
+      if (data.stats) setViewStats(data.stats);
+    } catch {
+      // silently fail
     }
   }
 
@@ -205,6 +250,7 @@ export default function Dashboard() {
     const url = `${previewBaseUrl || window.location.origin}/preview/${slug}`;
     navigator.clipboard.writeText(url);
     setCopiedSlug(slug);
+    trackEventClient("link_copied", { slug });
     setTimeout(() => setCopiedSlug(""), 2000);
   }
 
@@ -247,8 +293,9 @@ export default function Dashboard() {
     const active = previews.filter((p) => !isExpired(p)).length;
     const expired = previews.filter((p) => isExpired(p)).length;
     const thisWeek = previews.filter((p) => new Date(p.created_at) >= weekAgo).length;
-    return { total: previews.length, active, expired, thisWeek };
-  }, [previews]);
+    const totalViews = Object.values(viewStats).reduce((sum, s) => sum + s.totalViews, 0);
+    return { total: previews.length, active, expired, thisWeek, totalViews };
+  }, [previews, viewStats]);
 
   const filtered = useMemo(() => {
     let list = previews;
@@ -308,7 +355,7 @@ export default function Dashboard() {
             { icon: <LayersIcon className="w-4 h-4" />, value: stats.total, label: "Total Previews" },
             { icon: <ActivityIcon className="w-4 h-4" />, value: stats.active, label: "Active" },
             { icon: <ClockIcon className="w-4 h-4" />, value: stats.expired, label: "Expired" },
-            { icon: <SparklesIcon className="w-4 h-4" />, value: stats.thisWeek, label: "This Week" },
+            { icon: <EyeIcon className="w-4 h-4" />, value: stats.totalViews, label: "Total Views" },
           ].map((stat) => (
             <div
               key={stat.label}
@@ -489,9 +536,27 @@ export default function Dashboard() {
                   </div>
 
                   {/* Date */}
-                  <div className="text-xs text-neutral-600 mb-4">
+                  <div className="text-xs text-neutral-600 mb-3">
                     {formatRelativeDate(preview.created_at)}
                   </div>
+
+                  {/* View stats */}
+                  {viewStats[preview.slug] && (
+                    <div className="flex items-center gap-3 mb-4 text-[11px] text-neutral-500">
+                      <span className="inline-flex items-center gap-1" title="Total views">
+                        <EyeIcon className="w-3 h-3" />
+                        {viewStats[preview.slug].totalViews}
+                      </span>
+                      <span className="inline-flex items-center gap-1" title="Unique visitors">
+                        <UserIcon className="w-3 h-3" />
+                        {viewStats[preview.slug].uniqueVisitors}
+                      </span>
+                      <span className="inline-flex items-center gap-1" title="Time spent">
+                        <ClockIcon className="w-3 h-3" />
+                        {formatDuration(viewStats[preview.slug].totalTimeSeconds)}
+                      </span>
+                    </div>
+                  )}
 
                   {/* Action bar */}
                   <div className="flex items-center gap-2 pt-3 border-t border-[var(--border)]">
@@ -555,6 +620,24 @@ export default function Dashboard() {
                     </div>
                     <div className="text-xs font-mono text-neutral-600 mt-0.5 truncate">{preview.slug}</div>
                   </div>
+
+                  {/* View stats */}
+                  {viewStats[preview.slug] && (
+                    <div className="hidden lg:flex items-center gap-3 shrink-0 text-[11px] text-neutral-500">
+                      <span className="inline-flex items-center gap-1" title="Views">
+                        <EyeIcon className="w-3 h-3" />
+                        {viewStats[preview.slug].totalViews}
+                      </span>
+                      <span className="inline-flex items-center gap-1" title="Visitors">
+                        <UserIcon className="w-3 h-3" />
+                        {viewStats[preview.slug].uniqueVisitors}
+                      </span>
+                      <span className="inline-flex items-center gap-1" title="Time">
+                        <ClockIcon className="w-3 h-3" />
+                        {formatDuration(viewStats[preview.slug].totalTimeSeconds)}
+                      </span>
+                    </div>
+                  )}
 
                   {/* Status badge */}
                   <div className="hidden sm:block shrink-0">
