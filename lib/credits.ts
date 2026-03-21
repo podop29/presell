@@ -2,7 +2,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { notifySuccess } from "@/lib/discord";
 
 export const SIGNUP_BONUS = 3;
-export const FREE_REVISIONS = 3;
+export const FREE_REVISIONS = 5;
 export const REVISIONS_PER_CREDIT = 5;
 
 /**

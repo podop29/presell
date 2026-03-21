@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import AuthButton from "@/components/auth-button";
 import UrlInput from "@/components/url-input";
 import FaqAccordion from "@/components/faq-accordion";
+import BeforeAfter from "@/components/before-after";
+import MapsToSite from "@/components/maps-to-site";
+import ScrollToTopLink from "@/components/scroll-to-top-link";
+import OutreachPreview from "@/components/outreach-preview";
 
 /* ───── SEO metadata ───── */
 export const metadata: Metadata = {
@@ -121,6 +125,7 @@ export default function Home() {
             pitchkit<span className="text-accent">.</span>
           </span>
           <div className="flex items-center gap-6">
+            <a href="#examples" className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors hidden sm:block">Examples</a>
             <a href="#how" className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors hidden sm:block">How it works</a>
             <a href="#features" className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors hidden sm:block">Features</a>
             <a href="#faq" className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors hidden sm:block">FAQ</a>
@@ -162,6 +167,61 @@ export default function Home() {
                 No credit card required — start with free credits
               </p>
             </div>
+          </div>
+        </section>
+
+        {/* ═══════ BEFORE / AFTER ═══════ */}
+        <section id="examples" className="relative py-16 sm:py-24 px-4 sm:px-6 border-t border-white/5 noise-bg overflow-hidden">
+          <div className="relative z-10 max-w-6xl mx-auto">
+            <div className="text-center mb-14">
+              <p className="text-xs font-medium text-accent uppercase tracking-wider mb-3">Redesign existing sites</p>
+              <h2 className="text-2xl sm:text-4xl font-bold text-white">
+                Turn their outdated site into a modern redesign
+              </h2>
+              <p className="mt-4 text-neutral-500 max-w-2xl mx-auto text-sm sm:text-base">
+                Paste a website URL and PitchKit generates a complete redesign in seconds.
+                Scroll through both — this is exactly what your prospect receives.
+              </p>
+            </div>
+            <BeforeAfter />
+          </div>
+        </section>
+
+        {/* ═══════ MAPS TO SITE ═══════ */}
+        <section className="relative py-16 sm:py-24 px-4 sm:px-6 border-t border-white/5 overflow-hidden">
+          <div className="relative z-10 max-w-6xl mx-auto">
+            <div className="text-center mb-14">
+              <p className="text-xs font-medium text-accent uppercase tracking-wider mb-3">Build sites from scratch</p>
+              <h2 className="text-2xl sm:text-4xl font-bold text-white">
+                No website? Build one from their Google Maps listing.
+              </h2>
+              <p className="mt-4 text-neutral-500 max-w-2xl mx-auto text-sm sm:text-base">
+                Millions of businesses have a Google Maps listing but no website. Paste their Maps link
+                and PitchKit builds a full site from their photos, reviews, and business info.
+              </p>
+            </div>
+            <MapsToSite />
+
+            <div className="mt-14 text-center">
+              <ScrollToTopLink />
+            </div>
+          </div>
+        </section>
+
+        {/* ═══════ OUTREACH PREVIEW ═══════ */}
+        <section className="relative py-16 sm:py-24 px-4 sm:px-6 border-t border-white/5 noise-bg overflow-hidden">
+          <div className="relative z-10 max-w-6xl mx-auto">
+            <div className="text-center mb-14">
+              <p className="text-xs font-medium text-accent uppercase tracking-wider mb-3">Send it &amp; close</p>
+              <h2 className="text-2xl sm:text-4xl font-bold text-white">
+                A cold email with proof attached
+              </h2>
+              <p className="mt-4 text-neutral-500 max-w-2xl mx-auto text-sm sm:text-base">
+                PitchKit auto-generates a personalized cold email with your preview link.
+                When the prospect clicks, they land on a branded page built just for their business — with your name and contact info front and center.
+              </p>
+            </div>
+            <OutreachPreview />
           </div>
         </section>
 

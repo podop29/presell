@@ -74,6 +74,7 @@ export interface ScrapedData {
 
 export interface BusinessProfile {
   businessName: string;
+  businessType: "local" | "digital";
   industry: string;
   whatTheyDo: string;
   targetCustomer: string;
@@ -90,7 +91,7 @@ export interface StyleSuggestion {
 
 export interface ClassifiedImage {
   url: string;
-  category: "logo" | "hero-worthy" | "product" | "team" | "storefront" | "gallery" | "decorative" | "skip";
+  category: "logo" | "hero-worthy" | "product" | "team" | "storefront" | "gallery" | "screenshot" | "decorative" | "skip";
   description: string;
 }
 

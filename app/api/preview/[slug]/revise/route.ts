@@ -31,10 +31,10 @@ export async function POST(
       );
     }
 
-    // Rate limit: 10 revisions per 10 minutes per IP
+    // Rate limit: 30 revisions per 10 minutes per IP
     const ip = getIP(req.headers);
     const limit = await rateLimit(`revise:${ip}`, {
-      maxRequests: 10,
+      maxRequests: 30,
       windowMs: 10 * 60 * 1000,
     });
     if (!limit.success) {

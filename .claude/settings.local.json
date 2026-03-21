@@ -25,9 +25,13 @@
       "Bash(npx tsc --noEmit --pretty 2>&1 | head -40)",
       "Bash(npx tsc --noEmit --pretty 2>&1 | head -30)",
       "Bash(npx tsc --noEmit --pretty 2>&1 | head -20)",
-      "Bash(ls -la /home/stevan/presell/*.json /home/stevan/presell/*.config.*)",
-      "Bash(mkdir -p /home/stevan/presell/app/api/preview/[slug]/track)",
-      "Bash(mkdir -p /home/stevan/presell/app/api/preview/[slug]/heartbeat)"
+      "Bash(npx next:*)",
+      "Bash(source:*)",
+      "Bash(git config:*)",
+      "Bash(wc:*)",
+      "Bash(find /home/steva/presell -path */node_modules -prune -o -name *.test.* -o -name *.spec.* -type f)",
+      "Bash(find /home/steva/presell -path */node_modules -prune -o -type f \\\\\\(-name *.sql -o -name *schema* -o -name *migration* \\\\\\) -print)",
+      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")"
     ]
   }
 }
