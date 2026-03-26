@@ -601,10 +601,10 @@ Design Style: ${style.styleName}
 Style Direction:
 ${style.styleBrief}
 
-ORIGINAL IMAGES (from the business's current website — use these for authenticity):
+BUSINESS IMAGES (from the business — use these for authenticity):
 ${originalImages}
 
-STOCK IMAGES (high-quality professional photos relevant to this business — use these to elevate the design):
+STOCK IMAGES (high-quality professional photos relevant to this business — use these to fill gaps):
 ${stockImagesText}
 
 ${hasClassified ? `Image Usage Strategy — CLASSIFIED IMAGES (use the category tags to place images correctly):
@@ -619,13 +619,13 @@ ${hasClassified ? `Image Usage Strategy — CLASSIFIED IMAGES (use the category 
 - STOCK images are grouped by purpose: HERO CANDIDATES are pre-selected wide images ideal for full-width hero backgrounds, SECONDARY are lifestyle/detail shots for content sections, ATMOSPHERE are mood images for section backgrounds. Use the right group for the right placement.
 - For the HERO section, pick from the HERO CANDIDATES stock images — these are specifically chosen to be wide, dramatic, and high-quality. Only use a classified [hero-worthy] original instead if one exists and is clearly professional quality.
 - Every image must use object-cover, rounded corners where appropriate, and proper aspect ratios.
-- If a section needs an image but neither set has a good fit, use a CSS gradient or textured background instead.` : `Image Usage Strategy — USE ORIGINAL IMAGES WHERE THEY FIT:
-- ORIGINAL images are the business's REAL photos — their shop, team, products, storefront, food, work, etc. The business owner will recognize their own photos and feel an immediate connection.
-- Use original images where they are a good fit and appear to be decent quality — about sections, service/product showcases, galleries, team photos, storefront shots.
-- HERO SECTION: The stock images above are grouped by purpose. Use a HERO CANDIDATE stock image for the hero — these are specifically chosen to be wide, dramatic, and relevant. Only use an original image for the hero if it is clearly high-quality, wide aspect ratio, and professional (e.g. a professional storefront photo). When in doubt, use a hero candidate stock image.
-- Use SECONDARY stock images for content sections, features, about sections — anywhere you need a supporting visual.
-- Use ATMOSPHERE stock images for section backgrounds, decorative overlays, or mood-setting imagery.
-- Mix both sets naturally throughout the page — use original images for authenticity in smaller placements, stock images for visual impact in large placements.
+- If a section needs an image but neither set has a good fit, use a CSS gradient or textured background instead.` : `Image Usage Strategy — PRIORITIZE THE BUSINESS'S OWN IMAGES:
+- BUSINESS images are the business's REAL photos — their shop, team, products, storefront, food, work, etc. The business owner will recognize their own photos and feel an immediate connection. This is what sells them on the redesign.
+- ALWAYS prefer business images over stock photos when they are decent quality. A real photo of their actual restaurant, salon, or storefront is infinitely more compelling than a generic stock photo of "a restaurant".
+- HERO SECTION: Use the business's best, most visually striking image for the hero if one is available and looks professional. Their real storefront, interior, signature dish, finished project, etc. makes the hero feel personal and authentic. Only fall back to a HERO CANDIDATE stock image if the business images are all low quality, too small, or clearly unsuitable for a hero.
+- Use business images throughout: gallery sections, about sections, service showcases, team photos, location sections — anywhere their real content fits.
+- Use STOCK images to FILL GAPS — sections where no business image fits, or where you need variety and have run out of business images. Stock images are the backup, not the default.
+- Use ATMOSPHERE stock images for section backgrounds or decorative overlays where a subtle, non-specific image works better than a specific business photo.
 - Every image must use object-cover, rounded corners where appropriate, and proper aspect ratios.
 - If a section needs an image but neither set has a good fit, use a CSS gradient or textured background instead.`}
 
