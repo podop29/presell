@@ -473,6 +473,7 @@ Spatial Composition & Layout:
 - Use max-w-7xl mx-auto containers but let hero elements break out
 - Unexpected layouts that feel genuinely designed, not template-driven
 - NAVBAR OVERLAP FIX: The navbar is fixed/sticky, so the hero section's content must not be hidden behind it. The simplest fix: add pt-20 or pt-24 to the hero section (just enough to clear the nav height). Do NOT overdo it — the goal is to prevent overlap, not add excessive whitespace.
+- BANNER + STICKY HEADER FIX: If you add an announcement banner above the header, you MUST make the banner sticky too (sticky top-0 z-50) and the header sticky right below it (sticky top-[banner-height] z-40). Otherwise when the user scrolls past the banner, a gap appears between the header and the top of the viewport. The simplest approach: wrap both the banner and nav in a single sticky container, OR skip the banner entirely.
 - HERO BOTTOM SPACING: The hero section must have enough bottom padding (pb-12 or pb-16) so that CTA buttons at the bottom of the hero don't touch or crowd the next section below.
 
 Motion & Interaction:
@@ -682,6 +683,7 @@ Critical Design Rules:
 - The design must feel like it was hand-crafted by a senior designer for this specific business, not generated from a template
 - HERO SECTIONS WITH BACKGROUND IMAGES: Always add a dark overlay div (absolute inset-0 bg-black/50 or bg-gradient-to-t from-black/70 to-black/30) between the image and the text content. The text container must be relative with z-10. This is MANDATORY — never skip the overlay.
 - NAVBAR OVERLAP FIX: The nav is fixed/sticky, so the hero's first visible content must clear the nav. Add pt-20 or pt-24 to the hero section to prevent the headline from hiding behind the navbar. Don't overdo the spacing — just enough to clear the nav.
+- BANNER + STICKY HEADER FIX: If you add an announcement banner above the header, you MUST make the banner sticky too (sticky top-0 z-50) and the header sticky right below it (sticky top-[banner-height] z-40). Otherwise when the user scrolls past the banner, a gap appears between the header and the top of the viewport. The simplest approach: wrap both the banner and nav in a single sticky container, OR skip the banner entirely.
 - HERO BOTTOM SPACING: The hero section must have enough bottom padding (pb-12 or pb-16) so that CTA buttons at the bottom of the hero don't touch or crowd the next section below.
 - FINAL CONTRAST CHECK: After generating the full HTML, scan every section top to bottom. For each section, verify the text color has high contrast against the section background. If any text would be hard to read, fix it before outputting.
 ${customInstructions ? `\nADDITIONAL INSTRUCTIONS FROM THE USER — follow these closely:\n${customInstructions}\n` : ""}
