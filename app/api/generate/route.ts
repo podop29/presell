@@ -141,7 +141,7 @@ export async function POST(req: NextRequest) {
     // Deduct credit AFTER successful DB insert
     await deductCredit(user.id, 1, "generation", `Generated preview for ${url}`, slug);
 
-    notifySuccess("Preview generated", { url, slug, email: devEmail });
+    notifySuccess("Preview generated", { url, slug, email: devEmail, previewUrl });
 
     trackEvent("generation_completed", { url, slug, style: selectedStyle?.styleName }, {
       userId: user.id, ip, userAgent: req.headers.get("user-agent") || undefined,

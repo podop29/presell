@@ -241,6 +241,7 @@ export async function POST(req: NextRequest) {
       url,
       slug,
       email: devEmail,
+      previewUrl,
     });
 
     return NextResponse.json({
