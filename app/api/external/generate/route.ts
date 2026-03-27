@@ -15,7 +15,6 @@ import {
   getPlacePhotoUrls,
 } from "@/lib/google-places";
 import { validateExternalUrl } from "@/lib/validate-url";
-import { notifyError, notifySuccess } from "@/lib/discord";
 import type { StockImages } from "@/types";
 
 export const maxDuration = 300;
@@ -67,7 +66,6 @@ export async function POST(req: NextRequest) {
         placeData = await fetchPlaceDetails(placeId);
       } catch (placeErr) {
         console.error("Google Places error:", placeErr);
-        notifyError("External API: Google Places error", placeErr, { url });
         return NextResponse.json(
           {
             error:
@@ -85,7 +83,6 @@ export async function POST(req: NextRequest) {
           await analyzeGooglePlaceData(placeData));
       } catch (aiErr) {
         console.error("AI analysis error:", aiErr);
-        notifyError("External API: AI analysis error", aiErr);
         return NextResponse.json(
           { error: "AI analysis failed." },
           { status: 502 }
@@ -142,7 +139,6 @@ export async function POST(req: NextRequest) {
           await analyzeBusinessContent(url, scrapedData));
       } catch (aiErr) {
         console.error("AI analysis error:", aiErr);
-        notifyError("External API: AI analysis error", aiErr, { url });
         return NextResponse.json(
           { error: "AI analysis failed." },
           { status: 502 }
@@ -188,7 +184,6 @@ export async function POST(req: NextRequest) {
       );
     } catch (aiErr) {
       console.error("AI generation error:", aiErr);
-      notifyError("External API: AI generation error", aiErr, { url });
       return NextResponse.json(
         { error: "Redesign generation failed." },
         { status: 502 }
@@ -230,19 +225,11 @@ export async function POST(req: NextRequest) {
 
     if (dbError) {
       console.error("DB insert error:", dbError.message);
-      notifyError("External API: DB insert error", new Error(dbError.message));
       return NextResponse.json(
         { error: "Failed to save preview." },
         { status: 500 }
       );
     }
-
-    notifySuccess("External API: Preview generated", {
-      url,
-      slug,
-      email: devEmail,
-      previewUrl,
-    });
 
     return NextResponse.json({
       slug,
@@ -253,7 +240,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     console.error("External generate error:", err);
-    notifyError("External API: unexpected error", err);
     return NextResponse.json(
       { error: "An unexpected error occurred." },
       { status: 500 }
