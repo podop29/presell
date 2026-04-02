@@ -5,9 +5,9 @@ import { scrapeWebsite } from "@/lib/scraper";
 import {
   analyzeBusinessContent,
   analyzeGooglePlaceData,
-  generateVariation,
   generateColdEmail,
 } from "@/lib/ai";
+import { runGenerationPipeline } from "@/lib/pipeline";
 import { searchPexelsGrouped } from "@/lib/pexels";
 import {
   extractPlaceId,
@@ -162,7 +162,7 @@ export async function POST(req: NextRequest) {
     const styleIndex = body.styleIndex ?? 0;
     const selectedStyle = styles[Math.min(styleIndex, styles.length - 1)];
 
-    // --- Step 3: Generate HTML ---
+    // --- Step 3: Generate HTML via multi-pass pipeline ---
     const stockImageUrls = [
       ...stockImages.hero,
       ...stockImages.secondary,
@@ -171,17 +171,18 @@ export async function POST(req: NextRequest) {
 
     let html: string;
     try {
-      html = await generateVariation(
+      const result = await runGenerationPipeline({
         profile,
-        imageUrls,
-        stockImageUrls,
         selectedStyle,
         pageStructure,
         pageContent,
-        customInstructions,
+        imageUrls,
+        stockImageUrls,
+        stockImages,
         classifiedImages,
-        stockImages
-      );
+        customInstructions,
+      });
+      html = result.html;
     } catch (aiErr) {
       console.error("AI generation error:", aiErr);
       return NextResponse.json(

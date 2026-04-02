@@ -61,16 +61,24 @@ interface StepConfig {
 // Spread across ~90s total so no single step hogs the wait.
 const STEP_INTERVALS = [6000, 12000, 18000, 25000, 30000];
 
-function SteppedProgress({ steps, done, subtitle }: { steps: StepConfig[]; done: boolean; subtitle: string }) {
+function SteppedProgress({ steps, done, subtitle, currentStep }: { steps: StepConfig[]; done: boolean; subtitle: string; currentStep?: number }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [barWidth, setBarWidth] = useState(0);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
-  // Advance steps on timers (simulated). Never advances past second-to-last unless done.
+  // If currentStep is provided (SSE-driven), use it directly
   useEffect(() => {
-    if (done) return;
+    if (currentStep !== undefined && currentStep >= 0) {
+      setActiveIndex(currentStep);
+    }
+  }, [currentStep]);
+
+  // Advance steps on timers (simulated fallback when currentStep is not provided).
+  // Never advances past second-to-last unless done.
+  useEffect(() => {
+    if (done || currentStep !== undefined) return;
     const timers = timersRef.current;
-    const maxSimulated = steps.length - 2; // hold with one pending step still visible
+    const maxSimulated = steps.length - 2;
     let current = 0;
 
     function scheduleNext() {
@@ -86,7 +94,7 @@ function SteppedProgress({ steps, done, subtitle }: { steps: StepConfig[]; done:
 
     scheduleNext();
     return () => timers.forEach(clearTimeout);
-  }, [done, steps.length]);
+  }, [done, steps.length, currentStep]);
 
   // Progress bar: smoothly advances per step, fills the gap between steps slowly
   useEffect(() => {
@@ -196,12 +204,22 @@ const ANALYZE_STEPS_MAPS: StepConfig[] = [
 ];
 
 const GENERATE_STEPS: StepConfig[] = [
-  { label: "Preparing content structure" },
-  { label: "Mapping page layout" },
-  { label: "Selecting imagery" },
+  { label: "Planning layout" },
   { label: "Building redesign" },
-  { label: "Finalizing preview" },
+  { label: "Reviewing design" },
+  { label: "Applying final touches" },
+  { label: "Saving preview" },
 ];
+
+// Map SSE pipeline stages to step indices
+const STAGE_TO_STEP: Record<string, number> = {
+  blueprint: 0,
+  generating: 1,
+  "qa-screenshot": 2,
+  "qa-review": 2,
+  "qa-fix": 3,
+  finalizing: 4,
+};
 
 /* ───── Main component ───── */
 function CreatePageInner() {
@@ -247,6 +265,7 @@ function CreatePageInner() {
   // Track when analysis/generation finishes so progress can complete before phase transition
   const [analysisDone, setAnalysisDone] = useState(false);
   const [generationDone, setGenerationDone] = useState(false);
+  const [generateStep, setGenerateStep] = useState<number | undefined>(undefined);
 
   /* Validate URL param */
   const isValidUrl = (() => {
@@ -319,6 +338,7 @@ function CreatePageInner() {
     setInsufficientCredits(false);
     if (!devName || !devEmail) { setError("Please fill in your name and email."); return; }
     setGenerationDone(false);
+    setGenerateStep(undefined);
     setPhase("generating");
     try {
       const res = await fetch("/api/generate", {
@@ -333,8 +353,11 @@ function CreatePageInner() {
           customInstructions: customInstructions.trim() || undefined,
         }),
       });
-      const data = await res.json();
-      if (!res.ok) {
+
+      // Non-SSE error responses (auth, credits, rate limit)
+      const contentType = res.headers.get("content-type") || "";
+      if (!contentType.includes("text/event-stream")) {
+        const data = await res.json();
         if (res.status === 402 && data.insufficientCredits) {
           setInsufficientCredits(true);
           setPhase("pick-style");
@@ -344,10 +367,63 @@ function CreatePageInner() {
         setPhase("pick-style");
         return;
       }
-      setPreviewUrl(data.previewUrl);
-      setPreviewSlug(data.slug);
-      setGenerationDone(true);
-      transitionToDone();
+
+      // Consume SSE stream
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        // Parse complete SSE events from buffer
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || ""; // Keep incomplete line in buffer
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          try {
+            const event = JSON.parse(line.slice(6));
+            if (event.type === "progress") {
+              const step = STAGE_TO_STEP[event.stage];
+              if (step !== undefined) setGenerateStep(step);
+            } else if (event.type === "complete") {
+              setPreviewUrl(event.previewUrl);
+              setPreviewSlug(event.slug);
+              setGenerationDone(true);
+              transitionToDone();
+            } else if (event.type === "error") {
+              setError(event.error || "Something went wrong.");
+              setPhase("pick-style");
+            }
+          } catch {
+            // Skip malformed events
+          }
+        }
+      }
+
+      // If stream ended without complete/error event
+      if (!generationDone && phase === "generating") {
+        // Check buffer for any remaining events
+        if (buffer.startsWith("data: ")) {
+          try {
+            const event = JSON.parse(buffer.slice(6));
+            if (event.type === "complete") {
+              setPreviewUrl(event.previewUrl);
+              setPreviewSlug(event.slug);
+              setGenerationDone(true);
+              transitionToDone();
+            } else if (event.type === "error") {
+              setError(event.error || "Something went wrong.");
+              setPhase("pick-style");
+            }
+          } catch {
+            // ignore
+          }
+        }
+      }
     } catch {
       setError("Network error. Please try again.");
       setPhase("pick-style");
@@ -415,7 +491,8 @@ function CreatePageInner() {
             <SteppedProgress
               steps={GENERATE_STEPS}
               done={generationDone}
-              subtitle="Building your custom redesign — almost there"
+              currentStep={generateStep}
+              subtitle="Building your custom redesign — this takes 1-2 minutes"
             />
           )}
 

@@ -6,6 +6,10 @@ import type {
   ClassifiedImage,
   AnalysisResult,
   StockImages,
+  DesignBlueprint,
+  SectionBlueprint,
+  QAIssue,
+  QAResult,
 } from "@/types";
 import type { GooglePlaceData } from "@/lib/google-places";
 
@@ -437,6 +441,551 @@ Rules for all 3 styles:
   }
 }
 
+// ── Design Blueprint Generation (Stage 2) ──
+
+const BLUEPRINT_SYSTEM_PROMPT = `You are an elite architectural web designer who plans website layouts with precision before any code is written. You create detailed section-by-section blueprints that guide HTML generation.
+
+You always respond with valid JSON only — no explanation, no markdown, no code fences.
+
+Your blueprint must:
+1. Pre-solve every contrast pairing — assign explicit background + text colors per section
+2. Pre-assign specific images to specific sections — no ambiguity during generation
+3. Choose layout patterns that match the business type and style direction
+4. Budget line counts per section to keep total HTML under 800 lines
+5. Create visual rhythm — alternate light/dark sections, vary layouts, build toward a cohesive whole
+
+SECTION PATTERN MENUS by business type:
+
+FOR LOCAL/PHYSICAL BUSINESSES (restaurants, salons, contractors, retail, clinics):
+Hero patterns: hero-fullwidth-overlay, hero-split-image-right, hero-split-image-left, hero-video-bg, hero-parallax-image
+Content patterns: menu-grid, services-cards-3col, services-alternating-rows, gallery-masonry, gallery-lightbox-grid
+Social proof: reviews-carousel, reviews-stacked-cards, reviews-featured-quote, rating-stats-bar
+Info patterns: hours-and-map-split, team-grid, team-spotlight, about-story-timeline, process-steps
+CTA patterns: cta-banner-fullwidth, cta-split-with-image, cta-floating-card
+
+FOR DIGITAL/SAAS BUSINESSES (software, apps, agencies, platforms, dev tools):
+Hero patterns: hero-product-screenshot-centered, hero-split-demo-right, hero-gradient-mesh-bg, hero-animated-grid-bg
+Content patterns: features-bento-grid, features-alternating-showcase, features-icon-grid-4col, integrations-logo-cloud, workflow-steps-visual
+Social proof: testimonials-company-logos, testimonials-tweet-wall, case-study-cards, metrics-counter-row
+Info patterns: pricing-table-3tier, pricing-toggle-monthly-annual, faq-accordion, comparison-table
+CTA patterns: cta-gradient-banner, cta-minimal-centered, cta-with-demo-form
+
+FOR PORTFOLIO/AGENCY:
+Hero patterns: hero-minimal-text-only, hero-showreel-bg, hero-bold-statement
+Content patterns: work-grid-asymmetric, case-study-fullwidth, services-minimal-list, process-numbered-steps
+Social proof: client-logo-bar, testimonials-minimal-quotes
+
+Choose patterns that create variety within the page — never use the same layout pattern twice in a row.`;
+
+function buildDefaultBlueprint(
+  style: StyleSuggestion,
+  pageStructure: string[]
+): DesignBlueprint {
+  // Extract colors from style brief
+  const hexMatches = style.styleBrief.match(/#[0-9a-fA-F]{6}/g) || [];
+  const primary = hexMatches[0] || "#1a1a2e";
+  const secondary = hexMatches[1] || "#f4f4f5";
+  const accent = hexMatches[2] || "#f59e0b";
+
+  // Extract font names from style brief
+  const fontRegex = /\b(Playfair Display|Fraunces|DM Serif Display|Space Grotesk|Outfit|Sora|Manrope|Cabinet Grotesk|Satoshi|General Sans|Clash Display|DM Sans|Nunito|Source Sans|Poppins|Lora|Merriweather|Raleway|Montserrat|Work Sans)\b/gi;
+  const fontMatches = style.styleBrief.match(fontRegex) || [];
+  const displayFont = fontMatches[0] || "Space Grotesk";
+  const bodyFont = fontMatches[1] || "DM Sans";
+
+  const sections: SectionBlueprint[] = pageStructure.map((section, i) => ({
+    id: `section-${i}`,
+    sectionType: i === 0 ? "nav" : i === 1 ? "hero" : `content-${i}`,
+    layoutPattern: "auto",
+    headline: section,
+    contentNotes: `Follow original page structure: ${section}`,
+    imageStrategy: { source: "none" as const, fallback: `linear-gradient(135deg, ${primary}, ${secondary})` },
+    backgroundColor: i % 2 === 0 ? "#ffffff" : "#f9fafb",
+    textColor: "#1a1a2e",
+    componentChoices: [],
+    animationApproach: "fade-in-up",
+    estimatedLines: Math.floor(700 / pageStructure.length),
+  }));
+
+  return {
+    globalTypography: {
+      displayFont,
+      bodyFont,
+      heroSize: "text-5xl md:text-7xl",
+      sectionHeadingSize: "text-3xl md:text-4xl",
+    },
+    colorSystem: {
+      primary,
+      secondary,
+      accent,
+      backgroundLight: "#ffffff",
+      backgroundDark: "#0f172a",
+      textOnLight: "#1a1a2e",
+      textOnDark: "#f4f4f5",
+    },
+    navStyle: "glass-blur-sticky",
+    footerStyle: "dark-3-column",
+    sections,
+    totalEstimatedLines: 700,
+    designRationale: `Default blueprint based on ${style.styleName} direction.`,
+  };
+}
+
+export async function generateBlueprint(
+  profile: BusinessProfile,
+  style: StyleSuggestion,
+  pageStructure: string[],
+  pageContent: string,
+  classifiedImages?: ClassifiedImage[],
+  groupedStockImages?: StockImages
+): Promise<DesignBlueprint> {
+  try {
+    // Build available images summary for the blueprint
+    const hasClassified = classifiedImages && classifiedImages.length > 0;
+    let imagesContext = "";
+
+    if (hasClassified) {
+      const usable = classifiedImages.filter((img) => img.category !== "skip");
+      imagesContext = `AVAILABLE BUSINESS IMAGES:\n${usable.map((img) => `- [${img.category}] ${img.url} — ${img.description}`).join("\n")}`;
+    }
+
+    if (groupedStockImages) {
+      const parts: string[] = [];
+      if (groupedStockImages.hero.length > 0) parts.push(`HERO STOCK IMAGES:\n${groupedStockImages.hero.map((u) => `  ${u}`).join("\n")}`);
+      if (groupedStockImages.secondary.length > 0) parts.push(`SECONDARY STOCK IMAGES:\n${groupedStockImages.secondary.map((u) => `  ${u}`).join("\n")}`);
+      if (groupedStockImages.atmosphere.length > 0) parts.push(`ATMOSPHERE STOCK IMAGES:\n${groupedStockImages.atmosphere.map((u) => `  ${u}`).join("\n")}`);
+      if (parts.length > 0) imagesContext += `\n\n${parts.join("\n\n")}`;
+    }
+
+    const structureList = pageStructure.map((s, i) => `${i + 1}. ${s}`).join("\n");
+
+    const message = await anthropic.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 4096,
+      system: BLUEPRINT_SYSTEM_PROMPT,
+      messages: [
+        {
+          role: "user",
+          content: `Plan a detailed section-by-section blueprint for redesigning this business's website.
+
+BUSINESS PROFILE:
+- Name: ${profile.businessName}
+- Type: ${profile.businessType === "digital" ? "Digital/SaaS" : "Local/Physical"}
+- Industry: ${profile.industry}
+- What They Do: ${profile.whatTheyDo}
+- Target Customer: ${profile.targetCustomer}
+- Key Selling Points: ${profile.keySellingPoints.join(", ")}
+- Brand Tone: ${profile.brandTone}
+- Existing Brand Colors: ${profile.primaryColors}
+- Location: ${profile.location}
+
+SELECTED DESIGN STYLE: ${style.styleName}
+STYLE DIRECTION:
+${style.styleBrief}
+
+ORIGINAL PAGE STRUCTURE (redesign must follow this structure):
+${structureList}
+
+ORIGINAL PAGE CONTENT (use for real headlines, content, and details):
+${pageContent ? pageContent.slice(0, 3000) : "(no content available)"}
+
+${imagesContext}
+
+Return a JSON object with this exact structure:
+{
+  "globalTypography": {
+    "displayFont": "specific Google Font name for headings",
+    "bodyFont": "specific Google Font name for body text",
+    "heroSize": "Tailwind text size classes e.g. 'text-5xl md:text-7xl'",
+    "sectionHeadingSize": "Tailwind text size classes e.g. 'text-3xl md:text-4xl'"
+  },
+  "colorSystem": {
+    "primary": "#hex (main brand color)",
+    "secondary": "#hex (supporting color)",
+    "accent": "#hex (accent/CTA color)",
+    "backgroundLight": "#hex (light section background)",
+    "backgroundDark": "#hex (dark section background)",
+    "textOnLight": "#hex (text color for light sections — must be dark)",
+    "textOnDark": "#hex (text color for dark sections — must be light)"
+  },
+  "navStyle": "description of navigation style",
+  "footerStyle": "description of footer style",
+  "sections": [
+    {
+      "id": "unique-section-id",
+      "sectionType": "section type from the pattern menu above",
+      "layoutPattern": "specific layout description",
+      "headline": "actual headline text to use (from real content or improved version)",
+      "subheadline": "optional subheadline",
+      "contentNotes": "what real content from pageContent to use here — be specific (quote actual text, list items, etc.)",
+      "imageStrategy": {
+        "source": "classified | stock-hero | stock-secondary | stock-atmosphere | none",
+        "url": "specific image URL to use (from the available images above) or omit if none",
+        "fallback": "CSS gradient fallback e.g. 'linear-gradient(135deg, #hex1, #hex2)'"
+      },
+      "backgroundColor": "#hex or 'image-based'",
+      "textColor": "#hex — MUST contrast with backgroundColor",
+      "componentChoices": ["specific component types to use in this section"],
+      "animationApproach": "animation style for this section",
+      "estimatedLines": number
+    }
+  ],
+  "totalEstimatedLines": number (must be under 800),
+  "designRationale": "2-3 sentences explaining the creative direction and why it fits this business"
+}
+
+RULES:
+1. The first section should be the navigation, the second should be the hero. Include a footer as the last section.
+2. Map EVERY item from the original page structure to a section in the blueprint.
+3. Pre-assign specific image URLs from the available images — don't leave it ambiguous.
+4. For the hero: prefer [hero-worthy] classified images. If none exist, use the best hero stock image.
+5. Every backgroundColor + textColor pair MUST have strong contrast. Light bg = dark text. Dark bg = light text.
+6. Vary section backgrounds for visual rhythm — alternate light/dark/colored.
+7. Keep totalEstimatedLines under 800. Budget ~40-60 lines for simple sections, ~80-120 for complex ones.
+8. Use real content from pageContent for headlines, not generic placeholders.
+9. Choose layout patterns from the pattern menu that match the business type.
+10. The blueprint should feel like a premium, hand-crafted design plan — not a generic template.`,
+        },
+      ],
+    });
+
+    const textBlock = message.content.find((block) => block.type === "text");
+    if (!textBlock || textBlock.type !== "text") {
+      console.error("[blueprint] No text response from Claude");
+      return buildDefaultBlueprint(style, pageStructure);
+    }
+
+    let jsonStr = textBlock.text.trim();
+    if (jsonStr.startsWith("```")) {
+      jsonStr = jsonStr.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+    }
+
+    const parsed = JSON.parse(jsonStr);
+
+    // Validate and construct the blueprint with safe fallbacks
+    const blueprint: DesignBlueprint = {
+      globalTypography: {
+        displayFont: parsed.globalTypography?.displayFont || "Space Grotesk",
+        bodyFont: parsed.globalTypography?.bodyFont || "DM Sans",
+        heroSize: parsed.globalTypography?.heroSize || "text-5xl md:text-7xl",
+        sectionHeadingSize: parsed.globalTypography?.sectionHeadingSize || "text-3xl md:text-4xl",
+      },
+      colorSystem: {
+        primary: parsed.colorSystem?.primary || "#1a1a2e",
+        secondary: parsed.colorSystem?.secondary || "#f4f4f5",
+        accent: parsed.colorSystem?.accent || "#f59e0b",
+        backgroundLight: parsed.colorSystem?.backgroundLight || "#ffffff",
+        backgroundDark: parsed.colorSystem?.backgroundDark || "#0f172a",
+        textOnLight: parsed.colorSystem?.textOnLight || "#1a1a2e",
+        textOnDark: parsed.colorSystem?.textOnDark || "#f4f4f5",
+      },
+      navStyle: parsed.navStyle || "glass-blur-sticky",
+      footerStyle: parsed.footerStyle || "dark-3-column",
+      sections: Array.isArray(parsed.sections)
+        ? parsed.sections.map((s: Record<string, unknown>, i: number) => ({
+            id: (s.id as string) || `section-${i}`,
+            sectionType: (s.sectionType as string) || "content",
+            layoutPattern: (s.layoutPattern as string) || "auto",
+            headline: (s.headline as string) || "",
+            subheadline: (s.subheadline as string) || undefined,
+            contentNotes: (s.contentNotes as string) || "",
+            imageStrategy: s.imageStrategy && typeof s.imageStrategy === "object"
+              ? {
+                  source: ((s.imageStrategy as Record<string, unknown>).source as string) || "none",
+                  url: ((s.imageStrategy as Record<string, unknown>).url as string) || undefined,
+                  fallback: ((s.imageStrategy as Record<string, unknown>).fallback as string) || "linear-gradient(135deg, #1a1a2e, #2d3748)",
+                }
+              : { source: "none" as const, fallback: "linear-gradient(135deg, #1a1a2e, #2d3748)" },
+            backgroundColor: (s.backgroundColor as string) || "#ffffff",
+            textColor: (s.textColor as string) || "#1a1a2e",
+            componentChoices: Array.isArray(s.componentChoices) ? s.componentChoices as string[] : [],
+            animationApproach: (s.animationApproach as string) || "fade-in-up",
+            estimatedLines: typeof s.estimatedLines === "number" ? s.estimatedLines : 60,
+          }))
+        : buildDefaultBlueprint(style, pageStructure).sections,
+      totalEstimatedLines: typeof parsed.totalEstimatedLines === "number" ? parsed.totalEstimatedLines : 700,
+      designRationale: parsed.designRationale || "",
+    };
+
+    return blueprint;
+  } catch (err) {
+    if (
+      err instanceof Anthropic.APIError ||
+      err instanceof Anthropic.APIConnectionError ||
+      err instanceof Anthropic.AuthenticationError ||
+      err instanceof Anthropic.RateLimitError
+    ) {
+      throw err;
+    }
+    console.error("[blueprint] Failed to generate blueprint, using default:", err);
+    return buildDefaultBlueprint(style, pageStructure);
+  }
+}
+
+// ── Visual QA Review (Stage 4) ──
+
+export async function reviewDesignQA(
+  screenshot: string,
+  blueprint: DesignBlueprint,
+  profile: BusinessProfile
+): Promise<QAResult> {
+  try {
+    // Condensed blueprint for QA context
+    const sectionSummary = blueprint.sections
+      .map((s) => `- ${s.id}: bg=${s.backgroundColor}, text=${s.textColor}, type=${s.sectionType}`)
+      .join("\n");
+
+    const message = await anthropic.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 2048,
+      system: `You are a senior web design QA reviewer performing a visual audit. You compare a screenshot of a generated website against its design blueprint and identify real, visible defects.
+
+You ONLY flag problems that are clearly visible in the screenshot — not style preferences or hypothetical issues. Be strict but fair.
+
+ISSUE SEVERITY:
+- "critical": Makes the site unusable or unprofessional — text unreadable, layout completely broken, content overflow
+- "major": Significantly hurts quality — empty sections, broken images, navbar covering content, sections with no padding
+- "minor": Small polish issues — inconsistent spacing, slight alignment off, could be better but doesn't hurt
+
+WHAT TO CHECK:
+1. TEXT CONTRAST: Can ALL text be read easily? White text on light backgrounds = critical. Dark text on dark backgrounds = critical.
+2. LAYOUT INTEGRITY: Do elements overlap incorrectly? Is there horizontal scroll? Are sections properly stacked?
+3. CONTENT COMPLETENESS: Are there empty cards, missing text, placeholder content, or skeleton elements?
+4. IMAGE DISPLAY: Are any images visibly broken (broken icon showing)? Are images properly sized?
+5. NAVBAR/BANNER: Does the navbar overlap or cover the hero headline? Is there a gap between a banner and the header when scrolled? If a banner exists above the nav, are they both inside the same sticky container?
+6. SPACING: Do sections have adequate vertical padding? Is content crammed together?
+7. VISUAL HIERARCHY: Is there clear separation between sections?
+8. CONTENT VISIBILITY: Is ALL content visible? If the page looks mostly empty or sections appear blank, this is critical — it may indicate an animation bug where content disappeared after load.
+
+PASS CRITERIA: Zero critical issues AND zero major issues. Minor issues are noted but don't block.
+
+Score 0-100:
+- 90-100: Production-ready, polished
+- 80-89: Good, minor polish needed
+- 60-79: Usable but has noticeable issues
+- Below 60: Needs significant fixes
+
+You always respond with valid JSON only — no explanation, no markdown, no code fences.`,
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "image" as const,
+              source: {
+                type: "base64" as const,
+                media_type: "image/png" as const,
+                data: screenshot,
+              },
+            },
+            {
+              type: "text" as const,
+              text: `Review this website screenshot against the design blueprint below.
+
+BUSINESS: ${profile.businessName} (${profile.industry})
+
+EXPECTED DESIGN:
+- Display Font: ${blueprint.globalTypography.displayFont}
+- Body Font: ${blueprint.globalTypography.bodyFont}
+- Color System: primary=${blueprint.colorSystem.primary}, accent=${blueprint.colorSystem.accent}
+- Text on light: ${blueprint.colorSystem.textOnLight}, Text on dark: ${blueprint.colorSystem.textOnDark}
+
+EXPECTED SECTIONS:
+${sectionSummary}
+
+Return a JSON object:
+{
+  "pass": boolean,
+  "score": number (0-100),
+  "issues": [
+    {
+      "severity": "critical" | "major" | "minor",
+      "sectionId": "which section has the problem (use section id from blueprint, or 'global')",
+      "issueType": "contrast" | "layout" | "overflow" | "missing-content" | "broken-image" | "spacing" | "alignment",
+      "description": "what's wrong — be specific about what you see",
+      "suggestedFix": "concrete CSS/HTML fix suggestion"
+    }
+  ]
+}
+
+If the design looks good with no critical or major issues, return { "pass": true, "score": 90+, "issues": [] } or include only minor issues.`,
+            },
+          ],
+        },
+      ],
+    });
+
+    const textBlock = message.content.find((block) => block.type === "text");
+    if (!textBlock || textBlock.type !== "text") {
+      console.error("[qa] No text response from Claude");
+      return { pass: true, score: 75, issues: [] };
+    }
+
+    let jsonStr = textBlock.text.trim();
+    if (jsonStr.startsWith("```")) {
+      jsonStr = jsonStr.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+    }
+
+    const parsed = JSON.parse(jsonStr);
+
+    const validSeverities = new Set(["critical", "major", "minor"]);
+    const validIssueTypes = new Set(["contrast", "layout", "overflow", "missing-content", "broken-image", "spacing", "alignment"]);
+
+    const issues: QAIssue[] = Array.isArray(parsed.issues)
+      ? parsed.issues
+          .filter(
+            (issue: Record<string, unknown>) =>
+              validSeverities.has(issue.severity as string) &&
+              validIssueTypes.has(issue.issueType as string) &&
+              typeof issue.description === "string" &&
+              typeof issue.suggestedFix === "string"
+          )
+          .map((issue: Record<string, string>) => ({
+            severity: issue.severity as QAIssue["severity"],
+            sectionId: issue.sectionId || "global",
+            issueType: issue.issueType as QAIssue["issueType"],
+            description: issue.description,
+            suggestedFix: issue.suggestedFix,
+          }))
+      : [];
+
+    const hasCritical = issues.some((i) => i.severity === "critical");
+    const hasMajor = issues.some((i) => i.severity === "major");
+    const pass = !hasCritical && !hasMajor;
+    const score = typeof parsed.score === "number" ? parsed.score : pass ? 85 : 50;
+
+    return { pass, score, issues };
+  } catch (err) {
+    // Don't block generation on QA failures — treat as pass
+    console.error("[qa] QA review failed, treating as pass:", err);
+    return { pass: true, score: 75, issues: [] };
+  }
+}
+
+// ── QA Fix Application (Stage 4 fix loop) ──
+
+const QA_FIX_TOOL = {
+  name: "apply_fixes" as const,
+  description: "Apply search-and-replace operations to fix visual defects in the HTML.",
+  input_schema: {
+    type: "object" as const,
+    properties: {
+      operations: {
+        type: "array" as const,
+        items: {
+          type: "object" as const,
+          properties: {
+            search: {
+              type: "string" as const,
+              description: "Exact substring from the existing HTML to find.",
+            },
+            replace: {
+              type: "string" as const,
+              description: "The replacement string.",
+            },
+          },
+          required: ["search", "replace"],
+        },
+        description: "The search-and-replace operations to fix the identified issues.",
+      },
+    },
+    required: ["operations"],
+  },
+};
+
+export async function applyQAFixes(
+  html: string,
+  issues: QAIssue[],
+  blueprint: DesignBlueprint
+): Promise<string> {
+  try {
+    const issuesList = issues
+      .filter((i) => i.severity === "critical" || i.severity === "major")
+      .map(
+        (issue, idx) =>
+          `${idx + 1}. [${issue.severity}/${issue.issueType}] Section "${issue.sectionId}": ${issue.description}\n   Suggested fix: ${issue.suggestedFix}`
+      )
+      .join("\n\n");
+
+    if (!issuesList) {
+      return html; // No critical/major issues to fix
+    }
+
+    const message = await anthropic.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 8192,
+      system: `You are a surgical HTML fixer. You receive an HTML document and a list of visual defects found by a QA reviewer. Apply the MINIMUM changes needed to fix each defect.
+
+Rules:
+1. "search" must be an EXACT substring copied from the existing HTML — character-for-character.
+2. "replace" is the string to substitute.
+3. Make each "search" string long enough to be unique in the document.
+4. Fix ONLY the listed issues — do not make any other changes.
+5. Focus on Tailwind classes: changing text colors, adding overlays, fixing padding, adjusting layout classes.
+6. Do NOT restructure sections, add new sections, or remove content.
+7. For contrast fixes: change text color classes (e.g. text-white → text-gray-900) or add background overlays.
+8. For spacing fixes: adjust padding/margin classes.
+9. For layout fixes: adjust flex/grid classes, widths, or positioning.
+
+Design system reference:
+- Text on light backgrounds: use ${blueprint.colorSystem.textOnLight} or text-gray-900/text-zinc-800
+- Text on dark backgrounds: use ${blueprint.colorSystem.textOnDark} or text-white/text-gray-100
+- Primary color: ${blueprint.colorSystem.primary}
+- Accent color: ${blueprint.colorSystem.accent}`,
+      tools: [QA_FIX_TOOL],
+      tool_choice: { type: "tool", name: "apply_fixes" },
+      messages: [
+        {
+          role: "user",
+          content: `Here is the HTML document:\n\n${html}\n\n---\n\nFIX THESE ISSUES:\n${issuesList}`,
+        },
+      ],
+    });
+
+    const toolBlock = message.content.find((block) => block.type === "tool_use");
+    if (!toolBlock || toolBlock.type !== "tool_use") {
+      console.error("[qa-fix] No tool use response");
+      return html;
+    }
+
+    const response = toolBlock.input as { operations: Array<{ search: string; replace: string }> };
+    const operations = response.operations;
+
+    if (!Array.isArray(operations) || operations.length === 0) {
+      return html;
+    }
+
+    // Keep original in case fixes break something
+    const originalHtml = html;
+    let fixedHtml = html;
+    let appliedCount = 0;
+
+    for (const op of operations) {
+      if (typeof op.search !== "string" || typeof op.replace !== "string") continue;
+      if (fixedHtml.includes(op.search)) {
+        fixedHtml = fixedHtml.replace(op.search, op.replace);
+        appliedCount++;
+      }
+    }
+
+    // Safety check: if fixes broke the HTML structure, revert
+    if (
+      appliedCount === 0 ||
+      !fixedHtml.includes("<!DOCTYPE") ||
+      !fixedHtml.includes("</html>") ||
+      fixedHtml.length < originalHtml.length * 0.5
+    ) {
+      console.error(`[qa-fix] Fixes may have broken HTML (applied=${appliedCount}, sizeRatio=${fixedHtml.length / originalHtml.length}), reverting`);
+      return originalHtml;
+    }
+
+    return fixedHtml;
+  } catch (err) {
+    console.error("[qa-fix] Failed to apply fixes:", err);
+    return html;
+  }
+}
+
 const VARIATION_SYSTEM_PROMPT = `You are an elite creative director and frontend designer. You create website redesigns so striking that business owners feel compelled to hire on the spot. Your work is production-grade, visually unforgettable, and avoids anything that looks like generic AI output.
 
 You use HTML and Tailwind CSS via CDN. You only return complete, valid HTML — no explanation, no markdown, no code fences. The HTML must start with <!DOCTYPE html>.
@@ -473,7 +1022,7 @@ Spatial Composition & Layout:
 - Use max-w-7xl mx-auto containers but let hero elements break out
 - Unexpected layouts that feel genuinely designed, not template-driven
 - NAVBAR OVERLAP FIX: The navbar is fixed/sticky, so the hero section's content must not be hidden behind it. The simplest fix: add pt-20 or pt-24 to the hero section (just enough to clear the nav height). Do NOT overdo it — the goal is to prevent overlap, not add excessive whitespace.
-- BANNER + STICKY HEADER FIX: If you add an announcement banner above the header, you MUST make the banner sticky too (sticky top-0 z-50) and the header sticky right below it (sticky top-[banner-height] z-40). Otherwise when the user scrolls past the banner, a gap appears between the header and the top of the viewport. The simplest approach: wrap both the banner and nav in a single sticky container, OR skip the banner entirely.
+- BANNER + STICKY HEADER FIX — THIS CAUSES VISIBLE BUGS IF DONE WRONG: If you add an announcement/info banner above the header, you MUST wrap BOTH the banner and the nav inside a single sticky container (sticky top-0 z-50). Do NOT make the nav "fixed top-8" or "fixed top-[banner-height]" while leaving the banner non-sticky — this causes the banner to scroll away and leaves a visible gap above the header. The correct pattern is: <div class="sticky top-0 z-50"><div class="banner...">...</div><nav class="nav...">...</nav></div>. Then the hero needs pt-28 or pt-32 to clear both. The SIMPLEST approach: skip the banner entirely — only add one if the business truly benefits from it.
 - HERO BOTTOM SPACING: The hero section must have enough bottom padding (pb-12 or pb-16) so that CTA buttons at the bottom of the hero don't touch or crowd the next section below.
 
 Motion & Interaction:
@@ -482,6 +1031,16 @@ Motion & Interaction:
 - Hover states that surprise: translate-y, shadow shifts, color transitions, scale changes on cards and buttons
 - Extend Tailwind config inline with <script> to add custom keyframe animations via tailwind.config
 - A sticky nav with backdrop-blur glass effect
+
+ANIMATION FILL MODE — CRITICAL BUG PREVENTION:
+- When using staggered animations with opacity-0 + animation-delay, you MUST include "forwards" in the Tailwind animation config so elements stay visible after animating.
+- In the tailwind.config script, define animations like this: 'fade-in-up': 'fadeInUp 0.8s ease-out forwards', 'fade-in': 'fadeIn 0.8s ease-out forwards'
+- The "forwards" keyword is MANDATORY — without it, elements snap back to opacity-0 after the animation completes, making all content disappear.
+- Do NOT define separate CSS @keyframes AND Tailwind config animations for the same name — Tailwind CDN will override your CSS. Use ONLY the Tailwind config extend approach.
+- Example correct config:
+  tailwind.config = { theme: { extend: { keyframes: { fadeInUp: { '0%': { opacity: '0', transform: 'translateY(30px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } } }, animation: { 'fade-in-up': 'fadeInUp 0.8s ease-out forwards' } } } }
+- Then use: class="animate-fade-in-up opacity-0" style="animation-delay: 0.2s"
+- NEVER define @keyframes in a <style> block AND also in the Tailwind config — this causes conflicts.
 
 Component Quality:
 - Cards that feel elevated: layered shadows, border highlights, hover transforms
@@ -531,6 +1090,58 @@ Every HTML element MUST contain real, visible content. Never output empty cards,
 
 Remember: you are capable of extraordinary creative work. Don't hold back — show what can truly be created when committing fully to a distinctive vision.`;
 
+function renderBlueprintInstructions(blueprint: DesignBlueprint): string {
+  const fontUrl = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(blueprint.globalTypography.displayFont)}:wght@400;500;600;700;800;900&family=${encodeURIComponent(blueprint.globalTypography.bodyFont)}:wght@300;400;500;600;700&display=swap`;
+
+  let text = `
+═══════════════════════════════════════
+DESIGN BLUEPRINT — FOLLOW THIS PRECISELY
+═══════════════════════════════════════
+
+GLOBAL DESIGN SYSTEM:
+- Display font: ${blueprint.globalTypography.displayFont} (load via Google Fonts: ${fontUrl})
+- Body font: ${blueprint.globalTypography.bodyFont}
+- Hero text size: ${blueprint.globalTypography.heroSize}
+- Section heading size: ${blueprint.globalTypography.sectionHeadingSize}
+- Color system:
+  Primary: ${blueprint.colorSystem.primary}
+  Secondary: ${blueprint.colorSystem.secondary}
+  Accent: ${blueprint.colorSystem.accent}
+  Light backgrounds: ${blueprint.colorSystem.backgroundLight}
+  Dark backgrounds: ${blueprint.colorSystem.backgroundDark}
+  Text on light: ${blueprint.colorSystem.textOnLight}
+  Text on dark: ${blueprint.colorSystem.textOnDark}
+- Nav style: ${blueprint.navStyle}
+- Footer style: ${blueprint.footerStyle}
+- Design rationale: ${blueprint.designRationale}
+
+SECTIONS TO BUILD (in order):
+`;
+
+  for (let i = 0; i < blueprint.sections.length; i++) {
+    const s = blueprint.sections[i];
+    text += `
+SECTION ${i + 1}: ${s.id} (${s.sectionType} — ${s.layoutPattern})
+- Headline: "${s.headline}"${s.subheadline ? `\n- Subheadline: "${s.subheadline}"` : ""}
+- Content: ${s.contentNotes}
+- Background: ${s.backgroundColor} | Text: ${s.textColor}
+- Image: ${s.imageStrategy.source !== "none" && s.imageStrategy.url ? `${s.imageStrategy.url} (${s.imageStrategy.source})` : s.imageStrategy.source === "none" ? "No image — use background colors/gradients" : `Use best available ${s.imageStrategy.source} image`}
+- Fallback: ${s.imageStrategy.fallback}
+- Components: ${s.componentChoices.length > 0 ? s.componentChoices.join(", ") : "use best judgment"}
+- Animation: ${s.animationApproach}
+- Line budget: ~${s.estimatedLines} lines
+`;
+  }
+
+  text += `
+TOTAL LINE BUDGET: ${blueprint.totalEstimatedLines} lines (do not exceed 800)
+
+CRITICAL: Follow the blueprint's color assignments per section. Every section's text color has been pre-verified for contrast against its background — use them exactly as specified.
+`;
+
+  return text;
+}
+
 function buildVariationPrompt(
   profile: BusinessProfile,
   imageUrls: string[],
@@ -540,7 +1151,8 @@ function buildVariationPrompt(
   pageContent: string,
   customInstructions?: string,
   classifiedImages?: ClassifiedImage[],
-  groupedStockImages?: StockImages
+  groupedStockImages?: StockImages,
+  blueprint?: DesignBlueprint
 ): string {
   // Use classified images if available, otherwise fall back to flat URL list
   const hasClassified = classifiedImages && classifiedImages.length > 0;
@@ -666,7 +1278,7 @@ Critical Design Rules:
 - IMAGE LOADING PERFORMANCE: The hero image must load eagerly (no loading attribute). ALL other images below the fold MUST use loading="lazy" to avoid blocking page load.
 - Load Tailwind CSS via CDN: <script src="https://cdn.tailwindcss.com"></script>
 - Use Lucide icons via <i data-lucide="name"> tags — NEVER use emoji characters as icons
-- Extend Tailwind config inline with <script> to add custom keyframe animations (fadeInUp, fadeIn, etc.) via tailwind.config
+- Extend Tailwind config inline with <script> to add custom keyframe animations (fadeInUp, fadeIn, etc.) via tailwind.config — ALWAYS include "forwards" fill mode in animation values so animated elements stay visible. Example: 'fade-in-up': 'fadeInUp 0.8s ease-out forwards'. Do NOT define duplicate @keyframes in a <style> block — use ONLY the Tailwind config approach.
 - Load a Google Font via <link> tag in <head> (pick the font specified in the style direction, or one that fits)
 - Set the font-family on <body> and configure it in the Tailwind config extend
 - Use the real business content — NEVER use placeholder text like "Lorem Ipsum" or "Your Business Name Here"
@@ -678,17 +1290,18 @@ Critical Design Rules:
 - ALL cards must have hover states — translate-y, shadow changes, or border color transitions
 - The design must be fully mobile responsive — test mental model at 375px, 768px, and 1440px
 - Use max-w-7xl mx-auto for content containers
-- Add orchestrated page-load animations: staggered fade-in-up reveals with animation-delay on hero elements and section content
+- Add orchestrated page-load animations: staggered fade-in-up reveals with animation-delay on hero elements and section content. CRITICAL: animations MUST use "forwards" fill mode and define keyframes ONLY in the Tailwind config, not in a separate <style> block.
 - Create visual depth: use background textures (subtle noise/grain via CSS), layered transparencies, and atmospheric gradients — not flat solid-color sections
 - The design must feel like it was hand-crafted by a senior designer for this specific business, not generated from a template
 - HERO SECTIONS WITH BACKGROUND IMAGES: Always add a dark overlay div (absolute inset-0 bg-black/50 or bg-gradient-to-t from-black/70 to-black/30) between the image and the text content. The text container must be relative with z-10. This is MANDATORY — never skip the overlay.
 - NAVBAR OVERLAP FIX: The nav is fixed/sticky, so the hero's first visible content must clear the nav. Add pt-20 or pt-24 to the hero section to prevent the headline from hiding behind the navbar. Don't overdo the spacing — just enough to clear the nav.
-- BANNER + STICKY HEADER FIX: If you add an announcement banner above the header, you MUST make the banner sticky too (sticky top-0 z-50) and the header sticky right below it (sticky top-[banner-height] z-40). Otherwise when the user scrolls past the banner, a gap appears between the header and the top of the viewport. The simplest approach: wrap both the banner and nav in a single sticky container, OR skip the banner entirely.
+- BANNER + STICKY HEADER FIX — THIS CAUSES VISIBLE BUGS IF DONE WRONG: If you add an announcement/info banner above the header, you MUST wrap BOTH the banner and the nav inside a single sticky container (sticky top-0 z-50). Do NOT make the nav "fixed top-8" or "fixed top-[banner-height]" while leaving the banner non-sticky — this causes the banner to scroll away and leaves a visible gap above the header. The correct pattern is: <div class="sticky top-0 z-50"><div class="banner...">...</div><nav class="nav...">...</nav></div>. Then the hero needs pt-28 or pt-32 to clear both. The SIMPLEST approach: skip the banner entirely — only add one if the business truly benefits from it.
 - HERO BOTTOM SPACING: The hero section must have enough bottom padding (pb-12 or pb-16) so that CTA buttons at the bottom of the hero don't touch or crowd the next section below.
 - FINAL CONTRAST CHECK: After generating the full HTML, scan every section top to bottom. For each section, verify the text color has high contrast against the section background. If any text would be hard to read, fix it before outputting.
 ${customInstructions ? `\nADDITIONAL INSTRUCTIONS FROM THE USER — follow these closely:\n${customInstructions}\n` : ""}
 - Keep the total HTML under 800 lines. Favor clean, efficient code — combine utility classes, avoid unnecessary wrapper divs, and keep sections impactful but concise. Quality over quantity.
-- Return ONLY the complete HTML document starting with <!DOCTYPE html> — absolutely nothing else`;
+- Return ONLY the complete HTML document starting with <!DOCTYPE html> — absolutely nothing else
+${blueprint ? renderBlueprintInstructions(blueprint) : ""}`;
 }
 
 function extractHtml(text: string): string {
@@ -709,9 +1322,10 @@ export async function generateVariation(
   pageContent: string,
   customInstructions?: string,
   classifiedImages?: ClassifiedImage[],
-  groupedStockImages?: StockImages
+  groupedStockImages?: StockImages,
+  blueprint?: DesignBlueprint
 ): Promise<string> {
-  const userContent = buildVariationPrompt(profile, imageUrls, stockImageUrls, style, pageStructure, pageContent, customInstructions, classifiedImages, groupedStockImages);
+  const userContent = buildVariationPrompt(profile, imageUrls, stockImageUrls, style, pageStructure, pageContent, customInstructions, classifiedImages, groupedStockImages, blueprint);
 
   const message = await anthropic.messages.create({
     model: "claude-sonnet-4-20250514",

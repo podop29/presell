@@ -102,3 +102,92 @@ export interface AnalysisResult {
   imageSearchQueries: string[];
   classifiedImages: ClassifiedImage[];
 }
+
+/* ── Design Blueprint (multi-pass pipeline) ── */
+
+export interface SectionBlueprint {
+  id: string;
+  sectionType: string;
+  layoutPattern: string;
+  headline: string;
+  subheadline?: string;
+  contentNotes: string;
+  imageStrategy: {
+    source: "classified" | "stock-hero" | "stock-secondary" | "stock-atmosphere" | "none";
+    url?: string;
+    fallback: string;
+  };
+  backgroundColor: string;
+  textColor: string;
+  componentChoices: string[];
+  animationApproach: string;
+  estimatedLines: number;
+}
+
+export interface DesignBlueprint {
+  globalTypography: {
+    displayFont: string;
+    bodyFont: string;
+    heroSize: string;
+    sectionHeadingSize: string;
+  };
+  colorSystem: {
+    primary: string;
+    secondary: string;
+    accent: string;
+    backgroundLight: string;
+    backgroundDark: string;
+    textOnLight: string;
+    textOnDark: string;
+  };
+  navStyle: string;
+  footerStyle: string;
+  sections: SectionBlueprint[];
+  totalEstimatedLines: number;
+  designRationale: string;
+}
+
+/* ── Visual QA ── */
+
+export interface QAIssue {
+  severity: "critical" | "major" | "minor";
+  sectionId: string;
+  issueType: "contrast" | "layout" | "overflow" | "missing-content" | "broken-image" | "spacing" | "alignment";
+  description: string;
+  suggestedFix: string;
+}
+
+export interface QAResult {
+  pass: boolean;
+  score: number;
+  issues: QAIssue[];
+}
+
+/* ── Generation Pipeline ── */
+
+export type PipelineStage = "blueprint" | "generating" | "qa-screenshot" | "qa-review" | "qa-fix" | "finalizing";
+
+export interface PipelineProgress {
+  stage: PipelineStage;
+  message: string;
+  iteration?: number;
+}
+
+export interface PipelineInput {
+  profile: BusinessProfile;
+  selectedStyle: StyleSuggestion;
+  pageStructure: string[];
+  pageContent: string;
+  imageUrls: string[];
+  stockImageUrls: string[];
+  stockImages?: StockImages;
+  classifiedImages?: ClassifiedImage[];
+  customInstructions?: string;
+}
+
+export interface PipelineResult {
+  html: string;
+  blueprint: DesignBlueprint;
+  qaIterations: number;
+  finalScore: number;
+}
