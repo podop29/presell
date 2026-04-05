@@ -33,7 +33,8 @@
       "Bash(find /home/steva/presell -path */node_modules -prune -o -type f \\\\\\(-name *.sql -o -name *schema* -o -name *migration* \\\\\\) -print)",
       "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")",
       "Bash(grep -E \"\\\\.\\(md|txt\\)$\")",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(npx tsc:*)"
     ]
   }
 }

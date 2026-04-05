@@ -6,6 +6,7 @@ import BeforeAfter from "@/components/before-after";
 import MapsToSite from "@/components/maps-to-site";
 import ScrollToTopLink from "@/components/scroll-to-top-link";
 import OutreachPreview from "@/components/outreach-preview";
+import LiveCounter from "@/components/live-counter";
 
 /* ───── SEO metadata ───── */
 export const metadata: Metadata = {
@@ -163,9 +164,7 @@ export default function Home() {
             {/* ─── URL INPUT ─── */}
             <div className="animate-fade-in-up delay-300 mt-12">
               <UrlInput />
-              <p className="mt-3 text-xs text-neutral-600 text-center">
-                No credit card required — start with free credits
-              </p>
+              <LiveCounter />
             </div>
           </div>
         </section>
@@ -406,9 +405,7 @@ export default function Home() {
               Your next client is one preview away. Paste their URL or Google Maps link and let the work speak for itself.
             </p>
             <UrlInput />
-            <p className="mt-3 text-xs text-neutral-600 text-center">
-              No credit card required — start with free credits
-            </p>
+            <LiveCounter />
           </div>
         </section>
       </main>
