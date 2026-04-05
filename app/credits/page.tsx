@@ -14,9 +14,10 @@ interface Transaction {
 }
 
 const CREDIT_PACKS = [
-  { id: "pack_5", credits: 5, price: 900, label: "Starter", perCredit: "$1.80" },
-  { id: "pack_15", credits: 15, price: 1900, label: "Popular", perCredit: "$1.27" },
-  { id: "pack_50", credits: 50, price: 4900, label: "Pro", perCredit: "$0.98" },
+  { id: "pack_3", credits: 3, price: 300, label: "Try It", perCredit: "$1.00" },
+  { id: "pack_10", credits: 10, price: 1200, label: "Starter", perCredit: "$1.20" },
+  { id: "pack_25", credits: 25, price: 2500, label: "Popular", perCredit: "$1.00" },
+  { id: "pack_50", credits: 50, price: 3900, label: "Pro", perCredit: "$0.78" },
 ];
 
 function CreditsPageInner() {
@@ -119,8 +120,8 @@ function CreditsPageInner() {
             <div className="p-6 rounded-2xl border border-[var(--border)] bg-surface animate-pulse">
               <div className="h-8 bg-neutral-800 rounded w-24" />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {[1, 2, 3].map((i) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {[1, 2, 3, 4].map((i) => (
                 <div key={i} className="p-6 rounded-2xl border border-[var(--border)] bg-surface animate-pulse h-48" />
               ))}
             </div>
@@ -143,9 +144,9 @@ function CreditsPageInner() {
               <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-4">
                 Buy Credits
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {CREDIT_PACKS.map((pack) => {
-                  const isPopular = pack.id === "pack_15";
+                  const isPopular = pack.id === "pack_25";
                   return (
                     <div
                       key={pack.id}
