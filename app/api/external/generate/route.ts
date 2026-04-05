@@ -36,13 +36,6 @@ export async function POST(req: NextRequest) {
     if (!url) {
       return NextResponse.json({ error: "URL is required." }, { status: 400 });
     }
-    if (!devName || !devEmail) {
-      return NextResponse.json(
-        { error: "devName and devEmail are required." },
-        { status: 400 }
-      );
-    }
-
     const urlCheck = validateExternalUrl(url);
     if (!urlCheck.valid) {
       return NextResponse.json({ error: urlCheck.reason }, { status: 400 });
@@ -211,8 +204,8 @@ export async function POST(req: NextRequest) {
       slug,
       original_url: url,
       redesign_html: html,
-      dev_name: devName,
-      dev_email: devEmail,
+      dev_name: devName || "",
+      dev_email: devEmail || "",
       dev_message: devMessage || null,
       created_at: now.toISOString(),
       expires_at: expiresAt.toISOString(),

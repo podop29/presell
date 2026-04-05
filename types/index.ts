@@ -34,7 +34,7 @@ export interface StockImages {
 
 export interface AnalyzeResponse {
   profile: BusinessProfile;
-  styles: [StyleSuggestion, StyleSuggestion, StyleSuggestion];
+  styles: StyleSuggestion[];
   pageStructure: string[];
   imageUrls: string[];
   stockImageUrls: string[];
@@ -45,8 +45,8 @@ export interface AnalyzeResponse {
 
 export interface GenerateRequest {
   url: string;
-  devName: string;
-  devEmail: string;
+  devName?: string;
+  devEmail?: string;
   devMessage?: string;
   profile: BusinessProfile;
   selectedStyle: StyleSuggestion;
@@ -97,7 +97,7 @@ export interface ClassifiedImage {
 
 export interface AnalysisResult {
   profile: BusinessProfile;
-  styles: [StyleSuggestion, StyleSuggestion, StyleSuggestion];
+  styles: StyleSuggestion[];
   pageStructure: string[];
   imageSearchQueries: string[];
   classifiedImages: ClassifiedImage[];

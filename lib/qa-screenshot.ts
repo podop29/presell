@@ -1,4 +1,16 @@
-import { chromium } from "playwright";
+import { chromium, type Browser } from "playwright";
+
+let _browser: Browser | null = null;
+
+/** Reuse a single browser instance across QA screenshots to avoid cold-start overhead. */
+async function getBrowser(): Promise<Browser> {
+  if (_browser && _browser.isConnected()) return _browser;
+  _browser = await chromium.launch({
+    headless: true,
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+  });
+  return _browser;
+}
 
 /**
  * Render generated HTML in a headless browser and capture a full-page screenshot.
@@ -6,22 +18,17 @@ import { chromium } from "playwright";
  * Returns a base64-encoded PNG string.
  */
 export async function screenshotHtml(html: string): Promise<string> {
-  const browser = await chromium.launch({
-    headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
-  });
+  const browser = await getBrowser();
+  const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+  const page = await context.newPage();
 
   try {
-    const page = await browser.newPage({
-      viewport: { width: 1280, height: 720 },
-    });
-
     // Render HTML directly — external resources (Google Fonts, Tailwind CDN, Pexels images)
     // load normally since they use absolute URLs
     await page.setContent(html, { waitUntil: "networkidle", timeout: 30000 });
 
-    // Extra wait for Tailwind JIT processing + Google Fonts loading
-    await page.waitForTimeout(2000);
+    // Brief wait for Tailwind JIT processing after network settles
+    await page.waitForTimeout(1000);
 
     // Clip to same height limit as scraper (Claude's 8000px image limit)
     const fullHeight = await page.evaluate(
@@ -36,6 +43,6 @@ export async function screenshotHtml(html: string): Promise<string> {
 
     return screenshotBuffer.toString("base64");
   } finally {
-    await browser.close();
+    await context.close();
   }
 }

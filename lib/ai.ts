@@ -29,21 +29,11 @@ const DEFAULT_PROFILE: BusinessProfile = {
   location: "unknown",
 };
 
-const DEFAULT_STYLES: [StyleSuggestion, StyleSuggestion, StyleSuggestion] = [
+const DEFAULT_STYLES: StyleSuggestion[] = [
   {
     styleName: "Refined & Editorial",
     styleBrief:
       "Sophisticated editorial layout with Playfair Display for headlines and Source Sans 3 for body. Color palette: #1a1a2e deep navy with #e8d5b7 warm gold accents. Asymmetric hero with oversized typography, magazine-style section layouts, generous whitespace, subtle grain texture on light sections, elegant card borders, and muted hover transitions. Channel the refined aesthetic of a high-end architecture portfolio.",
-  },
-  {
-    styleName: "Vivid & Energetic",
-    styleBrief:
-      "High-energy design with DM Sans bold headlines and Manrope body text. Color palette: #0f172a charcoal base with #f97316 vibrant orange and #06b6d4 cyan as sharp accents. Oversized hero text with gradient mesh background, diagonal section dividers, cards with bold colored left-borders and scale-up hover states, gradient CTA buttons with glow shadows. Channel the confident energy of Linear or Vercel.",
-  },
-  {
-    styleName: "Warm & Organic",
-    styleBrief:
-      "Earthy, approachable design with Fraunces for display text and Nunito for body. Color palette: #faf7f2 warm cream base, #2d4a3e forest green primary, #c9a96e muted gold accent. Rounded corners (rounded-2xl) everywhere, soft layered shadows, textured section backgrounds with subtle noise overlay, hand-crafted feel with organic shapes and generous padding. Channel the warmth of a premium artisan brand.",
   },
 ];
 
@@ -141,36 +131,32 @@ ${data.imageUrls.length > 0 ? data.imageUrls.slice(0, 20).join("\n") : "(no imag
 
 Classify EVERY image URL listed above. Be strict with "skip" — only quality images that add value should be kept. If the screenshot helps you see what an image actually looks like on the page, use that context.
 
-"styles" must be an array of exactly 3 objects. Each object has:
+"styles" must be an array with exactly 1 object — the single best design direction for this business. The object has:
 {
   "styleName": "string — a short, catchy name for this design direction (3-5 words, like 'Warm & Inviting' or 'Sleek Tech Forward')",
-  "styleBrief": "string — a detailed 150-250 word design brief covering: color palette (specific hex codes), typography (specific Google Font name), overall mood, hero section approach, card/component style, CTA button style, and what real-world brand or website aesthetic this should channel"
+  "styleBrief": "string — a detailed 150-250 word design brief covering: color palette (specific hex codes), typography (specific Google Font names for display and body), overall mood, hero section approach, card/component style, CTA button style, and what real-world brand or website aesthetic this should channel"
 }
 
-IMPORTANT — RESPECT THE EXISTING BRAND:
-First, assess whether the site has a strong existing brand identity (clear logo, consistent color scheme, recognizable style) or a weak/generic one (default template, no clear colors, no brand personality). This determines how you approach ALL 3 styles.
+STYLE SELECTION STRATEGY — RESPECT THE EXISTING BRAND:
+First, assess whether the site has a strong existing brand identity (clear logo, consistent color scheme, recognizable style) or a weak/generic one (default template, no clear colors, no brand personality).
 
 IF THE SITE HAS STRONG BRANDING (clear colors, logo, identity):
-- ALL 3 styles MUST preserve the brand's core color palette. Use the exact hex codes from "primaryColors" and the screenshot. These are the client's colors — do not replace them.
-- The 3 styles should differ in DESIGN APPROACH, not brand identity: vary the typography, layout style, component design, spacing, visual effects, and overall mood — but keep the same brand colors across all three.
-- Think of it as 3 different designers all working with the same brand guidelines — each brings a different aesthetic sensibility but respects the brand.
-- Example differences: one might use an editorial magazine layout with serif fonts, another might use a modern minimal approach with clean sans-serif, a third might use bold asymmetric layouts with strong whitespace.
+- PRESERVE the brand's core color palette. Use the exact hex codes from "primaryColors" and the screenshot. These are the client's colors — do not replace them.
+- Create an ELEVATED version of their existing brand — same colors, dramatically better design execution.
+- Think of it as the best designer in the world taking their brand guidelines and making the most beautiful version possible.
+- Name it something that signals elevation (e.g. "Elevated [Brand]", "Refined [Business Name]").
 
 IF THE SITE HAS WEAK/NO BRANDING (generic template, unclear colors, no identity):
-- You have more freedom to suggest color palettes, but still keep them appropriate for the industry and business.
-- The 3 styles can each propose a different color direction, but they should all feel like plausible brand identities for THIS specific business — not random experiments.
-- Each style should feel like a cohesive brand proposal, not just a color swap.
+- Create a fresh, distinctive design direction that feels like a natural fit for this specific business and industry.
+- Propose colors that are appropriate and compelling for their industry — a law firm gets different colors than a surf shop.
+- The style should feel like a cohesive brand proposal crafted specifically for them.
 
-Rules for all 3 styles:
-- Style 1: The most polished, refined elevation — closest to the original site's feel but dramatically better in execution. Name it something that signals continuity (e.g. "Elevated [Brand]", "Refined Classic").
-- Style 2: A sophisticated/editorial take — think refined magazine layout, elegant typography, generous whitespace.
-- Style 3: A modern/energetic take — think clean startup landing page, bold typography, strong visual hierarchy.
-- The goal is ELEVATION, not reinvention. The business owner should see their site made beautiful, not a completely foreign design.
-- Tailor every style to this specific business and industry — a law firm should never get the same styles as a surf shop.
-- FONT SELECTION IS CRITICAL: choose distinctive, characterful Google Fonts — NEVER suggest Inter, Roboto, Arial, Open Sans, or other overused defaults. Pick fonts with personality: Playfair Display, Fraunces, DM Serif Display, Space Grotesk, Outfit, Sora, Manrope, Cabinet Grotesk, Satoshi, General Sans, Clash Display, etc. Each style MUST use a different display font.
-- Reference specific colors (hex codes), specific Google Fonts by name, and specific design techniques (gradient meshes, grain textures, asymmetric layouts, diagonal dividers, overlapping elements, glassmorphism, etc.)
-- Describe the atmosphere: what real-world brand or website aesthetic should this channel? (e.g. "Channel the editorial elegance of Cereal magazine" or "Channel the bold energy of Stripe's landing page")
-- The briefs should be opinionated, vivid, and specific — say "use #1e3a5f navy with #f4a261 warm amber accents, grain-textured cream sections" not "use professional colors"
+Rules:
+- The goal is ELEVATION, not reinvention. The business owner should see their site made beautiful.
+- FONT SELECTION IS CRITICAL: choose distinctive, characterful Google Fonts — NEVER suggest Inter, Roboto, Arial, Open Sans, or other overused defaults. Pick fonts with personality: Playfair Display, Fraunces, DM Serif Display, Space Grotesk, Outfit, Sora, Manrope, Cabinet Grotesk, Satoshi, General Sans, Clash Display, etc.
+- Reference specific colors (hex codes), specific Google Fonts by name, and specific design techniques
+- Describe the atmosphere: what real-world brand or website aesthetic should this channel?
+- The brief should be opinionated, vivid, and specific — say "use #1e3a5f navy with #f4a261 warm amber accents, grain-textured cream sections" not "use professional colors"
 - ANTI-PATTERNS: Never suggest generic purple-on-white, safe blue corporate palettes, or any design direction that feels like generic AI output
 
 Website Title: ${data.title}
@@ -214,7 +200,7 @@ Page Content: ${data.content.slice(0, 3000)}`,
     let styles = DEFAULT_STYLES;
     if (
       Array.isArray(parsed.styles) &&
-      parsed.styles.length === 3 &&
+      parsed.styles.length >= 1 &&
       parsed.styles.every(
         (s: Record<string, unknown>) =>
           typeof s.styleName === "string" && typeof s.styleBrief === "string"
@@ -223,7 +209,7 @@ Page Content: ${data.content.slice(0, 3000)}`,
       styles = parsed.styles.map((s: Record<string, string>) => ({
         styleName: s.styleName,
         styleBrief: s.styleBrief,
-      })) as [StyleSuggestion, StyleSuggestion, StyleSuggestion];
+      })) as StyleSuggestion[];
     }
 
     let pageStructure = DEFAULT_PAGE_STRUCTURE;
@@ -346,22 +332,18 @@ ${reviewText || "No reviews available"}
 - Query 3: A background/atmosphere image
 Tailor these to the specific business category: ${categoryText}
 
-"styles" must be an array of exactly 3 objects. Each object has:
+"styles" must be an array with exactly 1 object — the single best design direction for this business. The object has:
 {
   "styleName": "string — a short, catchy name for this design direction (3-5 words)",
-  "styleBrief": "string — a detailed 150-250 word design brief covering: color palette (specific hex codes), typography (specific Google Font names), overall mood, hero section approach, card/component style, CTA button style, and what real-world brand aesthetic this should channel"
+  "styleBrief": "string — a detailed 150-250 word design brief covering: color palette (specific hex codes), typography (specific Google Font names for display and body), overall mood, hero section approach, card/component style, CTA button style, and what real-world brand aesthetic this should channel"
 }
 
 Since this business has NO existing website, you have FULL CREATIVE FREEDOM:
-- Style 1: The most natural, industry-appropriate direction — what a skilled designer would create as the obvious best choice for this category
-- Style 2: A sophisticated/editorial take — refined, elegant, generous whitespace
-- Style 3: A modern/energetic take — bold typography, strong visual hierarchy, confident energy
-
-Rules for all 3 styles:
-- Tailor every style to this specific business and industry — a law firm should never get the same styles as a surf shop
-- FONT SELECTION IS CRITICAL: choose distinctive, characterful Google Fonts — NEVER suggest Inter, Roboto, Arial, Open Sans, or other overused defaults. Pick fonts with personality: Playfair Display, Fraunces, DM Serif Display, Space Grotesk, Outfit, Sora, Manrope, Cabinet Grotesk, Satoshi, General Sans, Clash Display, etc. Each style MUST use a different display font.
+- Create the single most natural, industry-appropriate design direction — what the best designer in the world would create as the obvious best choice for this specific business category.
+- Tailor the style to this specific business and industry — a law firm should never get the same style as a surf shop.
+- FONT SELECTION IS CRITICAL: choose distinctive, characterful Google Fonts — NEVER suggest Inter, Roboto, Arial, Open Sans, or other overused defaults. Pick fonts with personality: Playfair Display, Fraunces, DM Serif Display, Space Grotesk, Outfit, Sora, Manrope, Cabinet Grotesk, Satoshi, General Sans, Clash Display, etc.
 - Reference specific colors (hex codes), specific Google Fonts by name, and specific design techniques
-- The briefs should be opinionated, vivid, and specific
+- The brief should be opinionated, vivid, and specific
 - ANTI-PATTERNS: Never suggest generic purple-on-white, safe blue corporate palettes, or any design direction that feels like generic AI output`,
         },
       ],
@@ -398,7 +380,7 @@ Rules for all 3 styles:
     let styles = DEFAULT_STYLES;
     if (
       Array.isArray(parsed.styles) &&
-      parsed.styles.length === 3 &&
+      parsed.styles.length >= 1 &&
       parsed.styles.every(
         (s: Record<string, unknown>) =>
           typeof s.styleName === "string" && typeof s.styleBrief === "string"
@@ -407,7 +389,7 @@ Rules for all 3 styles:
       styles = parsed.styles.map((s: Record<string, string>) => ({
         styleName: s.styleName,
         styleBrief: s.styleBrief,
-      })) as [StyleSuggestion, StyleSuggestion, StyleSuggestion];
+      })) as StyleSuggestion[];
     }
 
     let pageStructure = DEFAULT_PAGE_STRUCTURE;

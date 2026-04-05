@@ -48,6 +48,8 @@ export default function PreviewClient({
   coldEmailSubject,
   coldEmailBody,
 }: PreviewClientProps) {
+  const [currentDevName, setCurrentDevName] = useState(devName);
+  const [currentDevEmail, setCurrentDevEmail] = useState(devEmail);
   const [activeView, setActiveView] = useState<string>(
     variations[0]?.key ?? "original"
   );
@@ -104,7 +106,7 @@ export default function PreviewClient({
     }
   }, [originalUrl, businessName]);
 
-  const displayName = companyName || devName;
+  const displayName = companyName || currentDevName;
   const initial = displayName.charAt(0).toUpperCase();
 
   function revokePendingBlob() {
@@ -1054,12 +1056,67 @@ export default function PreviewClient({
     }
   }
 
-  const showCta = devName && devEmail;
+  // Dev details editing (name/email)
+  const [editingDevDetails, setEditingDevDetails] = useState(false);
+  const [devDetailsDraft, setDevDetailsDraft] = useState({ name: devName, email: devEmail, note: devMessage || "" });
+  const [savingDevDetails, setSavingDevDetails] = useState(false);
+
+  async function handleSaveDevDetails() {
+    if (!devDetailsDraft.name.trim() || !devDetailsDraft.email.trim()) return;
+    setSavingDevDetails(true);
+    try {
+      const res = await fetch(`/api/preview/${slug}/dev-details`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: devDetailsDraft.name.trim(), email: devDetailsDraft.email.trim() }),
+      });
+      if (res.ok) {
+        setCurrentDevName(devDetailsDraft.name.trim());
+        setCurrentDevEmail(devDetailsDraft.email.trim());
+        // Save note if provided
+        if (devDetailsDraft.note.trim()) {
+          const noteRes = await fetch(`/api/preview/${slug}/note`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: devDetailsDraft.note.trim() }),
+          });
+          if (noteRes.ok) {
+            setNote(devDetailsDraft.note.trim());
+            setNoteDraft(devDetailsDraft.note.trim());
+          }
+        }
+        // Persist to localStorage for future previews
+        if (typeof window !== "undefined") {
+          localStorage.setItem("pitchkit_devName", devDetailsDraft.name.trim());
+          localStorage.setItem("pitchkit_devEmail", devDetailsDraft.email.trim());
+        }
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setSavingDevDetails(false);
+      setEditingDevDetails(false);
+    }
+  }
+
+  function openDevDetailsModal() {
+    // Pre-fill from localStorage if current values are empty
+    let name = currentDevName;
+    let email = currentDevEmail;
+    if (typeof window !== "undefined") {
+      if (!name) name = localStorage.getItem("pitchkit_devName") || "";
+      if (!email) email = localStorage.getItem("pitchkit_devEmail") || "";
+    }
+    setDevDetailsDraft({ name, email, note: note || "" });
+    setEditingDevDetails(true);
+  }
+
+  const showCta = currentDevName && currentDevEmail;
   const [contactOpen, setContactOpen] = useState(false);
   const [emailCopied, setEmailCopied] = useState(false);
 
   function handleCopyEmail() {
-    navigator.clipboard.writeText(devEmail);
+    navigator.clipboard.writeText(currentDevEmail);
     setEmailCopied(true);
     setTimeout(() => setEmailCopied(false), 2000);
   }
@@ -1715,7 +1772,7 @@ export default function PreviewClient({
                 <p className="text-sm font-semibold text-white truncate">
                   {displayName}
                 </p>
-                <p className="text-xs text-zinc-400 truncate">{devEmail}</p>
+                <p className="text-xs text-zinc-400 truncate">{currentDevEmail}</p>
               </div>
               {/* CTA inline on mobile */}
               <button
@@ -1774,6 +1831,98 @@ export default function PreviewClient({
             </button>
           </div>
         </footer>
+      )}
+
+      {/* ── Add your details prompt (owner, no banner yet) ── */}
+      {isOwner && !showCta && (
+        <footer className="relative z-30 shrink-0 bg-black/60 backdrop-blur-xl border-t border-white/10 px-4 sm:px-6 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <div className="max-w-5xl mx-auto flex items-center justify-center gap-3">
+            <p className="text-sm text-zinc-400">Add your name &amp; email to show a contact banner</p>
+            <button
+              onClick={openDevDetailsModal}
+              className="px-4 py-1.5 bg-white hover:bg-neutral-200 text-zinc-900 text-sm font-semibold rounded-lg transition-colors"
+            >
+              Add Details
+            </button>
+          </div>
+        </footer>
+      )}
+
+      {/* ── Dev Details Modal ── */}
+      {editingDevDetails && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          onClick={() => setEditingDevDetails(false)}
+        >
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div
+            className="relative w-full max-w-md bg-zinc-900 border border-white/10 rounded-2xl p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setEditingDevDetails(false)}
+              className="absolute top-4 right-4 text-zinc-500 hover:text-white transition-colors"
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+
+            <h3 className="text-lg font-semibold text-white mb-1">Your contact details</h3>
+            <p className="text-sm text-zinc-400 mb-5">Shown on the preview so your prospect can reach you.</p>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1">Name</label>
+                <input
+                  type="text"
+                  placeholder="Jane Smith"
+                  value={devDetailsDraft.name}
+                  onChange={(e) => setDevDetailsDraft(d => ({ ...d, name: e.target.value }))}
+                  className="w-full px-3 py-2 bg-black/50 border border-white/10 rounded-lg text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-white/30"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1">Email</label>
+                <input
+                  type="email"
+                  placeholder="jane@studio.com"
+                  value={devDetailsDraft.email}
+                  onChange={(e) => setDevDetailsDraft(d => ({ ...d, email: e.target.value }))}
+                  className="w-full px-3 py-2 bg-black/50 border border-white/10 rounded-lg text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-white/30"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1">
+                  Personal note <span className="text-zinc-600">— optional</span>
+                </label>
+                <textarea
+                  placeholder="e.g. &quot;I noticed your site could use a refresh — here's what I'd do.&quot;"
+                  value={devDetailsDraft.note}
+                  onChange={(e) => setDevDetailsDraft(d => ({ ...d, note: e.target.value }))}
+                  rows={2}
+                  className="w-full px-3 py-2 bg-black/50 border border-white/10 rounded-lg text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-white/30 resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-5">
+              <button
+                onClick={() => setEditingDevDetails(false)}
+                className="px-4 py-2 text-sm text-zinc-400 hover:text-white transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveDevDetails}
+                disabled={savingDevDetails || !devDetailsDraft.name.trim() || !devDetailsDraft.email.trim()}
+                className="px-5 py-2 bg-white hover:bg-neutral-200 text-zinc-900 text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
+              >
+                {savingDevDetails ? "Saving..." : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ── Cold Email Modal (owner only) ── */}
@@ -1901,8 +2050,8 @@ export default function PreviewClient({
                 </div>
               )}
               <h3 className="text-lg font-semibold text-white">{displayName}</h3>
-              {companyName && companyName !== devName && (
-                <p className="text-sm text-zinc-400">{devName}</p>
+              {companyName && companyName !== currentDevName && (
+                <p className="text-sm text-zinc-400">{currentDevName}</p>
               )}
             </div>
 
@@ -1944,7 +2093,7 @@ export default function PreviewClient({
               <svg className="w-4 h-4 text-zinc-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="2" y="4" width="20" height="16" rx="2" /><path d="M22 7l-10 7L2 7" />
               </svg>
-              <span className="text-sm text-zinc-300 truncate flex-1 font-mono">{devEmail}</span>
+              <span className="text-sm text-zinc-300 truncate flex-1 font-mono">{currentDevEmail}</span>
               <button
                 onClick={handleCopyEmail}
                 className="shrink-0 px-2.5 py-1 text-xs font-medium rounded-md bg-white/10 hover:bg-white/15 text-zinc-300 transition-colors"
@@ -1956,7 +2105,7 @@ export default function PreviewClient({
             {/* Action buttons */}
             <div className="flex flex-col gap-2">
               <a
-                href={`mailto:${devEmail}?subject=Website Redesign&body=Hi ${encodeURIComponent(displayName)}, I saw the redesign preview and I'm interested in learning more.`}
+                href={`mailto:${currentDevEmail}?subject=Website Redesign&body=Hi ${encodeURIComponent(displayName)}, I saw the redesign preview and I'm interested in learning more.`}
                 className="w-full py-2.5 bg-white hover:bg-neutral-200 text-zinc-900 text-sm font-semibold rounded-xl transition-colors text-center"
               >
                 Send Email

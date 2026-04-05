@@ -13,13 +13,11 @@ import {
 import { screenshotHtml } from "@/lib/qa-screenshot";
 import { injectLucide } from "@/lib/inject-lucide";
 
-const MAX_QA_ITERATIONS = 3;
-
 /**
  * Multi-pass generation pipeline:
  * 1. Blueprint — plan layout section-by-section
  * 2. Generate — build HTML from blueprint
- * 3. QA Loop — screenshot → review → fix (up to 3 iterations)
+ * 3. QA — single screenshot → review → fix pass (no re-review loop to save time)
  *
  * Used by both /api/generate (SSE) and /api/external/generate (JSON).
  * The onProgress callback is optional — the external route skips it.
@@ -82,50 +80,33 @@ export async function runGenerationPipeline(
   );
   html = injectLucide(html);
 
-  // ── Stage 4: QA Loop ──
+  // ── Stage 4: Single QA pass (screenshot → review → fix if needed) ──
   let qaIterations = 0;
   let finalScore = 75; // Default if QA is skipped
-  let lastScore = -1;
 
-  for (let i = 1; i <= MAX_QA_ITERATIONS; i++) {
-    try {
-      // Screenshot
-      send({ stage: "qa-screenshot", message: "Taking screenshot...", iteration: i });
-      const screenshot = await screenshotHtml(html);
+  try {
+    send({ stage: "qa-screenshot", message: "Reviewing design...", iteration: 1 });
+    const screenshot = await screenshotHtml(html);
 
-      // Review
-      send({ stage: "qa-review", message: "Reviewing design quality...", iteration: i });
-      const qa = await reviewDesignQA(screenshot, blueprint || ({} as DesignBlueprint), profile);
-      qaIterations = i;
-      finalScore = qa.score;
+    send({ stage: "qa-review", message: "Checking quality...", iteration: 1 });
+    const qa = await reviewDesignQA(screenshot, blueprint || ({} as DesignBlueprint), profile);
+    qaIterations = 1;
+    finalScore = qa.score;
 
-      if (qa.pass) {
-        break;
-      }
-
-      // Early exit if score isn't improving
-      if (lastScore >= 0 && qa.score <= lastScore) {
-        console.log(`[pipeline] QA score not improving (${lastScore} → ${qa.score}), stopping`);
-        break;
-      }
-      lastScore = qa.score;
-
-      // Fix
+    if (!qa.pass) {
       const criticalAndMajor = qa.issues.filter(
         (issue) => issue.severity === "critical" || issue.severity === "major"
       );
 
-      if (criticalAndMajor.length === 0) {
-        break; // Only minor issues remain
+      if (criticalAndMajor.length > 0) {
+        send({ stage: "qa-fix", message: `Fixing ${criticalAndMajor.length} issues...`, iteration: 1 });
+        html = await applyQAFixes(html, qa.issues, blueprint || ({} as DesignBlueprint));
+        html = injectLucide(html);
       }
-
-      send({ stage: "qa-fix", message: `Fixing ${criticalAndMajor.length} issues...`, iteration: i });
-      html = await applyQAFixes(html, qa.issues, blueprint || ({} as DesignBlueprint));
-      html = injectLucide(html);
-    } catch (err) {
-      console.error(`[pipeline] QA iteration ${i} failed:`, err);
-      break; // Don't block on QA failures
     }
+  } catch (err) {
+    console.error("[pipeline] QA pass failed:", err);
+    // Don't block on QA failures — ship what we have
   }
 
   send({ stage: "finalizing", message: "Saving your preview..." });

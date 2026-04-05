@@ -68,13 +68,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid URL provided." }, { status: 400 });
   }
 
-  if (!devName || !devEmail) {
-    return NextResponse.json(
-      { error: "Name and email are required." },
-      { status: 400 }
-    );
-  }
-
   if (!profile || !selectedStyle || !pageStructure) {
     return NextResponse.json(
       { error: "Missing analysis data. Please analyze the site first." },
@@ -122,7 +115,7 @@ export async function POST(req: NextRequest) {
         try {
           const mapsPattern = /google\.com\/maps|maps\.google\.|maps\.app\.goo\.gl|goo\.gl\/maps/i;
           const isNewSite = mapsPattern.test(url);
-          coldEmail = await generateColdEmail(profile, previewUrl, devName, isNewSite);
+          coldEmail = await generateColdEmail(profile, previewUrl, devName || "", isNewSite);
         } catch (emailErr) {
           console.error("Cold email generation error:", emailErr);
         }
@@ -131,8 +124,8 @@ export async function POST(req: NextRequest) {
           slug,
           original_url: url,
           redesign_html: result.html,
-          dev_name: devName,
-          dev_email: devEmail,
+          dev_name: devName || "",
+          dev_email: devEmail || "",
           dev_message: devMessage || null,
           created_at: now.toISOString(),
           expires_at: expiresAt.toISOString(),
@@ -156,7 +149,7 @@ export async function POST(req: NextRequest) {
         // Deduct credit AFTER successful DB insert
         await deductCredit(user.id, 1, "generation", `Generated preview for ${url}`, slug);
 
-        notifySuccess("Preview generated", { url, slug, email: devEmail, previewUrl, qaIterations: String(result.qaIterations), qaScore: String(result.finalScore) });
+        notifySuccess("Preview generated", { url, slug, email: devEmail || "", previewUrl, qaIterations: String(result.qaIterations), qaScore: String(result.finalScore) });
 
         trackEvent("generation_completed", { url, slug, style: selectedStyle?.styleName, qaIterations: String(result.qaIterations), qaScore: String(result.finalScore) }, {
           userId: user.id, ip, userAgent: req.headers.get("user-agent") || undefined,
