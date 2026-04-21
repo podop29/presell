@@ -32,10 +32,10 @@ SELECT cron.schedule(
   '0 * * * *',
   $$
   SELECT net.http_post(
-    url := 'https://pitchkit.dev/api/cron/follow-up',
+    url := 'BASE_URL_PLACEHOLDER/api/cron/follow-up',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
-      'X-Cron-Secret', 'dab27b9147cd385195a5f4b3e38e2300c585a094bc2a1486ce9fa770c914c9e6'
+      'X-Cron-Secret', 'CRON_SECRET_PLACEHOLDER'
     ),
     body := '{}'::jsonb,
     timeout_milliseconds := 30000
