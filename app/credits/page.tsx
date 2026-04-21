@@ -14,10 +14,10 @@ interface Transaction {
 }
 
 const CREDIT_PACKS = [
-  { id: "pack_3", credits: 3, price: 300, label: "Try It", perCredit: "$1.00" },
-  { id: "pack_10", credits: 10, price: 1200, label: "Starter", perCredit: "$1.20" },
-  { id: "pack_25", credits: 25, price: 2500, label: "Popular", perCredit: "$1.00" },
-  { id: "pack_50", credits: 50, price: 3900, label: "Pro", perCredit: "$0.78" },
+  { id: "pack_6", credits: 6, price: 300, label: "Try It", perCredit: "$0.50" },
+  { id: "pack_20", credits: 20, price: 1200, label: "Starter", perCredit: "$0.60" },
+  { id: "pack_50", credits: 50, price: 2500, label: "Popular", perCredit: "$0.50" },
+  { id: "pack_100", credits: 100, price: 3900, label: "Pro", perCredit: "$0.39" },
 ];
 
 function CreditsPageInner() {
@@ -146,7 +146,7 @@ function CreditsPageInner() {
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {CREDIT_PACKS.map((pack) => {
-                  const isPopular = pack.id === "pack_25";
+                  const isPopular = pack.id === "pack_50";
                   return (
                     <div
                       key={pack.id}

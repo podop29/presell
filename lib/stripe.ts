@@ -20,8 +20,8 @@ export interface CreditPack {
 }
 
 export const CREDIT_PACKS: CreditPack[] = [
-  { id: "pack_3", credits: 3, price: 300, label: "3 Credits", perCredit: "$1.00" },
-  { id: "pack_10", credits: 10, price: 1200, label: "10 Credits", perCredit: "$1.20" },
-  { id: "pack_25", credits: 25, price: 2500, label: "25 Credits", perCredit: "$1.00" },
-  { id: "pack_50", credits: 50, price: 3900, label: "50 Credits", perCredit: "$0.78" },
+  { id: "pack_6", credits: 6, price: 300, label: "6 Credits", perCredit: "$0.50" },
+  { id: "pack_20", credits: 20, price: 1200, label: "20 Credits", perCredit: "$0.60" },
+  { id: "pack_50", credits: 50, price: 2500, label: "50 Credits", perCredit: "$0.50" },
+  { id: "pack_100", credits: 100, price: 3900, label: "100 Credits", perCredit: "$0.39" },
 ];
