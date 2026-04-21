@@ -30,14 +30,25 @@ export async function POST(req: NextRequest) {
       .eq("user_id", user.id)
       .single();
 
-    let customerId = creditRow?.stripe_customer_id;
+    let customerId = creditRow?.stripe_customer_id ?? null;
+
+    if (customerId) {
+      try {
+        const existing = await stripe.customers.retrieve(customerId);
+        if ("deleted" in existing && existing.deleted) customerId = null;
+      } catch (err) {
+        const code = (err as { code?: string })?.code;
+        if (code === "resource_missing") customerId = null;
+        else throw err;
+      }
+    }
 
     if (!customerId) {
-      const customer = await stripe.customers.create({
+      const created = await stripe.customers.create({
         email: user.email,
         metadata: { user_id: user.id },
       });
-      customerId = customer.id;
+      customerId = created.id;
       await supabaseAdmin
         .from("user_credits")
         .update({ stripe_customer_id: customerId })
