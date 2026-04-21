@@ -67,6 +67,7 @@ export async function POST(req: NextRequest) {
         pack_id: pack.id,
         credits: String(pack.credits),
       },
+      allow_promotion_codes: true,
       success_url: `${baseUrl}/credits?purchase=success`,
       cancel_url: `${baseUrl}/credits`,
     });
