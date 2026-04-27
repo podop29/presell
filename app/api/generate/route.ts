@@ -108,6 +108,15 @@ export async function POST(req: NextRequest) {
           }
         );
 
+        // Bail out if the client disconnected while the pipeline was running.
+        // We've already paid the AI cost, but persisting + deducting + notifying
+        // for a result the user will never see causes duplicate previews when
+        // they retry.
+        if (req.signal.aborted || isClosed) {
+          console.log("[generate] client disconnected mid-pipeline, skipping persistence");
+          return;
+        }
+
         // Save to Supabase
         const slug = nanoid(8);
         const now = new Date();
