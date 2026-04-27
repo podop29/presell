@@ -120,6 +120,54 @@ export async function addCredits(
   });
 }
 
+export type RedeemResult =
+  | { success: true; credits: number; balance: number }
+  | {
+      success: false;
+      reason: "NOT_FOUND" | "EXPIRED" | "EXHAUSTED" | "ALREADY_REDEEMED" | "ERROR";
+    };
+
+/**
+ * Redeem a code for free credits. The RPC handles validation, idempotency,
+ * and credit grant atomically; this wrapper just maps Postgres errors to
+ * stable reason codes the API layer can return.
+ */
+export async function redeemCode(
+  userId: string,
+  rawCode: string
+): Promise<RedeemResult> {
+  const code = rawCode.trim().toUpperCase();
+  if (!code) return { success: false, reason: "NOT_FOUND" };
+
+  const { data, error } = await supabaseAdmin.rpc("redeem_code", {
+    p_user_id: userId,
+    p_code: code,
+  });
+
+  if (error) {
+    const msg = error.message || "";
+    if (msg.includes("NOT_FOUND")) return { success: false, reason: "NOT_FOUND" };
+    if (msg.includes("EXPIRED")) return { success: false, reason: "EXPIRED" };
+    if (msg.includes("EXHAUSTED")) return { success: false, reason: "EXHAUSTED" };
+    if (msg.includes("ALREADY_REDEEMED"))
+      return { success: false, reason: "ALREADY_REDEEMED" };
+    return { success: false, reason: "ERROR" };
+  }
+
+  const credits = typeof data === "number" ? data : Number(data) || 0;
+  const balance = await getBalance(userId);
+
+  const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(userId);
+  notifySuccess("Code redeemed", {
+    email: authUser?.user?.email || "unknown",
+    code,
+    credits: String(credits),
+    balance: String(balance),
+  });
+
+  return { success: true, credits, balance };
+}
+
 /**
  * Get revision info for a preview.
  */

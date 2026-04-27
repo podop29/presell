@@ -31,6 +31,11 @@ function CreditsPageInner() {
   const [error, setError] = useState("");
   const [showBanner, setShowBanner] = useState(purchaseSuccess);
 
+  const [redeemCode, setRedeemCode] = useState("");
+  const [redeeming, setRedeeming] = useState(false);
+  const [redeemError, setRedeemError] = useState("");
+  const [redeemSuccess, setRedeemSuccess] = useState("");
+
   useEffect(() => {
     fetch("/api/credits")
       .then((r) => r.json())
@@ -48,6 +53,36 @@ function CreditsPageInner() {
       return () => clearTimeout(t);
     }
   }, [showBanner]);
+
+  async function handleRedeem(e: React.FormEvent) {
+    e.preventDefault();
+    setRedeemError("");
+    setRedeemSuccess("");
+    const code = redeemCode.trim();
+    if (!code) return;
+    setRedeeming(true);
+    try {
+      const res = await fetch("/api/redeem", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setRedeemError(data.error || "Couldn't redeem that code.");
+        return;
+      }
+      setBalance(data.balance);
+      setRedeemSuccess(
+        `+${data.credits} credit${data.credits === 1 ? "" : "s"} added.`
+      );
+      setRedeemCode("");
+    } catch {
+      setRedeemError("Network error. Please try again.");
+    } finally {
+      setRedeeming(false);
+    }
+  }
 
   async function handleBuy(packId: string) {
     setBuying(packId);
@@ -137,6 +172,36 @@ function CreditsPageInner() {
                 <span className="text-4xl font-bold text-white">{balance}</span>
                 <span className="text-sm text-neutral-500">credits</span>
               </div>
+            </div>
+
+            {/* Redeem code */}
+            <div className="p-5 rounded-2xl border border-[var(--border)] bg-surface">
+              <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-3">
+                Redeem a code
+              </p>
+              <form onSubmit={handleRedeem} className="flex gap-2">
+                <input
+                  type="text"
+                  value={redeemCode}
+                  onChange={(e) => setRedeemCode(e.target.value.toUpperCase())}
+                  placeholder="ENTER CODE"
+                  disabled={redeeming}
+                  className="flex-1 min-w-0 px-4 py-2.5 bg-[#0a0a0a] border border-[var(--border)] rounded-xl text-white text-sm placeholder:text-neutral-600 focus:outline-none focus:border-accent/50 font-mono tracking-wider disabled:opacity-50"
+                />
+                <button
+                  type="submit"
+                  disabled={redeeming || !redeemCode.trim()}
+                  className="px-5 py-2.5 bg-accent hover:bg-accent-light text-black text-sm font-semibold rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-accent/20 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                >
+                  {redeeming ? "..." : "Redeem"}
+                </button>
+              </form>
+              {redeemSuccess && (
+                <p className="mt-3 text-xs text-emerald-400">{redeemSuccess}</p>
+              )}
+              {redeemError && (
+                <p className="mt-3 text-xs text-red-400">{redeemError}</p>
+              )}
             </div>
 
             {/* Credit packs */}
