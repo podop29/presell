@@ -77,10 +77,16 @@ export async function POST(req: NextRequest) {
 
   // ── SSE Stream ──
   const encoder = new TextEncoder();
+  let isClosed = false;
   const stream = new ReadableStream({
     async start(controller) {
       function sendEvent(data: Record<string, unknown>) {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+        if (isClosed) return;
+        try {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+        } catch {
+          isClosed = true;
+        }
       }
 
       try {
@@ -142,7 +148,6 @@ export async function POST(req: NextRequest) {
           console.error("Supabase insert error:", dbError.message, dbError.details, dbError.hint);
           notifyError("DB insert error", new Error(dbError.message), { details: dbError.details || "", hint: dbError.hint || "" });
           sendEvent({ type: "error", error: "Failed to save preview." });
-          controller.close();
           return;
         }
 
@@ -161,8 +166,14 @@ export async function POST(req: NextRequest) {
         notifyError("Generate pipeline error", err);
         sendEvent({ type: "error", error: "An unexpected error occurred during generation." });
       } finally {
-        controller.close();
+        if (!isClosed) {
+          isClosed = true;
+          try { controller.close(); } catch {}
+        }
       }
+    },
+    cancel() {
+      isClosed = true;
     },
   });
 
