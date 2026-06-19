@@ -54,7 +54,7 @@ export async function analyzeBusinessContent(
 ): Promise<AnalysisResult> {
   try {
     const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-6",
       max_tokens: 4096,
       system: `You are an elite brand strategist and creative director who creates distinctive, context-specific design directions. You avoid generic AI aesthetics and cookie-cutter suggestions. Every style you propose must feel intentionally crafted for the specific business.
 
@@ -284,7 +284,7 @@ export async function analyzeGooglePlaceData(
 
   try {
     const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-6",
       max_tokens: 4096,
       system: `You are an elite brand strategist and creative director who creates distinctive, context-specific design directions. You avoid generic AI aesthetics and cookie-cutter suggestions. Every style you propose must feel intentionally crafted for the specific business.
 
@@ -542,7 +542,7 @@ export async function generateBlueprint(
     const structureList = pageStructure.map((s, i) => `${i + 1}. ${s}`).join("\n");
 
     const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-6",
       max_tokens: 4096,
       system: BLUEPRINT_SYSTEM_PROMPT,
       messages: [
@@ -718,7 +718,7 @@ export async function reviewDesignQA(
       .join("\n");
 
     const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-6",
       max_tokens: 2048,
       system: `You are a senior web design QA reviewer performing a visual audit. You compare a screenshot of a generated website against its design blueprint and identify real, visible defects.
 
@@ -894,7 +894,7 @@ export async function applyQAFixes(
     }
 
     const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-6",
       max_tokens: 8192,
       system: `You are a surgical HTML fixer. You receive an HTML document and a list of visual defects found by a QA reviewer. Apply the MINIMUM changes needed to fix each defect.
 
@@ -1310,7 +1310,7 @@ export async function generateVariation(
   const userContent = buildVariationPrompt(profile, imageUrls, stockImageUrls, style, pageStructure, pageContent, customInstructions, classifiedImages, groupedStockImages, blueprint);
 
   const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-20250514",
+    model: "claude-sonnet-4-6",
     max_tokens: 16000,
     system: VARIATION_SYSTEM_PROMPT,
     messages: [
@@ -1331,7 +1331,7 @@ export async function generateVariation(
   // If output was truncated, continue generating to get the rest
   if (message.stop_reason === "max_tokens") {
     const continuation = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-6",
       max_tokens: 8000,
       system: "You were generating an HTML document that was cut off. Continue EXACTLY where you left off — output only the remaining HTML to complete the document. Do not repeat any content. Do not add explanation.",
       messages: [
@@ -1458,7 +1458,7 @@ export async function reviseVariation(
   }
 
   const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-20250514",
+    model: "claude-sonnet-4-6",
     max_tokens: 8192,
     system: REVISION_SYSTEM_PROMPT,
     tools: [REVISION_TOOL],
@@ -1556,7 +1556,7 @@ export async function generateColdEmail(
     : `This business has an existing website that looks outdated or could be significantly improved. I proactively built them a free redesign preview showing exactly what their site COULD look like with a modern upgrade. They can view the before/after at the preview link. This is a cold outreach — they did not ask for this. The goal is to make the contrast between their current site and the preview so compelling that they want to move forward.`;
 
   const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-20250514",
+    model: "claude-sonnet-4-6",
     max_tokens: 1024,
     system: `You write short, genuine cold emails for a web developer who builds things for businesses before reaching out. You write like a real person dashing off a quick note — not a marketer, not a salesperson, not an AI.
 

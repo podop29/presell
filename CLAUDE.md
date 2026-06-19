@@ -8,7 +8,7 @@ PitchKit is an AI-powered website redesign tool for freelancers and agencies. Us
 
 - **Framework:** Next.js 14 (App Router), React 18, TypeScript
 - **Database/Auth/Storage:** Supabase (PostgreSQL + Auth + Storage buckets)
-- **AI:** Anthropic Claude API (`claude-sonnet-4-20250514`)
+- **AI:** Anthropic Claude API (`claude-sonnet-4-6`)
 - **Payments:** Stripe (credit packs)
 - **Web Scraping:** Playwright (headless Chrome)
 - **Styling:** Tailwind CSS (dark theme, no component library)
