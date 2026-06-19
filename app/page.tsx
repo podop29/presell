@@ -418,6 +418,7 @@ export default function Home() {
           </span>
           <div className="flex items-center gap-4">
             <a href="/blog" className="text-xs text-neutral-700 hover:text-neutral-500 transition-colors">Blog</a>
+            <a href="mailto:stevangrubac@lakeview-webdev.com" className="text-xs text-neutral-700 hover:text-neutral-500 transition-colors">Support</a>
             <p className="text-xs text-neutral-700">
               Built for freelancers and agencies who let their work do the talking.
             </p>
