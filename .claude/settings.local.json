@@ -36,7 +36,19 @@
       "Bash(npm run:*)",
       "Bash(npx tsc:*)",
       "Bash(npx tsx *)",
-      "Skill(claude-api)"
+      "Skill(claude-api)",
+      "Bash(grep -niE \"9|19|49|pack|credit|price|\\\\$\")",
+      "Bash(npm start *)",
+      "Bash(kill %1)",
+      "Bash(pkill -f \"next start\")",
+      "Bash(awk '/interface Preview /{f=1} f{print} f&&/^}/{exit}' types/index.ts)",
+      "Bash(node -e ' *)",
+      "Bash(fuser -k 3000/tcp)",
+      "Bash(pkill -f \"next-server\")",
+      "Bash(node scripts/pin-examples.mjs)",
+      "Bash(curl -s -o /dev/null -w \"picker page: %{http_code}\\\\n\" http://localhost:3000/admin/examples)",
+      "Bash(curl -s -o /dev/null -w \"bypass api: %{http_code}\\\\n\" http://localhost:3000/api/admin/preview-html/S2CjxqEK)",
+      "Bash(node scripts/pin-examples.mjs fwQZOlN7 ZzmKUNqs lHvFfiJL G8uoC40j GaLlDV_G yrNP06js)"
     ]
   }
 }

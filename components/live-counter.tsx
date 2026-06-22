@@ -19,7 +19,7 @@ export default function LiveCounter() {
 
   return (
     <p className="mt-3 text-xs text-neutral-600 text-center">
-      No credit card required — start with free credits
+      No credit card required — start with a free credit
       <span className="mx-1.5 text-neutral-700">·</span>
       <span className="text-neutral-500">{display}+ redesigns generated</span>
     </p>

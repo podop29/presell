@@ -2,10 +2,7 @@ import type { Metadata } from "next";
 import AuthButton from "@/components/auth-button";
 import UrlInput from "@/components/url-input";
 import FaqAccordion from "@/components/faq-accordion";
-import BeforeAfter from "@/components/before-after";
-import MapsToSite from "@/components/maps-to-site";
-import ScrollToTopLink from "@/components/scroll-to-top-link";
-import OutreachPreview from "@/components/outreach-preview";
+import ExamplesGallery from "@/components/examples-gallery";
 import LiveCounter from "@/components/live-counter";
 
 /* ───── SEO metadata ───── */
@@ -48,22 +45,6 @@ export const metadata: Metadata = {
   },
 };
 
-/* ───── tiny icon components (server-only) ───── */
-function Sparkles({ className = "w-5 h-5" }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 3l1.912 5.813a2 2 0 001.275 1.275L21 12l-5.813 1.912a2 2 0 00-1.275 1.275L12 21l-1.912-5.813a2 2 0 00-1.275-1.275L3 12l5.813-1.912a2 2 0 001.275-1.275L12 3z" />
-    </svg>
-  );
-}
-function Check({ className = "w-5 h-5" }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="20 6 9 17 4 12" />
-    </svg>
-  );
-}
-
 /* ───── FAQ data ───── */
 const faqs = [
   {
@@ -84,12 +65,20 @@ const faqs = [
   },
   {
     q: "How much does it cost?",
-    a: "You get free credits to start. Each generation costs one credit. No subscriptions, no monthly fees — just pay for what you use.",
+    a: "You start with a free credit. After that, each generation costs one credit and credits are sold in packs — no subscriptions, no monthly fees. You only pay for what you use.",
   },
   {
     q: "Can I customize the design before sending it?",
     a: "You choose from 3 AI-generated style directions, each tailored to the prospect's brand. After generating, you can refine the design with AI-powered revisions or edit text directly.",
   },
+];
+
+/* ───── Pricing data (source of truth: app/credits/page.tsx) ───── */
+const packs = [
+  { credits: 6, price: 3, label: "Try it" },
+  { credits: 20, price: 12, label: "Starter" },
+  { credits: 50, price: 25, label: "Popular", featured: true },
+  { credits: 100, price: 39, label: "Pro" },
 ];
 
 /* ───── JSON-LD structured data ───── */
@@ -105,7 +94,7 @@ const jsonLd = {
     "@type": "Offer",
     price: "0",
     priceCurrency: "USD",
-    description: "Free credits to start",
+    description: "Start with a free credit",
   },
 };
 
@@ -126,9 +115,9 @@ export default function Home() {
             pitchkit<span className="text-accent">.</span>
           </span>
           <div className="flex items-center gap-6">
-            <a href="#examples" className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors hidden sm:block">Examples</a>
+            <a href="#demo" className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors hidden sm:block">See it work</a>
             <a href="#how" className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors hidden sm:block">How it works</a>
-            <a href="#features" className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors hidden sm:block">Features</a>
+            <a href="#pricing" className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors hidden sm:block">Pricing</a>
             <a href="#faq" className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors hidden sm:block">FAQ</a>
             <a href="/blog" className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors hidden sm:block">Blog</a>
             <AuthButton />
@@ -138,98 +127,48 @@ export default function Home() {
 
       <main>
         {/* ═══════ HERO ═══════ */}
-        <section className="relative pt-24 sm:pt-32 pb-16 sm:pb-20 px-4 sm:px-6 noise-bg overflow-hidden">
-          {/* Ambient glow */}
-          <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-accent/8 rounded-full blur-[120px] pointer-events-none" />
-          <div className="absolute top-40 left-1/4 w-[300px] h-[300px] bg-amber-500/5 rounded-full blur-[100px] pointer-events-none animate-float" />
-
-          <div className="relative z-10 max-w-4xl mx-auto text-center">
-            {/* Badge */}
-            <div className="animate-fade-in-up inline-flex items-center gap-2 px-3 py-1 rounded-full border border-accent/20 bg-accent/5 mb-6 sm:mb-8">
-              <Sparkles className="w-3.5 h-3.5 text-accent shrink-0" />
-              <span className="text-[11px] sm:text-xs font-medium text-accent">AI website redesign tool for freelancer cold outreach</span>
-            </div>
-
-            <h1 className="animate-fade-in-up delay-100 text-4xl sm:text-6xl md:text-7xl font-bold tracking-tight leading-[1.05]">
-              <span className="text-white">Show the website.</span>
-              <br />
-              <span className="text-gradient">Close the client.</span>
+        <section className="relative pt-28 sm:pt-36 pb-16 sm:pb-20 px-4 sm:px-6">
+          <div className="max-w-3xl mx-auto text-center">
+            <h1 className="text-4xl sm:text-6xl font-bold tracking-tight leading-[1.07] text-white">
+              Win web design clients by
+              <br className="hidden sm:block" /> showing them the work first
             </h1>
 
-            <p className="animate-fade-in-up delay-200 mt-5 sm:mt-6 text-base sm:text-xl text-neutral-400 max-w-2xl mx-auto leading-relaxed">
-              Paste any website URL to generate an AI website redesign — or drop a Google Maps
-              link to build a brand new site. Send it as a shareable preview to land your next web design client.
+            <p className="mt-6 text-base sm:text-lg text-neutral-400 max-w-xl mx-auto leading-relaxed">
+              PitchKit turns any website URL — or Google Maps listing — into a
+              polished redesign you can send as a link. Cold outreach that opens
+              with proof instead of a promise.
             </p>
 
-            {/* ─── URL INPUT ─── */}
-            <div className="animate-fade-in-up delay-300 mt-12">
+            <div className="mt-10">
               <UrlInput />
               <LiveCounter />
             </div>
           </div>
         </section>
 
-        {/* ═══════ BEFORE / AFTER ═══════ */}
-        <section id="examples" className="relative py-16 sm:py-24 px-4 sm:px-6 border-t border-white/5 noise-bg overflow-hidden">
-          <div className="relative z-10 max-w-6xl mx-auto">
-            <div className="text-center mb-14">
-              <p className="text-xs font-medium text-accent uppercase tracking-wider mb-3">Redesign existing sites</p>
-              <h2 className="text-2xl sm:text-4xl font-bold text-white">
-                Turn their outdated site into a modern redesign
-              </h2>
+        {/* ═══════ REAL EXAMPLES ═══════ */}
+        <section id="demo" className="relative py-16 sm:py-24 px-4 sm:px-6 border-t border-white/5">
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center mb-12">
+              <h2 className="text-2xl sm:text-4xl font-bold text-white">Real redesigns, made with PitchKit</h2>
               <p className="mt-4 text-neutral-500 max-w-2xl mx-auto text-sm sm:text-base">
-                Paste a website URL and PitchKit generates a complete redesign in seconds.
-                Scroll through both — this is exactly what your prospect receives.
+                Every one of these started as a single link. Click any to open the
+                live preview — exactly what the prospect would see.
               </p>
             </div>
-            <BeforeAfter />
-          </div>
-        </section>
-
-        {/* ═══════ MAPS TO SITE ═══════ */}
-        <section className="relative py-16 sm:py-24 px-4 sm:px-6 border-t border-white/5 overflow-hidden">
-          <div className="relative z-10 max-w-6xl mx-auto">
-            <div className="text-center mb-14">
-              <p className="text-xs font-medium text-accent uppercase tracking-wider mb-3">Build sites from scratch</p>
-              <h2 className="text-2xl sm:text-4xl font-bold text-white">
-                No website? Build one from their Google Maps listing.
-              </h2>
-              <p className="mt-4 text-neutral-500 max-w-2xl mx-auto text-sm sm:text-base">
-                Millions of businesses have a Google Maps listing but no website. Paste their Maps link
-                and PitchKit builds a full site from their photos, reviews, and business info.
-              </p>
-            </div>
-            <MapsToSite />
-
-            <div className="mt-14 text-center">
-              <ScrollToTopLink />
-            </div>
-          </div>
-        </section>
-
-        {/* ═══════ OUTREACH PREVIEW ═══════ */}
-        <section className="relative py-16 sm:py-24 px-4 sm:px-6 border-t border-white/5 noise-bg overflow-hidden">
-          <div className="relative z-10 max-w-6xl mx-auto">
-            <div className="text-center mb-14">
-              <p className="text-xs font-medium text-accent uppercase tracking-wider mb-3">Send it &amp; close</p>
-              <h2 className="text-2xl sm:text-4xl font-bold text-white">
-                A cold email with proof attached
-              </h2>
-              <p className="mt-4 text-neutral-500 max-w-2xl mx-auto text-sm sm:text-base">
-                PitchKit auto-generates a personalized cold email with your preview link.
-                When the prospect clicks, they land on a branded page built just for their business — with your name and contact info front and center.
-              </p>
-            </div>
-            <OutreachPreview />
+            <ExamplesGallery />
           </div>
         </section>
 
         {/* ═══════ HOW IT WORKS ═══════ */}
-        <section id="how" className="relative py-16 sm:py-24 px-4 sm:px-6 border-t border-white/5 noise-bg">
-          <div className="relative z-10 max-w-4xl mx-auto">
+        <section id="how" className="relative py-16 sm:py-24 px-4 sm:px-6 border-t border-white/5">
+          <div className="max-w-4xl mx-auto">
             <div className="text-center mb-14">
-              <p className="text-xs font-medium text-accent uppercase tracking-wider mb-3">How it works</p>
               <h2 className="text-2xl sm:text-4xl font-bold text-white">Three steps to your next client</h2>
+              <p className="mt-4 text-neutral-500 max-w-xl mx-auto text-sm sm:text-base">
+                From a link to a ready-to-send pitch in under a minute.
+              </p>
             </div>
 
             <div className="space-y-10 sm:space-y-0 sm:flex sm:items-start sm:gap-0">
@@ -237,17 +176,17 @@ export default function Home() {
                 {
                   num: "1",
                   title: "Paste a link",
-                  desc: "Drop a website URL to redesign an existing site, or a Google Maps link to build a new one.",
+                  desc: "Drop a website URL to redesign an existing site, or a Google Maps link to build a new one from scratch.",
                 },
                 {
                   num: "2",
                   title: "Pick a direction",
-                  desc: "Choose from 3 styles tailored to the business. Refine with AI revisions or edit text directly.",
+                  desc: "Choose from 3 styles tailored to the business. Refine with AI revisions or edit the text directly.",
                 },
                 {
                   num: "3",
                   title: "Send and close",
-                  desc: "Get a shareable preview link and an auto-generated cold email — ready to send.",
+                  desc: "Get a shareable preview link and a personalized cold email — branded with your name and ready to send.",
                 },
               ].map((item, i) => (
                 <div key={item.num} className="flex-1 relative text-center px-4">
@@ -265,126 +204,51 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ═══════ PROBLEM ═══════ */}
-        <section className="relative py-16 sm:py-24 px-4 sm:px-6 border-t border-white/5">
-          <div className="max-w-5xl mx-auto">
-            <div className="text-center mb-16">
-              <p className="text-xs font-medium text-accent uppercase tracking-wider mb-3">The problem</p>
-              <h2 className="text-2xl sm:text-4xl font-bold text-white">
-                Cold outreach for web design doesn&apos;t work<br className="hidden sm:block" /> when you have nothing to show
-              </h2>
-            </div>
-
-            <div className="grid sm:grid-cols-3 gap-6">
-              {[
-                {
-                  title: "Cold emails get ignored",
-                  desc: "\"I can build you a website\" sounds like every other pitch in their inbox. Without proof, there's no reply.",
-                },
-                {
-                  title: "Portfolios don't convert",
-                  desc: "Your past work looks great — but it's someone else's brand. Prospects can't picture what you'd build for them.",
-                },
-                {
-                  title: "Proposals take hours",
-                  desc: "Spending 3 hours on a custom mockup for a prospect who might ghost you? Not a sustainable strategy.",
-                },
-              ].map((item) => (
-                <div key={item.title} className="relative p-6 rounded-2xl border border-[var(--border)] bg-surface">
-                  <h3 className="text-white font-semibold mb-2">{item.title}</h3>
-                  <p className="text-sm text-neutral-500 leading-relaxed">{item.desc}</p>
-                </div>
-              ))}
-            </div>
-
-            <p className="text-center mt-12 text-neutral-400 text-lg">
-              What if you could <span className="text-white font-medium">show them the result</span> before doing any work?
-            </p>
-          </div>
-        </section>
-
-        {/* ═══════ FEATURES ═══════ */}
-        <section id="features" className="relative py-16 sm:py-24 px-4 sm:px-6 border-t border-white/5">
+        {/* ═══════ PRICING ═══════ */}
+        <section id="pricing" className="relative py-16 sm:py-24 px-4 sm:px-6 border-t border-white/5">
           <div className="max-w-4xl mx-auto">
-            <div className="text-center mb-14">
-              <p className="text-xs font-medium text-accent uppercase tracking-wider mb-3">Features</p>
-              <h2 className="text-2xl sm:text-4xl font-bold text-white">Everything you need to close</h2>
+            <div className="text-center mb-12">
+              <h2 className="text-2xl sm:text-4xl font-bold text-white">Pay only for what you send</h2>
+              <p className="mt-4 text-neutral-500 max-w-xl mx-auto text-sm sm:text-base">
+                Start with a free credit — no card required. One credit generates one
+                preview. No subscriptions, no monthly fees.
+              </p>
             </div>
 
-            <div className="grid sm:grid-cols-2 gap-x-16 gap-y-8">
-              {[
-                { title: "AI business analysis", desc: "Understands their industry, customers, and brand tone automatically." },
-                { title: "Google Maps to website", desc: "No website? Build one from their Maps listing, photos, and reviews." },
-                { title: "3 style directions", desc: "Three unique designs tailored to the business — never generic templates." },
-                { title: "Real content, not lorem ipsum", desc: "Uses their actual copy, images, and details." },
-                { title: "Shareable preview links", desc: "One URL with your contact info built in. Send it and let the work talk." },
-                { title: "Auto-generated cold email", desc: "A ready-to-send outreach email personalized to the prospect." },
-                { title: "AI revisions + text editing", desc: "Refine with AI revisions or edit text directly before sending." },
-                { title: "30-day hosted previews", desc: "Links stay live for a month. Plenty of time to follow up." },
-              ].map((item) => (
-                <div key={item.title} className="flex items-start gap-3">
-                  <span className="text-accent mt-1.5 shrink-0">
-                    <Check className="w-4 h-4" />
-                  </span>
-                  <div>
-                    <h3 className="text-white font-medium text-sm">{item.title}</h3>
-                    <p className="text-sm text-neutral-500 mt-0.5 leading-relaxed">{item.desc}</p>
-                  </div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {packs.map((pack) => (
+                <div
+                  key={pack.credits}
+                  className={`relative p-6 rounded-2xl border bg-surface flex flex-col ${
+                    pack.featured ? "border-accent/40" : "border-[var(--border)]"
+                  }`}
+                >
+                  {pack.featured && (
+                    <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-accent text-black text-[10px] font-semibold uppercase tracking-wide">
+                      Most popular
+                    </span>
+                  )}
+                  <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider">{pack.label}</p>
+                  <p className="mt-3 text-3xl font-bold text-white">${pack.price}</p>
+                  <p className="mt-1 text-sm text-neutral-400">{pack.credits} credits</p>
+                  <p className="mt-1 text-xs text-neutral-600">{pack.credits} previews</p>
                 </div>
               ))}
             </div>
-          </div>
-        </section>
 
-        {/* ═══════ WHO IT'S FOR ═══════ */}
-        <section className="relative py-16 sm:py-24 px-4 sm:px-6 border-t border-white/5 noise-bg">
-          <div className="relative z-10 max-w-4xl mx-auto">
-            <div className="text-center mb-14">
-              <p className="text-xs font-medium text-accent uppercase tracking-wider mb-3">Who it&apos;s for</p>
-              <h2 className="text-2xl sm:text-4xl font-bold text-white">Built for freelancers and agencies who sell websites</h2>
-            </div>
-
-            <div className="grid sm:grid-cols-2 gap-12 sm:gap-16">
-              <div>
-                <h3 className="text-lg font-semibold text-white mb-4">Freelancers</h3>
-                <ul className="space-y-3">
-                  {[
-                    "Prospect local businesses — redesign their site or build one from their Google Maps listing",
-                    "Skip the free consultation — let the preview do the talking",
-                    "Stand out from every other \"I build websites\" DM in their inbox",
-                  ].map((item) => (
-                    <li key={item} className="flex items-start gap-3 text-sm text-neutral-400 leading-relaxed">
-                      <span className="text-accent mt-0.5 shrink-0">&mdash;</span>
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-semibold text-white mb-4">Agencies</h3>
-                <ul className="space-y-3">
-                  {[
-                    "Scale outbound without burning designer hours — target businesses with or without websites",
-                    "Send personalized previews to dozens of prospects per week",
-                    "Arm your sales team with auto-generated cold emails and shareable preview links",
-                  ].map((item) => (
-                    <li key={item} className="flex items-start gap-3 text-sm text-neutral-400 leading-relaxed">
-                      <span className="text-accent mt-0.5 shrink-0">&mdash;</span>
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
+            <p className="text-center mt-8 text-sm text-neutral-500">
+              <a href="/signup" className="text-accent hover:text-accent-light transition-colors font-medium">
+                Create a free account
+              </a>{" "}
+              and your first credit is on us.
+            </p>
           </div>
         </section>
 
         {/* ═══════ FAQ ═══════ */}
         <section id="faq" className="relative py-16 sm:py-24 px-4 sm:px-6 border-t border-white/5">
           <div className="max-w-2xl mx-auto">
-            <div className="text-center mb-16">
-              <p className="text-xs font-medium text-accent uppercase tracking-wider mb-3">FAQ</p>
+            <div className="text-center mb-14">
               <h2 className="text-2xl sm:text-4xl font-bold text-white">Frequently asked questions</h2>
             </div>
 
@@ -393,16 +257,13 @@ export default function Home() {
         </section>
 
         {/* ═══════ BOTTOM CTA ═══════ */}
-        <section className="relative py-16 sm:py-24 px-4 sm:px-6 border-t border-white/5 noise-bg overflow-hidden">
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="w-[500px] h-[300px] bg-accent/5 rounded-full blur-[100px]" />
-          </div>
-          <div className="relative z-10 max-w-2xl mx-auto text-center">
+        <section className="relative py-16 sm:py-24 px-4 sm:px-6 border-t border-white/5">
+          <div className="max-w-2xl mx-auto text-center">
             <h2 className="text-2xl sm:text-4xl font-bold text-white mb-4">
-              Stop pitching. Start showing.
+              Your next client is one link away
             </h2>
             <p className="text-neutral-500 mb-10 max-w-lg mx-auto">
-              Your next client is one preview away. Paste their URL or Google Maps link and let the work speak for itself.
+              Paste their website URL or Google Maps link and let the work do the pitching.
             </p>
             <UrlInput />
             <LiveCounter />
