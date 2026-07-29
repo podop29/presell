@@ -199,6 +199,7 @@ function CreatePageInner() {
   const [previewSlug, setPreviewSlug] = useState("");
   const [copied, setCopied] = useState(false);
   const [insufficientCredits, setInsufficientCredits] = useState(false);
+  const [bonusBlocked, setBonusBlocked] = useState(false);
 
   const [allDone, setAllDone] = useState(false);
   const [currentStep, setCurrentStep] = useState<number | undefined>(undefined);
@@ -244,6 +245,7 @@ function CreatePageInner() {
         if (!res.ok) {
           if (res.status === 402 && data.insufficientCredits) {
             setInsufficientCredits(true);
+            setBonusBlocked(!!data.bonusBlocked);
           }
           setError(data.error || "Something went wrong.");
           return;
@@ -281,6 +283,7 @@ function CreatePageInner() {
           const data = await res.json();
           if (res.status === 402 && data.insufficientCredits) {
             setInsufficientCredits(true);
+            setBonusBlocked(!!data.bonusBlocked);
           }
           setError(data.error || "Something went wrong.");
           return;
@@ -472,9 +475,13 @@ function CreatePageInner() {
 
           {insufficientCredits && (
             <div className="mt-4 p-4 bg-amber-500/5 border border-amber-500/20 rounded-xl text-center">
-              <p className="text-sm font-medium text-amber-400">Out of credits</p>
+              <p className="text-sm font-medium text-amber-400">
+                {bonusBlocked ? "Free credits already claimed" : "Out of credits"}
+              </p>
               <p className="text-xs text-neutral-500 mt-1">
-                You need at least 1 credit to generate a preview.
+                {bonusBlocked
+                  ? "The free starter credit has already been used on this network. Grab a credit pack to keep going — or get in touch if you think this is a mistake."
+                  : "You need at least 1 credit to generate a preview."}
               </p>
               <Link
                 href="/credits"

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getUser } from "@/lib/auth";
 import { getBalance } from "@/lib/credits";
 import { getStripe, CREDIT_PACKS } from "@/lib/stripe";
+import { getIP } from "@/lib/rate-limit";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { notifyError } from "@/lib/discord";
 
@@ -21,7 +22,7 @@ export async function POST(req: NextRequest) {
     const stripe = getStripe();
 
     // Ensure user_credits row exists
-    await getBalance(user.id);
+    await getBalance(user.id, getIP(req.headers));
 
     // Get or create Stripe customer
     const { data: creditRow } = await supabaseAdmin

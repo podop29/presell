@@ -5,7 +5,7 @@ import { generateColdEmail } from "@/lib/ai";
 import { runGenerationPipeline } from "@/lib/pipeline";
 import { rateLimit, getIP } from "@/lib/rate-limit";
 import { getUser } from "@/lib/auth";
-import { getBalance, deductCredit } from "@/lib/credits";
+import { getCreditStatus, deductCredit } from "@/lib/credits";
 import type { GenerateRequest, PipelineProgress } from "@/types";
 import { notifyError, notifySuccess } from "@/lib/discord";
 import { trackEvent } from "@/lib/analytics";
@@ -22,15 +22,23 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const balance = await getBalance(user.id);
+  const ip = getIP(req.headers);
+
+  const { balance, bonusBlocked } = await getCreditStatus(user.id, ip);
   if (balance < 1) {
     return NextResponse.json(
-      { error: "You don't have enough credits.", insufficientCredits: true, balance: 0 },
+      {
+        error: bonusBlocked
+          ? "Free starter credits have already been claimed on this network."
+          : "You don't have enough credits.",
+        insufficientCredits: true,
+        bonusBlocked,
+        balance: 0,
+      },
       { status: 402 }
     );
   }
 
-  const ip = getIP(req.headers);
   const limit = await rateLimit(`generate:${ip}`, { maxRequests: 10, windowMs: 10 * 60 * 1000 });
   if (!limit.success) {
     return NextResponse.json(

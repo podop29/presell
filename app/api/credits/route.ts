@@ -1,17 +1,20 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getUser } from "@/lib/auth";
 import { getBalance } from "@/lib/credits";
+import { getIP } from "@/lib/rate-limit";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { notifyError } from "@/lib/discord";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const user = await getUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const balance = await getBalance(user.id);
+    // This is usually the first endpoint a new account hits, so it's where the
+    // credits row (and the IP-capped signup bonus) gets created.
+    const balance = await getBalance(user.id, getIP(req.headers));
 
     const { data: transactions } = await supabaseAdmin
       .from("credit_transactions")

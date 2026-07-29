@@ -4,7 +4,7 @@ import { analyzeBusinessContent, analyzeGooglePlaceData } from "@/lib/ai";
 import { searchPexelsGrouped } from "@/lib/pexels";
 import { rateLimit, getIP } from "@/lib/rate-limit";
 import { getUser } from "@/lib/auth";
-import { getBalance } from "@/lib/credits";
+import { getCreditStatus } from "@/lib/credits";
 import {
   extractPlaceId,
   fetchPlaceDetails,
@@ -27,17 +27,25 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const ip = getIP(req.headers);
+
     // Check credits before doing expensive scrape + AI work
-    const balance = await getBalance(user.id);
+    const { balance, bonusBlocked } = await getCreditStatus(user.id, ip);
     if (balance < 1) {
       return NextResponse.json(
-        { error: "You don't have enough credits.", insufficientCredits: true, balance: 0 },
+        {
+          error: bonusBlocked
+            ? "Free starter credits have already been claimed on this network."
+            : "You don't have enough credits.",
+          insufficientCredits: true,
+          bonusBlocked,
+          balance: 0,
+        },
         { status: 402 }
       );
     }
 
     // Rate limit: 15 analyses per 10 minutes per IP
-    const ip = getIP(req.headers);
     const limit = await rateLimit(`analyze:${ip}`, { maxRequests: 15, windowMs: 10 * 60 * 1000 });
     if (!limit.success) {
       return NextResponse.json(

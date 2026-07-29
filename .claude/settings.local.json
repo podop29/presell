@@ -48,7 +48,11 @@
       "Bash(node scripts/pin-examples.mjs)",
       "Bash(curl -s -o /dev/null -w \"picker page: %{http_code}\\\\n\" http://localhost:3000/admin/examples)",
       "Bash(curl -s -o /dev/null -w \"bypass api: %{http_code}\\\\n\" http://localhost:3000/api/admin/preview-html/S2CjxqEK)",
-      "Bash(node scripts/pin-examples.mjs fwQZOlN7 ZzmKUNqs lHvFfiJL G8uoC40j GaLlDV_G yrNP06js)"
+      "Bash(node scripts/pin-examples.mjs fwQZOlN7 ZzmKUNqs lHvFfiJL G8uoC40j GaLlDV_G yrNP06js)",
+      "Bash(npx esbuild *)",
+      "Bash(node /tmp/claude-1000/-home-stevan-presell/706ae182-5aab-4135-95e7-2e5dbc091675/scratchpad/run.mjs)",
+      "Bash(git --no-pager diff --stat)",
+      "Bash(git --no-pager diff lib/credits.ts)"
     ]
   }
 }
