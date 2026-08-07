@@ -39,6 +39,7 @@ export async function searchPexels(
           `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=${perQuery}&orientation=landscape`,
           {
             headers: { Authorization: apiKey },
+            signal: AbortSignal.timeout(10_000),
           }
         );
 
@@ -76,6 +77,7 @@ export async function searchPexelsGrouped(
           `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=${perQuery[i]}&orientation=landscape`,
           {
             headers: { Authorization: apiKey },
+            signal: AbortSignal.timeout(10_000),
           }
         );
 

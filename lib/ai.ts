@@ -16,7 +16,18 @@ import type { GooglePlaceData } from "@/lib/google-places";
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
+  // The SDK defaults to a 10-minute timeout and 2 retries, so one degraded call
+  // can block for ~30 minutes. The request is long dead by then and the proxy
+  // has already returned a 502, so bound it to something a request can survive.
+  timeout: 180_000,
+  maxRetries: 1,
 });
+
+/**
+ * Tighter budget for calls on the /api/analyze path, which answers with a
+ * single JSON response and therefore has no way to hold the connection open.
+ */
+const ANALYZE_REQUEST_OPTIONS = { timeout: 60_000, maxRetries: 1 } as const;
 
 const DEFAULT_PROFILE: BusinessProfile = {
   businessName: "This Business",
@@ -168,7 +179,7 @@ Page Content: ${data.content.slice(0, 3000)}`,
           ],
         },
       ],
-    });
+    }, ANALYZE_REQUEST_OPTIONS);
 
     const textBlock = message.content.find((block) => block.type === "text");
     if (!textBlock || textBlock.type !== "text") {
@@ -348,7 +359,7 @@ Since this business has NO existing website, you have FULL CREATIVE FREEDOM:
 - ANTI-PATTERNS: Never suggest generic purple-on-white, safe blue corporate palettes, or any design direction that feels like generic AI output`,
         },
       ],
-    });
+    }, ANALYZE_REQUEST_OPTIONS);
 
     const textBlock = message.content.find((block) => block.type === "text");
     if (!textBlock || textBlock.type !== "text") {

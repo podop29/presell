@@ -13,8 +13,20 @@ import {
 import { notifyError } from "@/lib/discord";
 import { validateExternalUrl } from "@/lib/validate-url";
 import { trackEvent } from "@/lib/analytics";
+import { withTimeout, StageTimeoutError, StageTimer } from "@/lib/with-timeout";
 
 export const maxDuration = 120;
+
+/**
+ * Unlike /api/generate, this route answers with a single JSON body — no bytes
+ * reach the client until the very end. A request that outlives the edge proxy's
+ * patience is killed upstream and the browser sees a plain-text `upstream error`
+ * 502 that never touches our error handling. Bound every stage so we always
+ * answer first, and say which stage was slow.
+ */
+const SCRAPE_BUDGET_MS = 55_000;
+const AI_BUDGET_MS = 65_000;
+const IMAGE_BUDGET_MS = 15_000;
 
 export async function POST(req: NextRequest) {
   try {
@@ -96,13 +108,20 @@ export async function POST(req: NextRequest) {
       let profile, styles, pageStructure, imageSearchQueries, classifiedImages;
       try {
         ({ profile, styles, pageStructure, imageSearchQueries, classifiedImages } =
-          await analyzeGooglePlaceData(placeData));
+          await withTimeout("ai-analysis", AI_BUDGET_MS, () =>
+            analyzeGooglePlaceData(placeData)
+          ));
       } catch (aiErr) {
         console.error("AI analysis error:", aiErr);
         notifyError("AI analysis error (Google Maps)", aiErr);
         return NextResponse.json(
-          { error: "AI analysis failed — please check your API key or credits and try again." },
-          { status: 502 }
+          {
+            error:
+              aiErr instanceof StageTimeoutError
+                ? "The design analysis took too long. Please try again."
+                : "AI analysis failed — please check your API key or credits and try again.",
+          },
+          { status: aiErr instanceof StageTimeoutError ? 504 : 502 }
         );
       }
 
@@ -112,7 +131,9 @@ export async function POST(req: NextRequest) {
       let stockImages = { hero: [] as string[], secondary: [] as string[], atmosphere: [] as string[] };
       if (imageSearchQueries.length > 0) {
         try {
-          stockImages = await searchPexelsGrouped(imageSearchQueries);
+          stockImages = await withTimeout("pexels", IMAGE_BUDGET_MS, () =>
+            searchPexelsGrouped(imageSearchQueries)
+          );
         } catch (err) {
           console.error("Pexels search error:", err);
           notifyError("Pexels search error", err);
@@ -158,12 +179,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: urlCheck.reason }, { status: 400 });
     }
 
+    const timer = new StageTimer();
+
     // Step 1: Scrape the website
     let scrapedData;
     try {
-      scrapedData = await scrapeWebsite(url);
+      scrapedData = await withTimeout("scrape", SCRAPE_BUDGET_MS, () =>
+        scrapeWebsite(url)
+      );
     } catch (scrapeErr) {
       console.error("Scrape error:", scrapeErr);
+      if (scrapeErr instanceof StageTimeoutError) {
+        notifyError("Analyze scrape timeout", scrapeErr, { url });
+        return NextResponse.json(
+          {
+            error:
+              "That site took too long to load. It may be very slow or blocking automated access — try a different URL.",
+          },
+          { status: 504 }
+        );
+      }
       return NextResponse.json(
         {
           error:
@@ -172,30 +207,50 @@ export async function POST(req: NextRequest) {
         { status: 422 }
       );
     }
+    timer.mark("scrape");
 
     // Step 2: Analyze business content + generate style directions
     let profile, styles, pageStructure, imageSearchQueries, classifiedImages;
     try {
       ({ profile, styles, pageStructure, imageSearchQueries, classifiedImages } =
-        await analyzeBusinessContent(url, scrapedData));
+        await withTimeout("ai-analysis", AI_BUDGET_MS, () =>
+          analyzeBusinessContent(url, scrapedData)
+        ));
     } catch (aiErr) {
       console.error(`AI analysis error for ${url}:`, aiErr);
-      notifyError("AI analysis error", aiErr, { url });
+      notifyError("AI analysis error", aiErr, { url, timings: timer.summary() });
       return NextResponse.json(
-        { error: "AI analysis failed — please check your API key or credits and try again." },
-        { status: 502 }
+        {
+          error:
+            aiErr instanceof StageTimeoutError
+              ? "The design analysis took too long. Please try again."
+              : "AI analysis failed — please check your API key or credits and try again.",
+        },
+        { status: aiErr instanceof StageTimeoutError ? 504 : 502 }
       );
     }
+    timer.mark("ai-analysis");
 
     // Step 3: Fetch stock images from Pexels using AI-suggested queries
     let stockImages = { hero: [] as string[], secondary: [] as string[], atmosphere: [] as string[] };
     if (imageSearchQueries.length > 0) {
       try {
-        stockImages = await searchPexelsGrouped(imageSearchQueries);
+        stockImages = await withTimeout("pexels", IMAGE_BUDGET_MS, () =>
+          searchPexelsGrouped(imageSearchQueries)
+        );
       } catch (err) {
+        // Stock images are a nice-to-have — never fail the request over them
         console.error("Pexels search error:", err);
         notifyError("Pexels search error", err);
       }
+    }
+    timer.mark("pexels");
+
+    // Surface slow-but-successful requests: these are the ones that will start
+    // 502ing as soon as they cross the proxy's limit.
+    if (timer.totalMs > 60_000) {
+      console.warn(`[analyze] slow request for ${url}: ${timer.summary()}`);
+      notifyError("Analyze slow request", new Error(timer.summary()), { url });
     }
 
     return NextResponse.json({

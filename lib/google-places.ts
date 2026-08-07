@@ -36,7 +36,10 @@ export async function extractPlaceId(mapsUrl: string): Promise<string> {
     resolvedUrl.includes("goo.gl/maps") ||
     resolvedUrl.includes("maps.app.goo.gl")
   ) {
-    const res = await fetch(resolvedUrl, { redirect: "follow" });
+    const res = await fetch(resolvedUrl, {
+      redirect: "follow",
+      signal: AbortSignal.timeout(10_000),
+    });
     resolvedUrl = res.url;
   }
 
@@ -92,7 +95,7 @@ export async function extractPlaceId(mapsUrl: string): Promise<string> {
 
   // Use Text Search to find the place_id (with location bias when available)
   const searchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}${locationParam}&key=${API_KEY}`;
-  const searchRes = await fetch(searchUrl);
+  const searchRes = await fetch(searchUrl, { signal: AbortSignal.timeout(10_000) });
   const searchData = await searchRes.json();
 
   if (
@@ -128,7 +131,7 @@ export async function fetchPlaceDetails(
   ].join(",");
 
   const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=${fields}&key=${API_KEY}`;
-  const res = await fetch(url);
+  const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
   const data = await res.json();
 
   if (data.status !== "OK" || !data.result) {
