@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin as supabase } from "@/lib/supabase/admin";
-import { reviseVariation } from "@/lib/ai";
+import { reviseVariation, RevisionError } from "@/lib/ai";
 import { rateLimit, getIP } from "@/lib/rate-limit";
 import { getUser } from "@/lib/auth";
 import { injectLucide } from "@/lib/inject-lucide";
 import { getRevisionInfo } from "@/lib/credits";
 import { notifyError } from "@/lib/discord";
 import { trackEvent } from "@/lib/analytics";
+import type { BusinessProfile } from "@/types";
 
 export const maxDuration = 300;
 
@@ -16,6 +17,22 @@ const VARIATION_COLUMNS: Record<string, string> = {
   b: "variation_b_html",
   c: "variation_c_html",
 };
+
+/**
+ * `profile_json` is a jsonb column written with JSON.stringify, so it comes back
+ * as a JSON-encoded string. Older rows (or a future direct object write) come
+ * back already parsed — handle both rather than throwing inside the revision.
+ */
+function parseProfile(value: unknown): BusinessProfile | null {
+  if (!value) return null;
+  if (typeof value === "object") return value as BusinessProfile;
+  if (typeof value !== "string") return null;
+  try {
+    return JSON.parse(value) as BusinessProfile;
+  } catch {
+    return null;
+  }
+}
 
 export async function POST(
   req: NextRequest,
@@ -138,19 +155,24 @@ export async function POST(
     let revisedHtml: string;
     let imageOptions: string[] = [];
     let appliedImageUrl: string | null = null;
+    let partialWarning: string | null = null;
     try {
-      const profile = data.profile_json ? JSON.parse(data.profile_json as string) : null;
+      const profile = parseProfile(data.profile_json);
       const pageContent = (data.page_content as string) || null;
       const result = await reviseVariation(existingHtml, prompt.trim(), profile, pageContent);
       revisedHtml = result.html;
       imageOptions = result.imageOptions;
       appliedImageUrl = result.appliedImageUrl;
+      if (result.appliedCount < result.totalOperations) {
+        const skipped = result.totalOperations - result.appliedCount;
+        partialWarning = `Only part of that change could be applied (${skipped} of ${result.totalOperations} edits didn't match the page). Review the preview before accepting.`;
+      }
     } catch (aiErr) {
       console.error("AI revision error:", aiErr);
       notifyError("AI revision error", aiErr, { slug: params.slug });
       const message =
-        aiErr instanceof Error && aiErr.message.includes("matched")
-          ? "The revision couldn't be applied — try rephrasing your request."
+        aiErr instanceof RevisionError
+          ? aiErr.message
           : "Revision failed. Please try again.";
       return NextResponse.json({ error: message }, { status: 502 });
     }
@@ -163,6 +185,7 @@ export async function POST(
       success: true,
       revisedHtml: injectLucide(revisedHtml),
       revisionInfo: updatedRevisionInfo,
+      ...(partialWarning ? { warning: partialWarning } : {}),
       // Include image alternatives so the user can pick a different one
       ...(imageOptions.length > 1 && appliedImageUrl
         ? { imageOptions, appliedImageUrl }

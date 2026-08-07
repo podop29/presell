@@ -60,6 +60,7 @@ export default function PreviewClient({
   const [revisePrompt, setRevisePrompt] = useState("");
   const [revising, setRevising] = useState(false);
   const [reviseError, setReviseError] = useState<string | null>(null);
+  const [reviseWarning, setReviseWarning] = useState<string | null>(null);
   const [iframeVersion, setIframeVersion] = useState(0);
   const [pendingRevisionHtml, setPendingRevisionHtml] = useState<string | null>(null);
   const [imageOptions, setImageOptions] = useState<string[]>([]);
@@ -237,6 +238,7 @@ export default function PreviewClient({
     }
     setRevising(true);
     setReviseError(null);
+    setReviseWarning(null);
     try {
       const res = await fetch(`/api/preview/${slug}/revise`, {
         method: "POST",
@@ -262,6 +264,7 @@ export default function PreviewClient({
       );
       pendingBlobUrl.current = blobUrl;
       setPendingRevisionHtml(data.revisedHtml);
+      setReviseWarning(data.warning ?? null);
       setImageOptions(data.imageOptions ?? []);
       setAppliedImageUrl(data.appliedImageUrl ?? null);
       setRevisePrompt("");
@@ -305,6 +308,7 @@ export default function PreviewClient({
       );
       revokePendingBlob();
       setPendingRevisionHtml(null);
+      setReviseWarning(null);
       setImageOptions([]);
       setAppliedImageUrl(null);
       setIframeLoading(true);
@@ -331,6 +335,7 @@ export default function PreviewClient({
     setAppliedImageUrl(null);
     setImageSearchQuery("");
     setReviseError(null);
+    setReviseWarning(null);
   }
 
   function handleSwapImage(newUrl: string) {
@@ -1624,6 +1629,11 @@ export default function PreviewClient({
           {reviseError && (
             <p className="max-w-3xl mx-auto mt-1.5 text-xs text-red-400">
               {reviseError}
+            </p>
+          )}
+          {!reviseError && reviseWarning && (
+            <p className="max-w-3xl mx-auto mt-1.5 text-xs text-amber-400">
+              {reviseWarning}
             </p>
           )}
         </div>

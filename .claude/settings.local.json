@@ -52,7 +52,12 @@
       "Bash(npx esbuild *)",
       "Bash(node /tmp/claude-1000/-home-stevan-presell/706ae182-5aab-4135-95e7-2e5dbc091675/scratchpad/run.mjs)",
       "Bash(git --no-pager diff --stat)",
-      "Bash(git --no-pager diff lib/credits.ts)"
+      "Bash(git --no-pager diff lib/credits.ts)",
+      "Bash(node -e \"console.log\\(Object.keys\\(require\\('./package.json'\\).dependencies\\).join\\(' '\\)\\)\")",
+      "Bash(node /tmp/claude-1000/-home-stevan-presell/706ae182-5aab-4135-95e7-2e5dbc091675/scratchpad/funnel.mjs)",
+      "Bash(node -e \"console.log\\(require.resolve\\('@supabase/supabase-js'\\)\\)\")",
+      "Bash(sed -i 's|dist/main/index.js|dist/index.cjs|' funnel.mjs)",
+      "Bash(node funnel.mjs)"
     ]
   }
 }

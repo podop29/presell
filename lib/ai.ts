@@ -1420,6 +1420,37 @@ export interface RevisionResult {
   html: string;
   imageOptions: string[];
   appliedImageUrl: string | null;
+  appliedCount: number;
+  totalOperations: number;
+}
+
+/**
+ * A revision failure with a message that is safe to show the user directly.
+ */
+export class RevisionError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "RevisionError";
+  }
+}
+
+/**
+ * Find `search` inside `html`. Falls back to a whitespace-tolerant match, since
+ * the model frequently reproduces an HTML snippet with different indentation or
+ * line breaks than the original. Returns the exact substring that matched.
+ */
+function findMatch(html: string, search: string): string | null {
+  if (html.includes(search)) return search;
+
+  const parts = search.trim().split(/\s+/);
+  if (parts.length < 2) return null;
+
+  const pattern = parts
+    .map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .join("\\s+");
+
+  const match = html.match(new RegExp(pattern));
+  return match ? match[0] : null;
 }
 
 export async function reviseVariation(
@@ -1459,7 +1490,7 @@ export async function reviseVariation(
 
   const message = await anthropic.messages.create({
     model: "claude-sonnet-4-6",
-    max_tokens: 8192,
+    max_tokens: 16000,
     system: REVISION_SYSTEM_PROMPT,
     tools: [REVISION_TOOL],
     tool_choice: { type: "tool", name: "apply_revisions" },
@@ -1471,6 +1502,15 @@ export async function reviseVariation(
     ],
   });
 
+  // A truncated response leaves the tool input as incomplete JSON, which the API
+  // returns as a partial (often empty) object. Catch it before it looks like the
+  // model simply had nothing to say.
+  if (message.stop_reason === "max_tokens") {
+    throw new RevisionError(
+      "That change was too large to generate in one pass — try asking for one smaller change at a time."
+    );
+  }
+
   const toolBlock = message.content.find((block) => block.type === "tool_use");
   if (!toolBlock || toolBlock.type !== "tool_use") {
     throw new Error("No tool use response from Claude");
@@ -1480,7 +1520,9 @@ export async function reviseVariation(
 
   const operations = revision.operations;
   if (!Array.isArray(operations) || operations.length === 0) {
-    throw new Error("No revision operations returned");
+    throw new RevisionError(
+      "The revision couldn't be applied — try rephrasing your request."
+    );
   }
 
   // If the revision needs a stock image, fetch candidates from Pexels
@@ -1508,8 +1550,11 @@ export async function reviseVariation(
       replaceStr = replaceStr.replace(/\{\{STOCK_IMAGE_URL\}\}/g, stockImageUrl);
     }
 
-    if (html.includes(op.search)) {
-      html = html.replace(op.search, replaceStr);
+    const matched = findMatch(html, op.search);
+    if (matched) {
+      // Function replacer: a plain string would let `$&`, `$1`, `` $` `` etc. in
+      // the replacement be interpreted as substitution patterns.
+      html = html.replace(matched, () => replaceStr);
       appliedCount++;
     } else if (op.search.includes("<img") || op.replace.includes("{{STOCK_IMAGE_URL}}") || (stockImageUrl && op.replace.includes(stockImageUrl))) {
       // Fallback for image operations: the AI often copies <img> tags inexactly
@@ -1522,7 +1567,7 @@ export async function reviseVariation(
         const imgRegex = new RegExp(`<img[^>]*src=["']${escapedSrc}["'][^>]*/?>`, "i");
         const imgMatch = html.match(imgRegex);
         if (imgMatch) {
-          html = html.replace(imgMatch[0], replaceStr);
+          html = html.replace(imgMatch[0], () => replaceStr);
           appliedCount++;
         }
       }
@@ -1530,12 +1575,18 @@ export async function reviseVariation(
   }
 
   if (appliedCount === 0) {
-    throw new Error(
-      "None of the revision operations matched the existing HTML"
+    throw new RevisionError(
+      "The revision couldn't be applied — try rephrasing your request."
     );
   }
 
-  return { html, imageOptions, appliedImageUrl: stockImageUrl };
+  return {
+    html,
+    imageOptions,
+    appliedImageUrl: stockImageUrl,
+    appliedCount,
+    totalOperations: operations.length,
+  };
 }
 
 // ── Cold Email Generation ──
