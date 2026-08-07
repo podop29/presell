@@ -57,7 +57,10 @@
       "Bash(node /tmp/claude-1000/-home-stevan-presell/706ae182-5aab-4135-95e7-2e5dbc091675/scratchpad/funnel.mjs)",
       "Bash(node -e \"console.log\\(require.resolve\\('@supabase/supabase-js'\\)\\)\")",
       "Bash(sed -i 's|dist/main/index.js|dist/index.cjs|' funnel.mjs)",
-      "Bash(node funnel.mjs)"
+      "Bash(node funnel.mjs)",
+      "Bash(npx playwright *)",
+      "Bash(ln -sfn /home/stevan/presell/node_modules node_modules)",
+      "Bash(node test.js)"
     ]
   }
 }

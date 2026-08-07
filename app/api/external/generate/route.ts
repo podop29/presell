@@ -15,7 +15,8 @@ import {
   getPlacePhotoUrls,
 } from "@/lib/google-places";
 import { validateExternalUrl } from "@/lib/validate-url";
-import type { StockImages } from "@/types";
+import { notifyError } from "@/lib/discord";
+import type { StockImages, QAStatus } from "@/types";
 
 export const maxDuration = 300;
 
@@ -163,6 +164,8 @@ export async function POST(req: NextRequest) {
     ];
 
     let html: string;
+    let qaStatus: QAStatus = "skipped";
+    let qaScore = 0;
     try {
       const result = await runGenerationPipeline({
         profile,
@@ -176,6 +179,19 @@ export async function POST(req: NextRequest) {
         customInstructions,
       });
       html = result.html;
+      qaStatus = result.qaStatus;
+      qaScore = result.finalScore;
+      if (result.qaStatus === "failed" || result.qaStatus === "skipped") {
+        notifyError(
+          `QA ${result.qaStatus} on external generation`,
+          new Error(
+            result.remainingIssues
+              .map((i) => `[${i.severity}] ${i.description}`)
+              .join(" | ") || "QA could not be evaluated"
+          ),
+          { url, score: String(result.finalScore) }
+        );
+      }
     } catch (aiErr) {
       console.error("AI generation error:", aiErr);
       return NextResponse.json(
@@ -215,6 +231,8 @@ export async function POST(req: NextRequest) {
       business_name: profile.businessName || null,
       profile_json: JSON.stringify(profile),
       page_content: pageContent || null,
+      qa_status: qaStatus,
+      qa_score: qaScore,
     });
 
     if (dbError) {

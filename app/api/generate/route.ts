@@ -159,6 +159,8 @@ export async function POST(req: NextRequest) {
           business_name: profile.businessName || null,
           profile_json: JSON.stringify(profile),
           page_content: pageContent || null,
+          qa_status: result.qaStatus,
+          qa_score: result.finalScore,
         });
 
         if (dbError) {
@@ -171,7 +173,21 @@ export async function POST(req: NextRequest) {
         // Deduct credit AFTER successful DB insert
         await deductCredit(user.id, 1, "generation", `Generated preview for ${url}`, slug);
 
-        notifySuccess("Preview generated", { url, slug, email: devEmail || "", previewUrl, qaIterations: String(result.qaIterations), qaScore: String(result.finalScore) });
+        // A site that shipped with known defects, or that QA couldn't evaluate,
+        // should page us — that's the class of preview a prospect sees broken.
+        if (result.qaStatus === "failed" || result.qaStatus === "skipped") {
+          notifyError(
+            `QA ${result.qaStatus} — preview shipped`,
+            new Error(
+              result.remainingIssues
+                .map((i) => `[${i.severity}/${i.issueType}] ${i.description}`)
+                .join(" | ") || "QA could not be evaluated"
+            ),
+            { url, slug, previewUrl, score: String(result.finalScore) }
+          );
+        }
+
+        notifySuccess("Preview generated", { url, slug, email: devEmail || "", previewUrl, qaIterations: String(result.qaIterations), qaScore: String(result.finalScore), qaStatus: result.qaStatus, regenerated: String(result.regenerated) });
 
         trackEvent("generation_completed", { url, slug, style: selectedStyle?.styleName, qaIterations: String(result.qaIterations), qaScore: String(result.finalScore) }, {
           userId: user.id, ip, userAgent: req.headers.get("user-agent") || undefined,

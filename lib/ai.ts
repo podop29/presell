@@ -10,6 +10,7 @@ import type {
   SectionBlueprint,
   QAIssue,
   QAResult,
+  DomFinding,
 } from "@/types";
 import type { GooglePlaceData } from "@/lib/google-places";
 
@@ -707,10 +708,27 @@ RULES:
 // ── Visual QA Review (Stage 4) ──
 
 export async function reviewDesignQA(
-  screenshot: string,
+  capture: {
+    desktopScreenshot: string;
+    mobileScreenshot?: string | null;
+    domFindings?: DomFinding[];
+  },
   blueprint: DesignBlueprint,
   profile: BusinessProfile
-): Promise<QAResult> {
+): Promise<QAResult & { reviewFailed: boolean }> {
+  const { desktopScreenshot, mobileScreenshot, domFindings = [] } = capture;
+
+  // Browser-measured defects are ground truth — they don't need the model's
+  // agreement, so they bypass the review and go straight into the issue list.
+  const measuredIssues: QAIssue[] = domFindings.map((f) => ({
+    severity: f.severity,
+    sectionId: f.viewport === "mobile" ? "global (mobile)" : "global",
+    issueType: f.issueType,
+    description: `[${f.viewport}] ${f.description}`,
+    suggestedFix: `${f.suggestedFix} Target element: ${f.evidence}`,
+    source: "measured",
+  }));
+
   try {
     // Condensed blueprint for QA context
     const sectionSummary = blueprint.sections
@@ -738,6 +756,9 @@ WHAT TO CHECK:
 6. SPACING: Do sections have adequate vertical padding? Is content crammed together?
 7. VISUAL HIERARCHY: Is there clear separation between sections?
 8. CONTENT VISIBILITY: Is ALL content visible? If the page looks mostly empty or sections appear blank, this is critical — it may indicate an animation bug where content disappeared after load.
+9. MOBILE LAYOUT: When a mobile screenshot is provided, check it separately — text clipped or running off the edge, nav overlapping the hero, columns that never stacked, images squashed, tap targets crushed together. Prefix mobile issue descriptions with "[mobile]".
+
+Automated browser checks may be listed below the screenshots. Those are already confirmed — do NOT repeat them in your issues list. Report only what you can see that they missed.
 
 PASS CRITERIA: Zero critical issues AND zero major issues. Minor issues are noted but don't block.
 
@@ -753,16 +774,45 @@ You always respond with valid JSON only — no explanation, no markdown, no code
           role: "user",
           content: [
             {
+              type: "text" as const,
+              text: "DESKTOP SCREENSHOT (1280px wide):",
+            },
+            {
               type: "image" as const,
               source: {
                 type: "base64" as const,
                 media_type: "image/png" as const,
-                data: screenshot,
+                data: desktopScreenshot,
               },
             },
+            ...(mobileScreenshot
+              ? [
+                  {
+                    type: "text" as const,
+                    text: "MOBILE SCREENSHOT (390px wide):",
+                  },
+                  {
+                    type: "image" as const,
+                    source: {
+                      type: "base64" as const,
+                      media_type: "image/png" as const,
+                      data: mobileScreenshot,
+                    },
+                  },
+                ]
+              : []),
             {
               type: "text" as const,
-              text: `Review this website screenshot against the design blueprint below.
+              text: `${
+                domFindings.length > 0
+                  ? `AUTOMATED BROWSER CHECKS ALREADY CONFIRMED (do not repeat these):\n${domFindings
+                      .map(
+                        (f) =>
+                          `- [${f.severity}/${f.viewport}] ${f.description}`
+                      )
+                      .join("\n")}\n\n`
+                  : ""
+              }Review these screenshots against the design blueprint below.
 
 BUSINESS: ${profile.businessName} (${profile.industry})
 
@@ -800,7 +850,7 @@ If the design looks good with no critical or major issues, return { "pass": true
     const textBlock = message.content.find((block) => block.type === "text");
     if (!textBlock || textBlock.type !== "text") {
       console.error("[qa] No text response from Claude");
-      return { pass: true, score: 75, issues: [] };
+      return measuredOnlyResult(measuredIssues, true);
     }
 
     let jsonStr = textBlock.text.trim();
@@ -828,20 +878,57 @@ If the design looks good with no critical or major issues, return { "pass": true
             issueType: issue.issueType as QAIssue["issueType"],
             description: issue.description,
             suggestedFix: issue.suggestedFix,
+            source: "review" as const,
           }))
       : [];
 
-    const hasCritical = issues.some((i) => i.severity === "critical");
-    const hasMajor = issues.some((i) => i.severity === "major");
+    const allIssues = [...measuredIssues, ...issues];
+    const hasCritical = allIssues.some((i) => i.severity === "critical");
+    const hasMajor = allIssues.some((i) => i.severity === "major");
     const pass = !hasCritical && !hasMajor;
-    const score = typeof parsed.score === "number" ? parsed.score : pass ? 85 : 50;
 
-    return { pass, score, issues };
+    let score = typeof parsed.score === "number" ? parsed.score : pass ? 85 : 50;
+    // The reviewer scores what it can see; measured defects it was told to skip
+    // must still pull the score down.
+    if (measuredIssues.length > 0) {
+      const penalty = measuredIssues.reduce(
+        (sum, i) => sum + (i.severity === "critical" ? 20 : 10),
+        0
+      );
+      score = Math.max(0, Math.min(score, 100 - penalty));
+    }
+
+    return { pass, score, issues: allIssues, reviewFailed: false };
   } catch (err) {
-    // Don't block generation on QA failures — treat as pass
-    console.error("[qa] QA review failed, treating as pass:", err);
-    return { pass: true, score: 75, issues: [] };
+    // Don't block generation on a reviewer failure, but don't pretend it passed
+    // either — fall back to whatever the browser measured.
+    console.error("[qa] QA review failed:", err);
+    return measuredOnlyResult(measuredIssues, true);
   }
+}
+
+/**
+ * Result built from browser-measured findings alone, used when the vision
+ * reviewer is unavailable. `reviewFailed` lets the pipeline record this as
+ * "skipped" rather than a clean pass.
+ */
+function measuredOnlyResult(
+  measuredIssues: QAIssue[],
+  reviewFailed: boolean
+): QAResult & { reviewFailed: boolean } {
+  const hasCritical = measuredIssues.some((i) => i.severity === "critical");
+  const hasMajor = measuredIssues.some((i) => i.severity === "major");
+  const pass = !hasCritical && !hasMajor;
+  const penalty = measuredIssues.reduce(
+    (sum, i) => sum + (i.severity === "critical" ? 20 : 10),
+    0
+  );
+  return {
+    pass,
+    score: Math.max(0, 75 - penalty),
+    issues: measuredIssues,
+    reviewFailed,
+  };
 }
 
 // ── QA Fix Application (Stage 4 fix loop) ──
@@ -895,7 +982,7 @@ export async function applyQAFixes(
 
     const message = await anthropic.messages.create({
       model: "claude-sonnet-4-6",
-      max_tokens: 8192,
+      max_tokens: 16000,
       system: `You are a surgical HTML fixer. You receive an HTML document and a list of visual defects found by a QA reviewer. Apply the MINIMUM changes needed to fix each defect.
 
 Rules:
@@ -924,6 +1011,13 @@ Design system reference:
       ],
     });
 
+    // A truncated response leaves the tool input as incomplete JSON. Applying a
+    // partial fix set is worse than applying none, so bail out.
+    if (message.stop_reason === "max_tokens") {
+      console.error("[qa-fix] Response truncated, skipping fixes");
+      return html;
+    }
+
     const toolBlock = message.content.find((block) => block.type === "tool_use");
     if (!toolBlock || toolBlock.type !== "tool_use") {
       console.error("[qa-fix] No tool use response");
@@ -944,10 +1038,19 @@ Design system reference:
 
     for (const op of operations) {
       if (typeof op.search !== "string" || typeof op.replace !== "string") continue;
-      if (fixedHtml.includes(op.search)) {
-        fixedHtml = fixedHtml.replace(op.search, op.replace);
+      const matched = findMatch(fixedHtml, op.search);
+      if (matched) {
+        // Function replacer: a plain string would let `$&`, `$1`, `` $` `` etc.
+        // in the replacement be interpreted as substitution patterns.
+        fixedHtml = fixedHtml.replace(matched, () => op.replace);
         appliedCount++;
       }
+    }
+
+    if (appliedCount < operations.length) {
+      console.warn(
+        `[qa-fix] Only ${appliedCount}/${operations.length} fixes matched the HTML`
+      );
     }
 
     // Safety check: if fixes broke the HTML structure, revert
@@ -1327,9 +1430,13 @@ export async function generateVariation(
   }
 
   let html = textBlock.text;
+  let stopReason = message.stop_reason;
 
-  // If output was truncated, continue generating to get the rest
-  if (message.stop_reason === "max_tokens") {
+  // If output was truncated, keep continuing until the document is complete.
+  // A single continuation isn't always enough, and shipping a half-written
+  // document is the most visible way a generation can be broken.
+  const MAX_CONTINUATIONS = 3;
+  for (let i = 0; i < MAX_CONTINUATIONS && stopReason === "max_tokens"; i++) {
     const continuation = await anthropic.messages.create({
       model: "claude-sonnet-4-6",
       max_tokens: 8000,
@@ -1342,12 +1449,24 @@ export async function generateVariation(
     });
 
     const contBlock = continuation.content.find((block) => block.type === "text");
-    if (contBlock && contBlock.type === "text") {
-      html += contBlock.text;
-    }
+    if (!contBlock || contBlock.type !== "text" || !contBlock.text.trim()) break;
+
+    html += contBlock.text;
+    stopReason = continuation.stop_reason;
   }
 
-  return extractHtml(html);
+  const finalHtml = extractHtml(html);
+
+  // The system prompt contracts a complete document. A missing closing tag means
+  // we never recovered from truncation — fail loudly rather than saving a broken
+  // preview and charging a credit for it.
+  if (!/<\/html\s*>/i.test(finalHtml)) {
+    throw new Error(
+      "Generated HTML was truncated and could not be completed after continuations"
+    );
+  }
+
+  return finalHtml;
 }
 
 // ── Revision (surgical edit of existing HTML via search-and-replace) ──

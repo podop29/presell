@@ -155,6 +155,12 @@ export interface QAIssue {
   issueType: "contrast" | "layout" | "overflow" | "missing-content" | "broken-image" | "spacing" | "alignment";
   description: string;
   suggestedFix: string;
+  /**
+   * "measured" issues come from browser checks and are re-testable on every
+   * render; "review" issues come from the vision reviewer and can only be
+   * re-tested by another review.
+   */
+  source?: "measured" | "review";
 }
 
 export interface QAResult {
@@ -163,9 +169,40 @@ export interface QAResult {
   issues: QAIssue[];
 }
 
+/**
+ * Outcome of the QA stage. "skipped" means QA could not run (render or API
+ * failure) — distinct from "passed" so a QA outage isn't mistaken for a clean
+ * site.
+ */
+export type QAStatus = "passed" | "fixed" | "failed" | "skipped";
+
+export type QAViewport = "desktop" | "mobile";
+
+/**
+ * A defect measured directly in the browser rather than eyeballed in a
+ * screenshot. `evidence` is the offending element's opening tag, which gives
+ * the fix pass a concrete string to search for in the HTML source.
+ */
+export interface DomFinding {
+  severity: QAIssue["severity"];
+  issueType: QAIssue["issueType"];
+  viewport: QAViewport;
+  description: string;
+  suggestedFix: string;
+  evidence: string;
+}
+
 /* ── Generation Pipeline ── */
 
-export type PipelineStage = "blueprint" | "generating" | "qa-screenshot" | "qa-review" | "qa-fix" | "finalizing";
+export type PipelineStage =
+  | "blueprint"
+  | "generating"
+  | "qa-screenshot"
+  | "qa-review"
+  | "qa-fix"
+  | "qa-verify"
+  | "regenerating"
+  | "finalizing";
 
 export interface PipelineProgress {
   stage: PipelineStage;
@@ -190,4 +227,9 @@ export interface PipelineResult {
   blueprint: DesignBlueprint;
   qaIterations: number;
   finalScore: number;
+  qaStatus: QAStatus;
+  /** Critical/major issues still present in the shipped HTML. */
+  remainingIssues: QAIssue[];
+  /** True when the first attempt was thrown away and the page rebuilt. */
+  regenerated: boolean;
 }

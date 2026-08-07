@@ -176,9 +176,11 @@ const STEPS_MAPS: StepConfig[] = [
 const STAGE_TO_STEP: Record<string, number> = {
   blueprint: 2,
   generating: 3,
+  regenerating: 3,
   "qa-screenshot": 4,
   "qa-review": 4,
   "qa-fix": 4,
+  "qa-verify": 4,
   finalizing: 5,
 };
 
